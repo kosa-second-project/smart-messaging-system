@@ -45,8 +45,8 @@
     </insert>
 
 
-    <!-- 4. 사원 권한 매핑 등록 -->
-    <insert id="insertAuthority">
+    <!-- 4. 사원 권한 매핑 등록 (Common.auditColumns, Common.auditInsertValues 공통 include 적용) -->
+    <insert id="insertAuthority" parameterType="AuthoritiesVO">
         INSERT INTO "authorities" (
             user_id,
             authority,
@@ -57,6 +57,7 @@
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
+
 
 </mapper>
 

@@ -1,5 +1,6 @@
 package com.example.smartmessaging.mapper;
 
+import com.example.smartmessaging.dto.vo.AuthoritiesVO;
 import com.example.smartmessaging.dto.vo.UsersVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -26,6 +27,7 @@ public interface UserMapper {
     /**
      * 특정 사원에게 권한을 할당합니다.
      */
-    int insertAuthority(@Param("userId") Long userId, @Param("authority") String authority);
+    int insertAuthority(AuthoritiesVO authoritiesVO);
 }
+
 

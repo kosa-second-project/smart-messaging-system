@@ -1,5 +1,6 @@
 package com.example.smartmessaging.security;
 
+import com.example.smartmessaging.dto.vo.AuthoritiesVO;
 import com.example.smartmessaging.dto.vo.UsersVO;
 import com.example.smartmessaging.mapper.UserMapper;
 import org.junit.jupiter.api.Disabled;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Disabled("로컬 DB 연동이 필요한 테스트이므로 자동 CI/CD 빌드 시 실행에서 제외합니다.")
 @SpringBootTest
 public class UserInsertTest {
+
 
     @Autowired
     private UserMapper userMapper;
@@ -73,7 +75,12 @@ public class UserInsertTest {
         System.out.println("생성된 사원 PK ID: " + testUser.getUserId());
 
         // 5. AUTHORITIES 테이블에 권한 INSERT 실행 (ROLE_USER 권한 부여)
-        int authInsertResult = userMapper.insertAuthority(testUser.getUserId(), "ROLE_USER");
+        AuthoritiesVO authority = AuthoritiesVO.builder()
+                .userId(testUser.getUserId())
+                .authority("ROLE_USER")
+                .build();
+        
+        int authInsertResult = userMapper.insertAuthority(authority);
         assertTrue(authInsertResult > 0, "사원 권한이 매핑되어야 합니다.");
 
         System.out.println("임시 테스트용 사원 데이터 입력 성공!");
