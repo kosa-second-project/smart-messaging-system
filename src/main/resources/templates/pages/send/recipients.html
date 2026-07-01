@@ -7,9 +7,9 @@
                 <!-- 1. 좌측 태그 필터 패널 -->
                 <aside class="send-filter-panel">
                     <div class="panel-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <h3 class="panel-title" style="margin: 0;">태그 선택</h3>
-                            <button type="button" id="btnResetTags" class="ds-button ds-button--text" style="padding: 0; font-size: 0.75rem; color: var(--primary); font-weight: var(--font-weight-medium); cursor: pointer; border: none; background: transparent; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        <div class="panel-header">
+                            <h3 class="panel-title">태그 선택</h3>
+                            <button type="button" id="btnResetTags" class="ds-button ds-button--text btn-reset-tags">
                                 태그 선택 초기화 🔄
                             </button>
                         </div>
@@ -84,7 +84,7 @@
                 </aside>
                 
                 <!-- 2. 우측 회원 목록 패널 -->
-                <main class="send-main-panel">
+                <div class="send-main-panel">
                     <div class="main-header-row">
                         <div class="search-box flex-grow-1">
                             <input type="text" id="customerSearchInput" class="ds-input" placeholder="고객명, 번호, 태그 검색" autocomplete="off">
@@ -92,8 +92,8 @@
                     </div>
                     
                     <!-- 필터 요약 정보 탭 -->
-                    <div class="summary-tabs" style="justify-content: space-between; align-items: center; width: 100%;">
-                        <div style="display: flex; gap: 0.5rem;">
+                    <div class="summary-tabs">
+                        <div class="summary-tab-group">
                             <button type="button" class="summary-tab active" data-tab-type="filtered">
                                 태그 후보 <span id="lblCandidateCount">0</span>명
                             </button>
@@ -101,8 +101,8 @@
                                 선택된 회원 목록 보기
                             </button>
                         </div>
-                        <div class="selected-summary-count-badge" style="font-size: 0.8125rem; font-weight: var(--font-weight-bold); color: var(--primary); background: rgba(24, 67, 250, 0.08); padding: 0.25rem 0.625rem; border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.25rem;">
-                            선택된 회원 수: <span id="lblSelectedCount" style="font-weight: 800;">0</span>명
+                        <div class="selected-summary-count-badge">
+                            선택된 회원 수: <span id="lblSelectedCount">0</span>명
                         </div>
                     </div>
                     
@@ -111,18 +111,18 @@
                         <table class="ds-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 45px; text-align: center;">
+                                    <th>
                                         <input type="checkbox" id="thCheckAll" class="ds-checkbox">
                                     </th>
-                                    <th style="width: 12%; text-align: left;">고객명</th>
-                                    <th style="width: 18%; text-align: left;">번호</th>
-                                    <th style="width: 10%; text-align: center;">유형</th>
-                                    <th style="width: 10%; text-align: center;">성별</th>
-                                    <th style="width: 10%; text-align: center;">나이</th>
-                                    <th style="width: 13%; text-align: center;">생일 대상자</th>
-                                    <th style="width: 8%; text-align: center;">문자</th>
-                                    <th style="width: 8%; text-align: center;">카카오</th>
-                                    <th style="width: 8%; text-align: center;">이메일</th>
+                                    <th>고객명</th>
+                                    <th>번호</th>
+                                    <th class="hide-on-tablet">유형</th>
+                                    <th class="hide-on-mobile">성별</th>
+                                    <th class="hide-on-mobile">나이</th>
+                                    <th class="hide-on-mobile">생일 대상자</th>
+                                    <th>문자</th>
+                                    <th>카카오</th>
+                                    <th>이메일</th>
                                 </tr>
                             </thead>
                             <tbody id="customerTableBody">
@@ -148,14 +148,14 @@
                         <!-- 3. 우측 페이지 크기 셀렉터 -->
                         <div class="page-size-selector">
                             <label for="pageSizeSelect">페이지 당 보기:</label>
-                            <select id="pageSizeSelect" class="ds-input ds-input--sm" style="width: 85px; display: inline-block; padding: 0.25rem 0.5rem; height: auto; min-height: auto;">
+                            <select id="pageSizeSelect" class="ds-input ds-input--sm page-size-select">
                                 <option value="5">5개</option>
                                 <option value="10">10개</option>
                                 <option value="20">20개</option>
                             </select>
                         </div>
                     </div>
-                </main>
+                </div>
     </div>
 </body>
 </html>

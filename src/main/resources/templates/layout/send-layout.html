@@ -8,7 +8,7 @@
 
 <body>
     <!-- 부모 layout/default-layout 의 content 프래그먼트를 정의하고 오버라이드 -->
-    <main layout:fragment="content" class="page page--fill">
+    <div layout:fragment="content" class="page page--fill">
         <!-- 발송 화면 전용 스타일 일괄 병렬 로딩 (중첩 레이아웃 헤더 누락 방지) -->
         <link rel="stylesheet" th:href="@{/css/pages/send/send-layout.css}">
         <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css}">
@@ -30,7 +30,7 @@
 
         <!-- 발송 화면 전용 JS 추가 (스프링 자동 캐시 버스팅 활성화) -->
         <script th:src="@{/js/pages/send.js}"></script>
-    </main>
+    </div>
 </body>
 
 </html>

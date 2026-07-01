@@ -426,3 +426,96 @@
     justify-content: center;
   }
 }
+
+/* ==========================================
+   6. 인라인 스타일 대체 클래스 (HTML 청정화)
+   ========================================== */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.btn-reset-tags {
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.selected-summary-count-badge {
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+  background: rgba(24, 67, 250, 0.08);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ==========================================
+   7. 반응형 컬럼 제어 (모바일 컬럼 숨김)
+   ========================================== */
+@media (max-width: 992px) {
+  .hide-on-tablet {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  /* 모바일 해상도에서는 숨겨진 컬럼들 덕분에 가로폭이 확보되므로 고정 min-width를 제거 */
+  .table-container .ds-table {
+    min-width: auto !important;
+    width: 100%;
+  }
+}
+
+/* ==========================================
+   8. 마크업 청정화 관련 인라인 스타일 이관
+   ========================================== */
+.panel-title {
+  margin: 0 !important;
+}
+
+.summary-tab-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.selected-summary-count-badge span {
+  font-weight: 800;
+}
+
+.page-size-select {
+  width: 85px;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+  min-height: auto;
+}
+
+/* 테이블 헤더 컬럼별 크기 및 정렬 지정 (인라인 style 제거 대응) */
+.ds-table th:nth-child(1) { width: 45px; text-align: center; }
+.ds-table th:nth-child(2) { width: 12%; text-align: left; }
+.ds-table th:nth-child(3) { width: 18%; text-align: left; }
+.ds-table th:nth-child(4) { width: 10%; text-align: center; }
+.ds-table th:nth-child(5) { width: 10%; text-align: center; }
+.ds-table th:nth-child(6) { width: 10%; text-align: center; }
+.ds-table th:nth-child(7) { width: 13%; text-align: center; }
+.ds-table th:nth-child(8) { width: 8%; text-align: center; }
+.ds-table th:nth-child(9) { width: 8%; text-align: center; }
+.ds-table th:nth-child(10) { width: 8%; text-align: center; }

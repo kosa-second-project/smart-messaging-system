@@ -318,10 +318,10 @@ const RecipientSelector = {
                     </td>
                     <td style="text-align: left;"><strong>${customer.name}</strong></td>
                     <td style="text-align: left;">${customer.phone}</td>
-                    <td style="text-align: center;">${customer.type}</td>
-                    <td style="text-align: center;">${gender}</td>
-                    <td style="text-align: center;">${age}</td>
-                    <td style="text-align: center;">${isBirthday}</td>
+                    <td style="text-align: center;" class="hide-on-tablet">${customer.type}</td>
+                    <td style="text-align: center;" class="hide-on-mobile">${gender}</td>
+                    <td style="text-align: center;" class="hide-on-mobile">${age}</td>
+                    <td style="text-align: center;" class="hide-on-mobile">${isBirthday}</td>
                     <!-- 수신 거부(X)인 셀에 .is-rejected 및 deny-badge 적용하여 시각적 경고 강조 -->
                     <td style="text-align: center;" class="${!customer.sms ? 'is-rejected' : ''}">
                         ${customer.sms ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
