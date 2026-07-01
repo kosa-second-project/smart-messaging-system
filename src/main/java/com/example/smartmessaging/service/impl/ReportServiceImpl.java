@@ -5,6 +5,7 @@ import com.example.smartmessaging.dto.response.ReportCardResponse;
 import com.example.smartmessaging.dto.response.ReportChartDatasetResponse;
 import com.example.smartmessaging.dto.response.ReportChartResponse;
 import com.example.smartmessaging.dto.response.ReportPageResponse;
+import com.example.smartmessaging.dto.response.ReportTableResponse;
 import com.example.smartmessaging.service.ReportService;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,43 @@ public class ReportServiceImpl implements ReportService {
         return ReportPageResponse.builder()
                 .cards(buildDeliveryCards())
                 .charts(buildDeliveryCharts())
-                .tables(List.of())
+                .tables(buildDeliveryTables())
+                .build();
+    }
+
+    @Override
+    public ReportPageResponse getChannelReport(ReportSearchRequest request) {
+        return ReportPageResponse.builder()
+                .cards(buildChannelCards())
+                .charts(buildChannelCharts())
+                .tables(buildChannelTables())
+                .build();
+    }
+
+    @Override
+    public ReportPageResponse getCostReport(ReportSearchRequest request) {
+        return ReportPageResponse.builder()
+                .cards(buildCostCards())
+                .charts(buildCostCharts())
+                .tables(buildCostTables())
+                .build();
+    }
+
+    @Override
+    public ReportPageResponse getCustomerReport(ReportSearchRequest request) {
+        return ReportPageResponse.builder()
+                .cards(buildCustomerCards())
+                .charts(buildCustomerCharts())
+                .tables(buildCustomerTables())
+                .build();
+    }
+
+    @Override
+    public ReportPageResponse getPerformanceReport(ReportSearchRequest request) {
+        return ReportPageResponse.builder()
+                .cards(buildPerformanceCards())
+                .charts(buildPerformanceCharts())
+                .tables(buildPerformanceTables())
                 .build();
     }
 
@@ -121,4 +158,223 @@ public class ReportServiceImpl implements ReportService {
         );
     }
 
+    private List<ReportTableResponse> buildDeliveryTables() {
+        return List.of();
+    }
+
+    private List<ReportCardResponse> buildChannelCards() {
+        return List.of(
+                ReportCardResponse.builder()
+                        .title("카카오톡 발송")
+                        .value("535,279")
+                        .subText("성공률 99.1%")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("SMS 발송")
+                        .value("249,886")
+                        .subText("성공률 99.1%")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("LMS 발송")
+                        .value("80,241")
+                        .subText("성공률 98.2%")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("이메일 발송")
+                        .value("26,739")
+                        .subText("성공률 97.8%")
+                        .build()
+        );
+    }
+
+    private List<ReportChartResponse> buildChannelCharts() {
+        return List.of(
+                ReportChartResponse.builder()
+                        .chartId("channelSuccessRate")
+                        .title("채널별 성공률")
+                        .type("bar")
+                        .labels(List.of("카카오톡", "SMS", "LMS", "이메일"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("성공률")
+                                        .data(List.<Number>of(99.1, 99.1, 98.2, 97.8))
+                                        .build()
+                        ))
+                        .build(),
+                ReportChartResponse.builder()
+                        .chartId("channelTrend")
+                        .title("채널별 발송 추이")
+                        .type("line")
+                        .labels(List.of("6/23", "6/24", "6/25", "6/26", "6/27", "6/28", "6/29"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("카카오톡")
+                                        .data(List.<Number>of(82000, 94400, 116000, 133200, 70100, 90200, 107500))
+                                        .build(),
+                                ReportChartDatasetResponse.builder()
+                                        .label("SMS")
+                                        .data(List.<Number>of(43800, 50500, 62000, 71200, 37500, 48200, 57500))
+                                        .build(),
+                                ReportChartDatasetResponse.builder()
+                                        .label("LMS")
+                                        .data(List.<Number>of(16200, 18700, 22900, 26300, 13900, 17800, 21200))
+                                        .build(),
+                                ReportChartDatasetResponse.builder()
+                                        .label("이메일")
+                                        .data(List.<Number>of(7600, 8800, 10800, 12400, 6500, 8400, 10000))
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    private List<ReportTableResponse> buildChannelTables() {
+        return List.of();
+    }
+
+    private List<ReportCardResponse> buildCostCards() {
+        return List.of(
+                ReportCardResponse.builder()
+                        .title("실제 청구 비용")
+                        .value("18,700,000원")
+                        .subText("선택 기간 누적")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("최대 비용")
+                        .value("24,200,000원")
+                        .subText("동일 물량 기준")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("기간 절감액")
+                        .value("5,500,000원")
+                        .subText("절감률 22.7%")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("대체 발송 전환")
+                        .value("5,549")
+                        .subText("전환율 1.9%")
+                        .build()
+        );
+    }
+
+    private List<ReportChartResponse> buildCostCharts() {
+        return List.of(
+                ReportChartResponse.builder()
+                        .chartId("costComparison")
+                        .title("비용 비교 현황")
+                        .type("line")
+                        .labels(List.of("1월", "2월", "3월", "4월", "5월", "6월"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("실제 청구 비용")
+                                        .data(List.<Number>of(9800000, 10600000, 12100000, 13800000, 16200000, 18700000))
+                                        .build(),
+                                ReportChartDatasetResponse.builder()
+                                        .label("최대 비용")
+                                        .data(List.<Number>of(11200000, 12450000, 14900000, 16950000, 20700000, 24200000))
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    private List<ReportTableResponse> buildCostTables() {
+        return List.of();
+    }
+
+    private List<ReportCardResponse> buildCustomerCards() {
+        return List.of(
+                ReportCardResponse.builder()
+                        .title("전체 고객")
+                        .value("198,341")
+                        .subText("분석 가능 고객")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("일반 고객")
+                        .value("127,721")
+                        .subText("주요 발송 대상")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("신규 고객")
+                        .value("2,184")
+                        .subText("7일 누적 가입")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("휴면 고객")
+                        .value("18,940")
+                        .subText("6개월 이상 미활동")
+                        .build()
+        );
+    }
+
+    private List<ReportChartResponse> buildCustomerCharts() {
+        return List.of(
+                ReportChartResponse.builder()
+                        .chartId("newCustomerTrend")
+                        .title("신규 고객 추이")
+                        .type("bar")
+                        .labels(List.of("6/23", "6/24", "6/25", "6/26", "6/27", "6/28", "6/29"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("신규 고객")
+                                        .data(List.<Number>of(280, 312, 348, 290, 361, 295, 298))
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    private List<ReportTableResponse> buildCustomerTables() {
+        return List.of();
+    }
+
+    private List<ReportCardResponse> buildPerformanceCards() {
+        return List.of(
+                ReportCardResponse.builder()
+                        .title("선택 채널")
+                        .value("카카오톡")
+                        .subText("채널별 데이터 표시")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("평균 클릭률")
+                        .value("19.1%")
+                        .subText("업계 평균 8.2%")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("전환율")
+                        .value("5.8%")
+                        .subText("선택 기간 평균")
+                        .build(),
+                ReportCardResponse.builder()
+                        .title("수신 거부율")
+                        .value("0.18%")
+                        .subText("업계 평균 0.41%")
+                        .build()
+        );
+    }
+
+    private List<ReportChartResponse> buildPerformanceCharts() {
+        return List.of(
+                ReportChartResponse.builder()
+                        .chartId("performanceTrend")
+                        .title("클릭률 & 전환율 추이")
+                        .type("line")
+                        .labels(List.of("6/23", "6/24", "6/25", "6/26", "6/27", "6/28", "6/29"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("클릭률")
+                                        .data(List.<Number>of(17.8, 18.4, 19.1, 20.2, 18.9, 19.4, 20.0))
+                                        .build(),
+                                ReportChartDatasetResponse.builder()
+                                        .label("전환율")
+                                        .data(List.<Number>of(5.1, 5.3, 5.8, 6.1, 5.6, 5.9, 6.0))
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    private List<ReportTableResponse> buildPerformanceTables() {
+        return List.of();
+    }
 }
