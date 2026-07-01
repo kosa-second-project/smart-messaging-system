@@ -1,0 +1,246 @@
+/* C:\Users\KOSA\Desktop\smart_messaging_system\src\main\resources\static\css\pages\login.css */
+
+:root {
+    --color-bg-start: #f8fafc;
+    --color-bg-end: #eff6ff; /* 아주 옅은 블루 톤 가미 */
+    --color-primary: #1843fa;
+    --color-primary-hover: #0f30d1;
+    --color-primary-glow: rgba(24, 67, 250, 0.15);
+    
+    --color-text-main: #0f172a; /* 어두운 네이비색 */
+    --color-text-sub: #64748b;  /* 중간 그레이 */
+    
+    --color-card-bg: #ffffff;
+    --color-card-border: #e2e8f0;
+    --color-input-bg: #ffffff;
+    --color-input-border: #cbd5e1;
+    --color-input-focus-border: #1843fa;
+}
+
+body.login-body {
+    background: linear-gradient(135deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    position: relative;
+}
+
+/* 아름답고 은은한 백그라운드 구체 조명 (라이트 모드용) */
+body.login-body::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(24, 67, 250, 0.04) 0%, rgba(0, 0, 0, 0) 70%);
+    top: -100px;
+    left: -100px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.login-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+}
+
+/* 화이트 프리미엄 카드 디자인 */
+.login-card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-card-border);
+    border-radius: 20px;
+    padding: 40px 35px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 
+                0 8px 10px -6px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.login-card:hover {
+    box-shadow: 0 20px 35px -5px rgba(24, 67, 250, 0.08), 
+                0 10px 15px -6px rgba(24, 67, 250, 0.08);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-logo-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.login-logo-icon {
+    width: 36px;
+    height: 36px;
+    background-color: var(--color-primary);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(24, 67, 250, 0.3);
+}
+
+.login-logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--color-text-main);
+}
+
+.login-subtitle {
+    color: var(--color-text-sub);
+    font-size: 13.5px;
+    margin: 0;
+}
+
+/* 폼 그룹 */
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    color: var(--color-text-sub);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+}
+
+.input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.login-input {
+    width: 100%;
+    background-color: var(--color-input-bg);
+    border: 1px solid var(--color-input-border);
+    border-radius: 10px;
+    padding: 12px 14px 12px 42px;
+    font-size: 14px;
+    color: var(--color-text-main);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.login-input::placeholder {
+    color: #94a3b8;
+}
+
+.login-input:focus {
+    border-color: var(--color-input-focus-border);
+    box-shadow: 0 0 0 4px rgba(24, 67, 250, 0.1);
+}
+
+.login-input:focus + .input-icon {
+    color: var(--color-primary);
+}
+
+/* 패스워드 보기 토글 */
+.password-toggle {
+    position: absolute;
+    right: 14px;
+    color: #94a3b8;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    outline: none;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: var(--color-text-main);
+}
+
+/* 로그인 버튼 */
+.login-btn {
+    width: 100%;
+    background-color: var(--color-primary);
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px var(--color-primary-glow);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.login-btn:hover {
+    background-color: var(--color-primary-hover);
+    box-shadow: 0 6px 16px rgba(24, 67, 250, 0.25);
+}
+
+.login-btn:active {
+    transform: scale(0.99);
+}
+
+/* 에러 & 알림창 */
+.alert-box {
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideDown 0.2s ease-out;
+}
+
+.alert-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #ef4444;
+}
+
+.alert-success {
+    background-color: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #10b981;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 11.5px;
+    color: var(--color-text-sub);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
