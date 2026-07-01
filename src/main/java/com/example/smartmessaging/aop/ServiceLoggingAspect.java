@@ -28,7 +28,7 @@ public class ServiceLoggingAspect {
         Object[] args = joinPoint.getArgs();
 
         // 1. 서비스 로직 시작 로그 출력
-        log.info("[Service Start] {}.{}() | Arguments: {}", className, methodName, Arrays.toString(args));
+        log.info("[Service Start] {}.{}()", className, methodName);
         
         long start = System.currentTimeMillis();
         try {
