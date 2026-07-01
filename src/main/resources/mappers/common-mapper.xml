@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Common">
+
+    <!-- 1. INSERT 시 공통 Audit 컬럼 목록 -->
+    <sql id="auditColumns">
+        created_at, updated_at, created_by, updated_by, is_deleted
+    </sql>
+
+    <!-- 2. INSERT 시 공통 Audit 바인딩 값 목록 -->
+    <sql id="auditInsertValues">
+        SYSTIMESTAMP, SYSTIMESTAMP, #{createdBy}, #{updatedBy}, 0
+    </sql>
+
+    <!-- 3. UPDATE 시 공통 Audit 수정 값 목록 -->
+    <sql id="auditUpdateValues">
+        updated_at = SYSTIMESTAMP,
+        updated_by = #{updatedBy}
+    </sql>
+
+</mapper>
