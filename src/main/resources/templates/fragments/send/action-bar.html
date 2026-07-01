@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+    <!-- activeStep 모델 기반 이전/다음 활성화 제어 및 다음 텍스트 전환 -->
+    <div th:fragment="actionBarFragment(activeStep)" class="action-bar-row">
+        <!-- 이전 버튼 (1단계는 비활성화, 2/3단계는 데이터 액션을 통해 이전 단계 URL로 전송) -->
+        <button type="button" 
+                id="btnPrevStep" 
+                class="ds-button ds-button--outline" 
+                data-action="prev-step" 
+                th:disabled="${activeStep == 1}">이전</button>
+
+        <!-- 다음/발송하기 버튼 -->
+        <button type="button" 
+                id="btnNextStep" 
+                th:classappend="${activeStep == 3 ? 'ds-button--success' : 'ds-button--primary'}"
+                class="ds-button" 
+                data-action="next-step"
+                th:text="${activeStep == 3 ? '발송하기' : '다음'}">다음</button>
+    </div>
+</body>
+</html>

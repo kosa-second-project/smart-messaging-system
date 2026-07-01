@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layout/default-layout}">
+
+<head>
+    <title>메시지 발송</title>
+</head>
+
+<body>
+    <!-- 부모 layout/default-layout 의 content 프래그먼트를 정의하고 오버라이드 -->
+    <main layout:fragment="content" class="page page--fill">
+        <!-- 발송 화면 전용 스타일 일괄 병렬 로딩 (중첩 레이아웃 헤더 누락 방지) -->
+        <link rel="stylesheet" th:href="@{/css/pages/send/send-layout.css}">
+        <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css}">
+
+
+
+        <div class="send-container">
+            <!-- 1. 공통 스텝바 컴포넌트 호출 (자식이 전달한 activeStep 모델 바인딩) -->
+            <div th:replace="~{fragments/send/steps :: stepsFragment(${activeStep})}"></div>
+
+            <!-- 2. 가변 컨텐츠 본문 영역 (자식 템플릿의 send-content 프래그먼트가 치환되어 꽂힐 구멍) -->
+            <div class="step-content-wrapper" layout:fragment="send-content">
+                <!-- 하위 템플릿의 조각들이 삽입되는 곳 -->
+            </div>
+
+            <!-- 3. 하단 스텝 전환 액션바 (자식이 전달한 activeStep 모델 바인딩) -->
+            <div th:replace="~{fragments/send/action-bar :: actionBarFragment(${activeStep})}"></div>
+        </div>
+
+        <!-- 발송 화면 전용 JS 추가 (스프링 자동 캐시 버스팅 활성화) -->
+        <script th:src="@{/js/pages/send.js}"></script>
+    </main>
+</body>
+
+</html>
