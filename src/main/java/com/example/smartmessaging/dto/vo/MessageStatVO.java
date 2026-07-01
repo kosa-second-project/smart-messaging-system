@@ -14,9 +14,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class MessageStatVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal totalSendCount;
-    private BigDecimal totalSuccessCount;
+    private Long id;
+    private Integer totalSendCount;
+    private Integer totalSuccessCount;
     private BigDecimal billingCost;
     private BigDecimal maxCost;
     private LocalDate date;

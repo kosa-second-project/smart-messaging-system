@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -14,14 +13,14 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class CustomerStatVO extends BaseVO {
-    private BigDecimal id;
+    private Long id;
     private LocalDate date;
-    private BigDecimal totalCustomerCount;
-    private BigDecimal normalCustomerCount;
-    private BigDecimal newCustomerCount;
-    private BigDecimal dormantCustomerCount;
-    private BigDecimal smsConsentCount;
-    private BigDecimal kakaoConsentCount;
-    private BigDecimal emailConsentCount;
-    private BigDecimal joinedCustomerCount;
+    private Integer totalCustomerCount;
+    private Integer normalCustomerCount;
+    private Integer newCustomerCount;
+    private Integer dormantCustomerCount;
+    private Integer smsConsentCount;
+    private Integer kakaoConsentCount;
+    private Integer emailConsentCount;
+    private Integer joinedCustomerCount;
 }

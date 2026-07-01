@@ -13,9 +13,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class ChannelVO extends BaseVO {
-    private BigDecimal id;
+    private Long id;
     private String channelType;
     private BigDecimal costPerMsg;
-    private BigDecimal maxLength;
+    private Integer maxLength;
     private Boolean isActive;
 }

@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -13,9 +12,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class TryHistoryVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal sendHistoryId;
-    private BigDecimal degree;
-    private BigDecimal successCount;
-    private BigDecimal failCount;
+    private Long id;
+    private Long sendHistoryId;
+    private Integer degree;
+    private Integer successCount;
+    private Integer failCount;
 }

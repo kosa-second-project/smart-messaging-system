@@ -14,11 +14,11 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class MessageStatByDegreeVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal degree;
-    private BigDecimal sendCount;
-    private BigDecimal successCount;
+    private Long id;
+    private Integer degree;
+    private Integer sendCount;
+    private Integer successCount;
     private LocalDate date;
     private BigDecimal cost;
-    private BigDecimal channelId;
+    private Long channelId;
 }

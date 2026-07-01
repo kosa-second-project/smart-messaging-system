@@ -13,10 +13,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class SendTargetVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal sendHistoryId;
-    private BigDecimal customerId;
-    private BigDecimal finalChannelId;
+    private Long id;
+    private Long sendHistoryId;
+    private Long customerId;
+    private Long finalChannelId;
     private String status;
     private BigDecimal cost;
     private String userUuid;

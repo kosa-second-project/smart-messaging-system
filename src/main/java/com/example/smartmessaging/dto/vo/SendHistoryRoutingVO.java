@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -13,8 +12,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class SendHistoryRoutingVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal channelId;
-    private BigDecimal sendHistoryId;
-    private BigDecimal priorityOrder;
+    private Long id;
+    private Long channelId;
+    private Long sendHistoryId;
+    private Integer priorityOrder;
 }

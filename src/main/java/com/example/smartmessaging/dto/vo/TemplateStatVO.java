@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -14,13 +13,13 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class TemplateStatVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal templateId;
-    private BigDecimal rank;
+    private Long id;
+    private Long templateId;
+    private Integer rank;
     private LocalDate date;
-    private BigDecimal count;
-    private BigDecimal clickTargetCount;
-    private BigDecimal clickCount;
-    private BigDecimal conversionTargetCount;
-    private BigDecimal conversionCount;
+    private Integer count;
+    private Integer clickTargetCount;
+    private Integer clickCount;
+    private Integer conversionTargetCount;
+    private Integer conversionCount;
 }

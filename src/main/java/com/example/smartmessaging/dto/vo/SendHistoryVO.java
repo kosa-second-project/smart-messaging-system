@@ -14,17 +14,17 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SendHistoryVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal templateId;
-    private BigDecimal userId;
+    private Long id;
+    private Long templateId;
+    private Long userId;
     private String title;
     private String content;
     private String purpose;
     private String status;
     private String solapiGroupId;
-    private BigDecimal totalTargetCount;
-    private BigDecimal successCount;
-    private BigDecimal failCount;
+    private Integer totalTargetCount;
+    private Integer successCount;
+    private Integer failCount;
     private BigDecimal estimatedCost;
     private BigDecimal estimatedSaving;
     private BigDecimal actualCost;

@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -13,8 +12,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class CustomerChannelConsentVO extends BaseVO {
-    private BigDecimal id;
+    private Long id;
     private Boolean isConsented;
-    private BigDecimal customerId;
-    private BigDecimal channelId;
+    private Long customerId;
+    private Long channelId;
 }
