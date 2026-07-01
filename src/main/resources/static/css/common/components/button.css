@@ -1,0 +1,80 @@
+.ds-button {
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+.ds-button--sm {
+  min-height: 2rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.ds-button--lg {
+  min-height: 2.75rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.ds-button--primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.ds-button--primary:hover {
+  background: color-mix(in srgb, var(--primary) 90%, #000000);
+}
+
+.ds-button--outline {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.ds-button--outline:hover {
+  background: var(--muted);
+}
+
+.ds-button--ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.ds-button--ghost:hover {
+  background: var(--muted);
+}
+
+.ds-button--danger {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+.ds-button--success {
+  background: var(--success);
+  color: var(--success-foreground);
+}
+
+.ds-icon-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--muted-foreground);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.ds-icon-button:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}

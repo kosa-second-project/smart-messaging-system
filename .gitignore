@@ -17,6 +17,7 @@ out/
 *.code-workspace
 
 # STS (Spring Tool Suite) / Eclipse
+.metadata/
 .apt_generated/
 .classpath
 .factorypath

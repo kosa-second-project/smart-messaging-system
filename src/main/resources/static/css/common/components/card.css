@@ -1,0 +1,32 @@
+.ds-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+.ds-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ds-card__title {
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.ds-card__description {
+  margin-top: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.ds-card__body {
+  padding: 1rem;
+}
