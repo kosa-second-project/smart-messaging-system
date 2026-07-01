@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head th:replace="~{fragments/head :: headFragment(~{::title})}">
+    <title>Empty Layout</title>
+</head>
+<body class="bg-light">
+    <!-- GNB/LNB가 배제된 단독 화면용 (로그인, 회원가입, 팝업 등) -->
+    <main layout:fragment="content">
+    </main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<aside th:fragment="sidebarFragment" class="bg-light border-end" style="width: var(--sidebar-width); min-height: calc(100vh - var(--header-height));">
+    <div class="list-group list-group-flush">
+        <a href="/" class="list-group-item list-group-item-action bg-light p-3">대시보드</a>
+        <a href="/campaign/list" class="list-group-item list-group-item-action bg-light p-3">캠페인 관리</a>
+        <a href="/target/setting" class="list-group-item list-group-item-action bg-light p-3">타겟 세그먼트 설정</a>
+        <a href="/template/list" class="list-group-item list-group-item-action bg-light p-3">메시지 템플릿</a>
+        <a href="/report/dashboard" class="list-group-item list-group-item-action bg-light p-3">발송 리포트/통계</a>
+    </div>
+</aside>
+</html>

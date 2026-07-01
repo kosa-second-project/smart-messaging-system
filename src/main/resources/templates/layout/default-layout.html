@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head th:replace="~{fragments/head :: headFragment(~{::title})}">
+    <title>Default Layout</title>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 1. 상단 내비게이션 바 (GNB) -->
+        <header th:replace="~{fragments/header :: headerFragment}"></header>
+        
+        <div class="app-body d-flex">
+            <!-- 2. 좌측 사이드바 (LNB) -->
+            <aside th:replace="~{fragments/sidebar :: sidebarFragment}"></aside>
+            
+            <!-- 3. 메인 콘텐츠 영역 (자식 페이지의 layout:fragment="content" 영역이 여기에 바인딩됨) -->
+            <main class="content-area flex-grow-1 p-4" layout:fragment="content">
+                <!-- 개별 페이지의 내용이 들어옵니다. -->
+            </main>
+        </div>
+        
+        <!-- 4. 푸터 -->
+        <footer th:replace="~{fragments/footer :: footerFragment}</footer>
+    </div>
+</body>
+</html>
