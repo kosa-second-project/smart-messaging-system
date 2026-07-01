@@ -6,21 +6,18 @@
     <!-- 1. 사원번호로 활성화된 사원 정보 조회 -->
     <select id="findByEmpNum" resultType="UsersVO">
         SELECT 
-            user_id AS userId,
-            emp_num AS empNum,
-            pwd AS pwd,
-            name AS name,
-            is_active AS isActive,
-            created_at AS createdAt,
-            updated_at AS updatedAt,
-            created_by AS createdBy,
-            updated_by AS updatedBy,
-            is_deleted AS isDeleted
+            user_id,
+            emp_num,
+            pwd,
+            name,
+            is_active,
+            <include refid="Common.auditColumns"/>
         FROM "users"
         WHERE emp_num = #{empNum}
           AND is_deleted = 0
           AND is_active = 1
     </select>
+
 
     <!-- 2. 사용자 ID로 보유한 권한 리스트 조회 -->
     <select id="findAuthoritiesByUserId" resultType="string">
