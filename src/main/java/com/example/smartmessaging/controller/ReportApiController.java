@@ -20,4 +20,24 @@ public class ReportApiController {
     public ReportPageResponse getDeliveryReport(@ModelAttribute ReportSearchRequest request) {
         return reportService.getDeliveryReport(request);
     }
+
+    @GetMapping("/channel")
+    public ReportPageResponse getChannelReport(@ModelAttribute ReportSearchRequest request) {
+        return reportService.getChannelReport(request);
+    }
+
+    @GetMapping("/cost")
+    public ReportPageResponse getCostReport(@ModelAttribute ReportSearchRequest request) {
+        return reportService.getCostReport(request);
+    }
+
+    @GetMapping("/customer")
+    public ReportPageResponse getCustomerReport(@ModelAttribute ReportSearchRequest request) {
+        return reportService.getCustomerReport(request);
+    }
+
+    @GetMapping("/performance")
+    public ReportPageResponse getPerformanceReport(@ModelAttribute ReportSearchRequest request) {
+        return reportService.getPerformanceReport(request);
+    }
 }
