@@ -36,6 +36,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6' // Thymeleaf에서 Security 표현식 사용 지원
 
+    // AOP (Aspect Oriented Programming - 공통 로깅)
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+
     // Database & MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc11' // Oracle JDBC (JDK 17 호환)
