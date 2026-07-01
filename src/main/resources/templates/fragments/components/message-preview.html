@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="preview(mode, title, content, sender)"
+     th:with="previewMode=${mode ?: 'sms'},
+              previewTitle=${title ?: '메시지 제목'},
+              previewContent=${content ?: '메시지 내용을 입력하세요.'},
+              previewSender=${sender ?: '010-0000-0000'}"
+     th:class="|message-preview message-preview--${previewMode}|">
+    <div class="message-preview__screen">
+        <span class="message-preview__sensor" aria-hidden="true"></span>
+        <div class="message-preview__status">
+            <span>9:41</span>
+            <span aria-hidden="true">▰</span>
+        </div>
+        <div class="message-preview__title"
+             th:text="${previewMode == 'kakao' ? '카카오 알림톡' : (previewMode == 'email' ? 'Email' : '메시지')}">메시지</div>
+
+        <div class="message-preview__body">
+            <th:block th:if="${previewMode == 'email'}">
+                <div class="message-preview__mail-header">
+                    <span class="message-preview__mail-logo">M</span>
+                    <strong>현대홈쇼핑</strong>
+                </div>
+                <div class="message-preview__mail-title" th:text="${previewTitle}">메일 제목</div>
+                <div class="message-preview__mail-meta">
+                    <span class="message-preview__mail-avatar">현</span>
+                    <span>
+                        <strong th:text="${previewSender}">현대홈쇼핑</strong>
+                        <small>to me · 오전 9:41</small>
+                    </span>
+                </div>
+                <div class="message-preview__bubble" th:text="${previewContent}">메일 내용</div>
+            </th:block>
+
+            <th:block th:unless="${previewMode == 'email'}">
+                <div class="message-preview__sender" th:text="${previewSender}">010-0000-0000</div>
+                <div class="message-preview__bubble-group">
+                    <div class="message-preview__bubble">
+                        <div class="message-preview__bubble-title" th:text="${previewTitle}">메시지 제목</div>
+                        <span class="message-preview__bubble-text" th:text="${previewContent}">메시지 내용</span>
+                    </div>
+                    <div th:if="${previewMode == 'kakao'}" class="message-preview__kakao-action">자세히 보기</div>
+                </div>
+            </th:block>
+        </div>
+        <span class="message-preview__home" aria-hidden="true"></span>
+    </div>
+</div>
+</html>

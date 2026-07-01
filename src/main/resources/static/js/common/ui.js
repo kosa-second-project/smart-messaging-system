@@ -5,11 +5,54 @@ $(function() {
     console.log("Global UI Module Loaded.");
     
     // GNB/LNB 현재 메뉴 활성화 자동 처리 예시
-    const currentPath = window.location.pathname;
+    const currentPath = window.location.pathname === "/" ? "/dashboard" : window.location.pathname;
     $(".list-group-item").each(function() {
         const href = $(this).attr("href");
         if (currentPath === href) {
             $(this).addClass("active").removeClass("bg-light");
         }
+    });
+
+    $(".app-nav__item").each(function() {
+        const href = $(this).attr("href");
+        if (href && currentPath === href.split("#")[0]) {
+            $(this).addClass("is-active");
+        }
+    });
+
+    $(".app-nav__subitem").each(function() {
+        const href = $(this).attr("href");
+        if (href && currentPath === href.split("#")[0]) {
+            $(this).addClass("is-active");
+        }
+    });
+
+    const $statsNav = $("[data-stats-nav]");
+    const $statsToggle = $("[data-stats-toggle]");
+    const isStatsPage = currentPath.startsWith("/stats/");
+
+    function setStatsOpen(open) {
+        $statsNav.toggleClass("is-open", open);
+        $statsToggle.toggleClass("is-active", isStatsPage);
+        $statsToggle.attr("aria-expanded", open ? "true" : "false");
+    }
+
+    setStatsOpen(isStatsPage);
+
+    $statsToggle.on("click", function() {
+        setStatsOpen(!$statsNav.hasClass("is-open"));
+    });
+
+    const $sidebar = $("#appSidebar");
+    const $backdrop = $("[data-sidebar-close]");
+
+    $("[data-sidebar-open]").on("click", function() {
+        $sidebar.addClass("is-open");
+        $backdrop.addClass("is-open");
+    });
+
+    $("[data-sidebar-close], .app-nav__item").on("click", function() {
+        $sidebar.removeClass("is-open");
+        $backdrop.removeClass("is-open");
     });
 });

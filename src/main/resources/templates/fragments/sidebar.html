@@ -1,12 +1,97 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<aside th:fragment="sidebarFragment" class="bg-light border-end" style="width: var(--sidebar-width); min-height: calc(100vh - var(--header-height));">
-    <div class="list-group list-group-flush">
-        <a href="/" class="list-group-item list-group-item-action bg-light p-3">대시보드</a>
-        <a href="/campaign/list" class="list-group-item list-group-item-action bg-light p-3">캠페인 관리</a>
-        <a href="/target/setting" class="list-group-item list-group-item-action bg-light p-3">타겟 세그먼트 설정</a>
-        <a href="/template/list" class="list-group-item list-group-item-action bg-light p-3">메시지 템플릿</a>
-        <a href="/report/dashboard" class="list-group-item list-group-item-action bg-light p-3">발송 리포트/통계</a>
+<aside th:fragment="sidebarFragment" id="appSidebar" class="app-sidebar">
+    <a href="/dashboard" class="app-sidebar__brand">
+        <span class="app-sidebar__logo">
+            <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </span>
+        <span>
+            <span class="app-sidebar__title d-block">현대홈쇼핑</span>
+            <span class="app-sidebar__subtitle d-block">관리자</span>
+        </span>
+    </a>
+
+    <nav class="app-nav" aria-label="주요 메뉴">
+        <div class="app-nav__section">
+            <a href="/dashboard" class="app-nav__item">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                    <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                    <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                    <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                </svg>
+                <span>대시보드</span>
+            </a>
+            <a href="/send" class="app-nav__item">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m22 2-7 20-4-9-9-4Z"></path>
+                    <path d="M22 2 11 13"></path>
+                </svg>
+                <span>메시지 발송</span>
+            </a>
+            <a href="/templates" class="app-nav__item">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                    <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                    <path d="M10 9H8"></path>
+                    <path d="M16 13H8"></path>
+                    <path d="M16 17H8"></path>
+                </svg>
+                <span>템플릿 관리</span>
+            </a>
+            <a href="/history" class="app-nav__item">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                    <path d="M12 7v5l4 2"></path>
+                </svg>
+                <span>전송 기록</span>
+            </a>
+            <a href="/customers" class="app-nav__item">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>고객 관리</span>
+            </a>
+        </div>
+
+        <div class="app-nav__stats" data-stats-nav>
+            <button type="button" class="app-nav__group" data-stats-toggle aria-expanded="false">
+                <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 3v18h18"></path>
+                    <path d="M18 17V9"></path>
+                    <path d="M13 17V5"></path>
+                    <path d="M8 17v-3"></path>
+                </svg>
+                <span class="flex-grow-1">통계</span>
+                <svg class="app-nav__icon app-nav__chevron" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </button>
+            <div class="app-nav__sublist" data-stats-sublist>
+                <a href="/stats/delivery" class="app-nav__subitem">발송 현황</a>
+                <a href="/stats/channel" class="app-nav__subitem">채널 분석</a>
+                <a href="/stats/cost" class="app-nav__subitem">비용 분석</a>
+                <a href="/stats/customer" class="app-nav__subitem">고객 분석</a>
+                <a href="/stats/performance" class="app-nav__subitem">성과 분석</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-sidebar__footer">
+        <button type="button" class="app-nav__item">
+            <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" x2="9" y1="12" y2="12"></line>
+            </svg>
+            <span>로그아웃</span>
+        </button>
     </div>
 </aside>
 </html>
