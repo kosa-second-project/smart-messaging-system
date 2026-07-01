@@ -12,7 +12,8 @@
             <span class="app-header__avatar">김</span>
             <span class="d-none d-sm-inline">김이름</span>
         </div>
-        <button type="button" class="ds-button ds-button--outline ds-button--sm">로그아웃</button>
+        <!-- 로그아웃 버튼을 시큐리티 로그아웃 GET 주소(/auth/logout) 링크로 연동 -->
+        <a th:href="@{/auth/logout}" class="ds-button ds-button--outline ds-button--sm" style="text-decoration: none;">로그아웃</a>
     </div>
 </header>
 </html>
