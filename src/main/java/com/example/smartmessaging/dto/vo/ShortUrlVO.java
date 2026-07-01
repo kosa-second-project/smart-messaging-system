@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
 public class ShortUrlVO extends BaseVO {
     private String id;
     private String originalUrl;
-    private BigDecimal sendTargetId;
+    private Long sendTargetId;
     private Boolean isClicked;
     private LocalDateTime clickedAt;
     private Boolean isConverted;

@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -14,13 +13,13 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class ChannelStatVO extends BaseVO {
-    private BigDecimal id;
-    private BigDecimal clickTargetCount;
-    private BigDecimal clickCount;
-    private BigDecimal conversionTargetCount;
-    private BigDecimal conversionCount;
-    private BigDecimal consentTargetCount;
-    private BigDecimal consentCount;
+    private Long id;
+    private Integer clickTargetCount;
+    private Integer clickCount;
+    private Integer conversionTargetCount;
+    private Integer conversionCount;
+    private Integer consentTargetCount;
+    private Integer consentCount;
     private LocalDate date;
-    private BigDecimal channelId;
+    private Long channelId;
 }

@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -13,6 +12,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class AuthoritiesVO extends BaseVO {
-    private BigDecimal userId;
+    private Long userId;
     private String authority;
 }
