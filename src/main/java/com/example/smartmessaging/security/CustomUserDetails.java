@@ -42,7 +42,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // DB에 저장된 권한 문자열(예: ROLE_USER, ROLE_ADMIN)을 시큐리티가 인식하는 GrantedAuthority 객체로 변환
+        // DB에 저장된 권한 문자열을 시큐리티가 인식하는 GrantedAuthority 객체로 변환
         return this.roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
@@ -60,6 +60,7 @@ public class CustomUserDetails implements UserDetails {
         return this.usersVO.getEmpNum().toString();
     }
 
+    // 아래 3개는 구현을 안했지만, UserDetails을 상속받아 강제로 재정의해야함 또한 추후에 사용될 수 있으므로 true로 기본값 설정
     @Override
     public boolean isAccountNonExpired() {
         return true; // 계정 만료 여부 (기본 true = 만료 안됨)
