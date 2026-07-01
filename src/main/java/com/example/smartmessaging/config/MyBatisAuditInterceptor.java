@@ -2,6 +2,8 @@ package com.example.smartmessaging.config;
 
 import com.example.smartmessaging.dto.vo.BaseVO;
 import com.example.smartmessaging.security.CustomUserDetails;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -40,9 +42,10 @@ public class MyBatisAuditInterceptor implements Interceptor {
                 currentUserId = userDetails.getUserId();
             }
 
-            // (비인증 상태의 회원가입이나 초기화 배치 시의 안전장치로 기본 시스템 어드민 ID 1L 매핑)
+            // 인증 정보가 없으면 감사 주체 누락으로 비즈니스 예외 발생 (하드코딩 1L 임시 처리를 제거하여 보안 무결성 확보)
             if (currentUserId == null) {
-                currentUserId = 1L; 
+                log.error("[MyBatis Audit Error] 감사 주체 ID를 찾을 수 없어 쿼리 처리를 제한합니다.");
+                throw new BusinessException(ErrorCode.UNAUTHORIZED_AUDIT_USER);
             }
 
             // 3. SQL 실행 유형(INSERT, UPDATE)에 따라 Audit 필드 값 주입 (시간 및 삭제 여부 기본값은 DB가 자동 처리하므로 생략)
