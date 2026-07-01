@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class UserInsertTest {
 
 
+
     @Autowired
     private UserMapper userMapper;
 
@@ -87,3 +88,5 @@ public class UserInsertTest {
         System.out.println("아이디(사원번호): 1001 | 비밀번호: 0000");
     }
 }
+
+
