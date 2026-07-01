@@ -14,9 +14,29 @@ public class PageController {
     }
 
     @GetMapping("/send")
-    public String send(Model model) {
+    public String sendRedirect() {
+        return "redirect:/send/recipients";
+    }
+
+    @GetMapping("/send/recipients")
+    public String sendRecipients(Model model) {
         model.addAttribute("pageTitle", "메시지 발송");
-        return "pages/send";
+        model.addAttribute("activeStep", 1);
+        return "pages/send/recipients";
+    }
+
+    @GetMapping("/send/message")
+    public String sendMessage(Model model) {
+        model.addAttribute("pageTitle", "메시지 발송");
+        model.addAttribute("activeStep", 2);
+        return "pages/send/message";
+    }
+
+    @GetMapping("/send/review")
+    public String sendReview(Model model) {
+        model.addAttribute("pageTitle", "메시지 발송");
+        model.addAttribute("activeStep", 3);
+        return "pages/send/review";
     }
 
     @GetMapping("/templates")
