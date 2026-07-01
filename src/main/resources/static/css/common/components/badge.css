@@ -1,0 +1,39 @@
+.ds-badge {
+  min-height: 1.375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ds-badge--primary {
+  background: rgba(24, 67, 250, 0.1);
+  color: var(--primary);
+}
+
+.ds-badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.ds-badge--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #A16207;
+}
+
+.ds-badge--danger {
+  background: rgba(224, 32, 32, 0.1);
+  color: var(--destructive);
+}
+
+.ds-badge--violet {
+  background: rgba(139, 92, 246, 0.12);
+  color: #6D28D9;
+}

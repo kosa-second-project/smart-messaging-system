@@ -1,0 +1,6 @@
+/*
+ * Deprecated compatibility file.
+ *
+ * Common component styles are loaded explicitly from templates/fragments/head.html
+ * with <link> tags under /css/common/components/.
+ */

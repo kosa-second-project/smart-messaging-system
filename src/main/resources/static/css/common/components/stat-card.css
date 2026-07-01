@@ -1,0 +1,60 @@
+.stat-card {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+
+.stat-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.stat-card__label {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat-card__icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: rgba(24, 67, 250, 0.1);
+  color: var(--primary);
+}
+
+.stat-card__value {
+  color: var(--foreground);
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.15;
+  word-break: keep-all;
+}
+
+.stat-card__sub {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.stat-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--success);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.stat-card__trend.is-danger {
+  color: var(--destructive);
+}
