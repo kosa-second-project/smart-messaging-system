@@ -4,6 +4,96 @@
       layout:decorate="~{layout/default-layout}">
 <head>
     <title>채널 분석</title>
+    <link rel="stylesheet" th:href="@{/css/pages/stats-channel.css}">
 </head>
-<main layout:fragment="content" class="page"></main>
+<main layout:fragment="content" class="page stats-channel-page">
+    <div class="stats-channel">
+        <section class="stats-channel__top">
+            <form id="statsPeriodForm" class="stats-period-control" aria-label="채널 분석 조회 기간">
+                <div class="stats-period-control__label">
+                    <svg class="stats-icon stats-icon--primary" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path>
+                    </svg>
+                    <span>기간</span>
+                </div>
+                <input id="statsStartDate" class="stats-period-control__input" type="date" value="2026-06-23">
+                <span class="stats-period-control__separator">~</span>
+                <input id="statsEndDate" class="stats-period-control__input" type="date" value="2026-06-29">
+                <span class="stats-period-control__badge">집계 기준</span>
+                <span id="statsPeriodLabel" class="stats-period-control__summary">2026-06-23 ~ 2026-06-29 (7일)</span>
+            </form>
+
+            <div class="stats-actions">
+                <button type="button" class="stats-button stats-button--outline" disabled title="PDF 다운로드">
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path d="M7 10l5 5 5-5"></path>
+                        <path d="M12 15V3"></path>
+                    </svg>
+                    PDF 다운로드
+                </button>
+                <button type="button" class="stats-button stats-button--outline" disabled title="Excel 다운로드">
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path d="M7 10l5 5 5-5"></path>
+                        <path d="M12 15V3"></path>
+                    </svg>
+                    Excel 다운로드
+                </button>
+            </div>
+        </section>
+
+        <section class="stats-channel__layout">
+            <div class="stats-channel__stack">
+                <article class="stats-channel-card">
+                    <h3 class="stats-channel-card__title">채널별 성공률/실패율 비교</h3>
+                    <div class="stats-channel-chart">
+                        <canvas id="channelSuccessChart" height="205"></canvas>
+                    </div>
+                </article>
+
+                <article class="stats-channel-card">
+                    <h3 class="stats-channel-card__title">채널별 추이</h3>
+                    <div class="stats-channel-chart">
+                        <canvas id="channelTrendChart" height="205"></canvas>
+                    </div>
+                </article>
+            </div>
+
+            <div class="stats-channel__stack">
+                <article class="stats-channel-card">
+                    <h3 class="stats-channel-card__title">채널별 발송 비중</h3>
+                    <div class="stats-channel-share">
+                        <div class="stats-channel-share__chart">
+                            <canvas id="channelShareChart" height="205"></canvas>
+                        </div>
+                        <div id="channelShareLegend" class="stats-channel-share__legend"></div>
+                    </div>
+                </article>
+
+                <article class="stats-channel-card stats-channel-card--table">
+                    <div class="stats-channel-card__head">
+                        <h3 class="stats-channel-card__title">채널별 비용</h3>
+                    </div>
+                    <div id="channelCostCards" class="stats-channel-mobile-list"></div>
+                    <div class="stats-channel-table-wrap">
+                        <table class="stats-channel-table">
+                            <thead>
+                            <tr>
+                                <th>채널</th>
+                                <th>발송량</th>
+                                <th>성공률</th>
+                                <th>총 비용</th>
+                            </tr>
+                            </thead>
+                            <tbody id="channelCostRows"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <script th:src="@{/js/pages/stats-channel.js}"></script>
+</main>
 </html>
