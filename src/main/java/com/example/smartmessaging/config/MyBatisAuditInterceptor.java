@@ -21,6 +21,13 @@ import java.util.Properties;
 })
 public class MyBatisAuditInterceptor implements Interceptor {
 
+    /**
+     * Populates audit fields on MyBatis update parameters that extend {@code BaseVO}.
+     *
+     * @param invocation the MyBatis invocation to continue
+     * @return the result of proceeding with the invocation
+     * @throws Throwable if the intercepted MyBatis call fails
+     */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         MappedStatement mappedStatement = (MappedStatement) invocation.getArgs()[0];
@@ -61,11 +68,22 @@ public class MyBatisAuditInterceptor implements Interceptor {
         return invocation.proceed();
     }
 
+    /**
+     * Wraps the target object with this interceptor.
+     *
+     * @param target the object to wrap
+     * @return the wrapped object
+     */
     @Override
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
 
+    /**
+     * Ignores interceptor configuration properties.
+     *
+     * @param properties interceptor properties
+     */
     @Override
     public void setProperties(Properties properties) {}
 }

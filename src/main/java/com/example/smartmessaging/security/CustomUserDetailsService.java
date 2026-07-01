@@ -18,6 +18,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserMapper userMapper;
 
+    /**
+     * Loads user details for the specified employee number.
+     *
+     * @param username the employee number used as the login identifier
+     * @return the authenticated user details with assigned authorities
+     * @throws UsernameNotFoundException if the employee number is not numeric or no active user exists for it
+     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.info("로그인 시도 사원번호(Username): {}", username);

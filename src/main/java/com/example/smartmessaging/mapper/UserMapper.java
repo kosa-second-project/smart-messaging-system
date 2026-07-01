@@ -9,23 +9,36 @@ import java.util.List;
 public interface UserMapper {
 
     /**
-     * 사원번호(empNum)로 활성화된 사원 정보를 조회합니다.
-     */
+ * Retrieves an active employee's information by employee number.
+ *
+ * @param empNum the employee number
+ * @return the matching user information
+ */
     UsersVO findByEmpNum(@Param("empNum") Integer empNum);
 
     /**
-     * 사용자 ID(userId)에 할당된 권한 목록을 조회합니다.
-     */
+ * Retrieves the authority list assigned to a user.
+ *
+ * @param userId the ID of the user
+ * @return the authority strings assigned to the specified user
+ */
     List<String> findAuthoritiesByUserId(@Param("userId") Long userId);
 
     /**
-     * 신규 사원을 데이터베이스에 등록합니다. (회원가입/사원생성 용)
-     */
+ * Inserts a new user record into the database.
+ *
+ * @param usersVO the user information to store
+ * @return the number of rows affected
+ */
     int insertUser(UsersVO usersVO);
 
     /**
-     * 특정 사원에게 권한을 할당합니다.
-     */
+ * Assigns a authority to the specified user.
+ *
+ * @param userId the user identifier
+ * @param authority the authority to assign
+ * @return the number of rows affected
+ */
     int insertAuthority(@Param("userId") Long userId, @Param("authority") String authority);
 }
 

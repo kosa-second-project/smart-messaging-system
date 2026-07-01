@@ -19,7 +19,11 @@ public class ServiceLoggingAspect {
     public void serviceMethods() {}
 
     /**
-     * 모든 비즈니스 서비스 로직 실행 전후에 개입하여 실행 시간 측정 및 입출력 로그를 남깁니다.
+     * Logs service method execution, including masked arguments, timing, and errors.
+     *
+     * @param joinPoint the intercepted method invocation
+     * @return the intercepted method result
+     * @throws Throwable if the intercepted method throws an exception
      */
     @Around("serviceMethods()")
     public Object logServiceMethod(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -50,7 +54,10 @@ public class ServiceLoggingAspect {
     }
 
     /**
-     * 로그 파일 및 콘솔에 고객 개인정보(이름, 이메일, 전화번호) 및 비밀번호가 평문 노출되는 것을 방어하는 필터링 유틸
+     * Masks method arguments for logging.
+     *
+     * @param args the arguments to mask
+     * @return a string representation of the arguments with sensitive values masked
      */
     private String maskArguments(Object[] args) {
         if (args == null) return "[]";
