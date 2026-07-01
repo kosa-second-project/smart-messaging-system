@@ -5,7 +5,7 @@
 
     <!-- 1. INSERT 시 공통 Audit 컬럼 목록 -->
     <sql id="auditColumns">
-        "created_at", "updated_at", "created_by", "updated_by", "is_deleted"
+        created_at, updated_at, created_by, updated_by, is_deleted
     </sql>
 
     <!-- 2. INSERT 시 공통 Audit 바인딩 값 목록 -->
@@ -15,9 +15,10 @@
 
     <!-- 3. UPDATE 시 공통 Audit 수정 값 목록 -->
     <sql id="auditUpdateValues">
-        "updated_at" = SYSTIMESTAMP,
-        "updated_by" = #{updatedBy}
+        updated_at = SYSTIMESTAMP,
+        updated_by = #{updatedBy}
     </sql>
+
 
 
 </mapper>
