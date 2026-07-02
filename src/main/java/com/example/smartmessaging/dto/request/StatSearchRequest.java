@@ -15,4 +15,6 @@ public class StatSearchRequest {
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate to;
+
+    private String channel;
 }
