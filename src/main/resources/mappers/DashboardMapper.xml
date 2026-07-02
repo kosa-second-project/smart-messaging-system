@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.DashboardMapper">
+
+    <select id="selectRecentSends" resultType="SendHistoryVO">
+        SELECT
+            sh.id,
+            sh.title,
+            sh.purpose,
+            sh.total_target_count,
+            sh.success_count,
+            sh.fail_count,
+            sh.status,
+            sh.scheduled_at,
+            sh.completed_at,
+            sh.created_at
+        FROM send_history sh
+        WHERE sh.is_deleted = 0
+        ORDER BY COALESCE(sh.completed_at, sh.scheduled_at, sh.created_at) DESC
+        FETCH FIRST 5 ROWS ONLY
+    </select>
+
+    <select id="selectTemplatePerformanceTop" parameterType="StatSearchRequest" resultType="com.example.smartmessaging.dto.response.DashboardSummaryResponse$TemplatePerformance">
+        SELECT
+            COALESCE(t.title, '템플릿 ' || ts.template_id) AS name,
+            CASE
+                WHEN SUM(COALESCE(ts.click_target_count, 0)) = 0 THEN 0
+                ELSE ROUND((SUM(COALESCE(ts.click_count, 0)) / SUM(COALESCE(ts.click_target_count, 0))) * 100, 1)
+            END AS click,
+            CASE
+                WHEN SUM(COALESCE(ts.conversion_target_count, 0)) = 0 THEN NULL
+                ELSE ROUND((SUM(COALESCE(ts.conversion_count, 0)) / SUM(COALESCE(ts.conversion_target_count, 0))) * 100, 1)
+            END AS conversion,
+            CASE
+                WHEN COALESCE(t.is_ai_generated, 0) = 1 THEN 'AI 템플릿'
+                ELSE '기본 템플릿'
+            END AS source
+        FROM template_stat ts
+        LEFT JOIN template t
+               ON t.id = ts.template_id
+              AND t.is_deleted = 0
+        WHERE ts.is_deleted = 0
+        <if test="from != null">
+          AND ts.stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND ts.stat_date &lt;= #{to}
+        </if>
+        GROUP BY ts.template_id, t.title, t.is_ai_generated
+        ORDER BY
+            CASE
+                WHEN SUM(COALESCE(ts.click_target_count, 0)) = 0 THEN 0
+                ELSE SUM(COALESCE(ts.click_count, 0)) / SUM(COALESCE(ts.click_target_count, 0))
+            END DESC,
+            SUM(COALESCE(ts.click_count, 0)) DESC
+        FETCH FIRST 5 ROWS ONLY
+    </select>
+</mapper>
