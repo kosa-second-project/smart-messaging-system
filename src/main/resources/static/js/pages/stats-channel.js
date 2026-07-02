@@ -102,145 +102,26 @@ function renderChannelShareLegend(rows) {
 }
 
 function drawHorizontalSuccessChart(canvas, rows) {
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = setupCanvas(canvas);
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const padding = { top: 8, right: 18, bottom: 28, left: 90 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-    const min = 96;
-    const max = 100;
-    const rowGap = 18;
-    const barHeight = Math.min(14, (chartHeight - rowGap * (rows.length - 1)) / rows.length);
-
-    clearCanvas(ctx, width, height);
-    drawHorizontalGrid(ctx, padding, chartWidth, chartHeight, min, max);
-
-    rows.forEach(function(row, index) {
-        const y = padding.top + index * (barHeight + rowGap);
-        const barWidth = ((row.successRate - min) / (max - min)) * chartWidth;
-        drawText(ctx, row.channel, padding.left - 8, y + barHeight * 0.72, {
-            align: "right",
-            fill: "#0A0A0F",
-            size: 10
-        });
-        ctx.fillStyle = "#1843FA";
-        roundRect(ctx, padding.left, y, Math.max(2, barWidth), barHeight, 0, 3, 3, 0);
-        ctx.fill();
-        drawText(ctx, `${row.successRate}%`, padding.left + Math.min(chartWidth - 2, barWidth + 8), y + barHeight * 0.72, {
-            align: barWidth > chartWidth - 34 ? "right" : "left",
-            fill: barWidth > chartWidth - 34 ? "#FFFFFF" : "#6B6B80",
-            size: 10,
-            weight: 700
-        });
+    StatsChart.horizontalBar(canvas, rows, {
+        color: "#1843FA",
+        label: "성공률",
+        xMin: 96,
+        xMax: 100,
+        tooltipSuffix: "%",
+        yFormatter: function(value) {
+            return `${value}%`;
+        }
     });
-
-    [96, 97, 98, 99, 100].forEach(function(value) {
-        const x = padding.left + ((value - min) / (max - min)) * chartWidth;
-        drawText(ctx, `${value}%`, x, height - 8, {
-            align: "center",
-            fill: "#6B6B80",
-            size: 10
-        });
-    });
-}
-
-function drawHorizontalGrid(ctx, padding, chartWidth, chartHeight, min, max) {
-    ctx.save();
-    ctx.strokeStyle = "#f0f0f5";
-    ctx.setLineDash([3, 3]);
-    ctx.lineWidth = 1;
-    [96, 97, 98, 99, 100].forEach(function(value) {
-        const x = padding.left + ((value - min) / (max - min)) * chartWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, padding.top);
-        ctx.lineTo(x, padding.top + chartHeight);
-        ctx.stroke();
-    });
-    ctx.restore();
 }
 
 function drawLineChart(canvas, rows, options) {
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = setupCanvas(canvas);
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const padding = { top: 8, right: 18, bottom: 42, left: 46 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom - 18;
-    const values = rows.flatMap(function(row) {
-        return options.keys.map(function(key) {
-            return Number(row[key]) || 0;
-        });
-    });
-    const max = Math.max.apply(null, values) * 1.12;
-
-    clearCanvas(ctx, width, height);
-    drawGrid(ctx, padding, chartWidth, chartHeight, 0, max, 4, options.yFormatter);
-
-    options.keys.forEach(function(key, index) {
-        const points = getLinePoints(rows, key, padding, chartWidth, chartHeight, 0, max);
-        drawLine(ctx, points, options.colors[index], 2);
-    });
-
-    rows.forEach(function(row, index) {
-        const x = padding.left + (rows.length === 1 ? chartWidth / 2 : (chartWidth / (rows.length - 1)) * index);
-        drawText(ctx, row.label, x, padding.top + chartHeight + 18, {
-            align: "center",
-            fill: "#6B6B80",
-            size: 11
-        });
-    });
-
-    drawLegend(ctx, options.labels, options.colors, padding.left, height - 8);
+    StatsChart.line(canvas, rows, options);
 }
 
 function drawDonutChart(canvas, rows) {
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = setupCanvas(canvas);
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const total = rows.reduce(function(sum, row) {
-        return sum + row.value;
-    }, 0);
-    const radius = Math.min(width, height) * 0.29;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    let start = -Math.PI / 2;
-
-    clearCanvas(ctx, width, height);
-
-    rows.forEach(function(row) {
-        const angle = total === 0 ? 0 : (row.value / total) * Math.PI * 2;
-        ctx.save();
-        ctx.strokeStyle = row.color;
-        ctx.lineWidth = Math.max(18, radius * 0.34);
-        ctx.lineCap = "butt";
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, start, start + angle);
-        ctx.stroke();
-        ctx.restore();
-
-        const labelAngle = start + angle / 2;
-        const labelX = centerX + Math.cos(labelAngle) * (radius + 18);
-        const labelY = centerY + Math.sin(labelAngle) * (radius + 18);
-        drawText(ctx, `${row.value}%`, labelX, labelY + 3, {
-            align: "center",
-            fill: "#0A0A0F",
-            size: 10,
-            weight: 700
-        });
-        start += angle + 0.045;
+    StatsChart.doughnut(canvas, rows, {
+        legend: false,
+        tooltipSuffix: "%"
     });
 }
 
@@ -342,108 +223,6 @@ function createStatsBuckets(period) {
     }
 
     return { grain, buckets };
-}
-
-function setupCanvas(canvas) {
-    const dpr = window.devicePixelRatio || 1;
-    const width = Math.max(1, canvas.clientWidth);
-    const height = Math.max(1, canvas.clientHeight);
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return ctx;
-}
-
-function clearCanvas(ctx, width, height) {
-    ctx.clearRect(0, 0, width, height);
-}
-
-function drawGrid(ctx, padding, chartWidth, chartHeight, min, max, ticks, formatter) {
-    ctx.save();
-    ctx.strokeStyle = "#f0f0f5";
-    ctx.setLineDash([3, 3]);
-    ctx.lineWidth = 1;
-
-    for (let index = 0; index <= ticks; index += 1) {
-        const ratio = index / ticks;
-        const y = padding.top + chartHeight - chartHeight * ratio;
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(padding.left + chartWidth, y);
-        ctx.stroke();
-        drawText(ctx, formatter(min + (max - min) * ratio), padding.left - 8, y + 4, {
-            align: "right",
-            fill: "#6B6B80",
-            size: 11
-        });
-    }
-    ctx.restore();
-}
-
-function getLinePoints(rows, key, padding, chartWidth, chartHeight, min, max) {
-    return rows.map(function(row, index) {
-        const x = padding.left + (rows.length === 1 ? chartWidth / 2 : (chartWidth / (rows.length - 1)) * index);
-        const value = Number(row[key]) || 0;
-        const y = padding.top + chartHeight - ((value - min) / (max - min)) * chartHeight;
-        return { x, y };
-    });
-}
-
-function drawLine(ctx, points, color, lineWidth) {
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.beginPath();
-    points.forEach(function(point, index) {
-        if (index === 0) {
-            ctx.moveTo(point.x, point.y);
-        } else {
-            ctx.lineTo(point.x, point.y);
-        }
-    });
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawLegend(ctx, labels, colors, x, y) {
-    let cursor = x;
-    labels.forEach(function(label, index) {
-        ctx.fillStyle = colors[index];
-        ctx.fillRect(cursor, y - 8, 8, 8);
-        drawText(ctx, label, cursor + 14, y, {
-            align: "left",
-            fill: "#0A0A0F",
-            size: 11
-        });
-        cursor += ctx.measureText(label).width + 52;
-    });
-}
-
-function drawText(ctx, text, x, y, options) {
-    ctx.save();
-    ctx.fillStyle = options.fill || "#0A0A0F";
-    ctx.font = `${options.weight || 400} ${options.size || 12}px "Pretendard Variable", "Pretendard", "Inter", sans-serif`;
-    ctx.textAlign = options.align || "left";
-    ctx.fillText(text, x, y);
-    ctx.restore();
-}
-
-function roundRect(ctx, x, y, width, height, topLeft, topRight, bottomRight, bottomLeft) {
-    const radii = [topLeft, topRight, bottomRight, bottomLeft].map(function(radius) {
-        return Math.min(radius || 0, width / 2, height / 2);
-    });
-    ctx.beginPath();
-    ctx.moveTo(x + radii[0], y);
-    ctx.lineTo(x + width - radii[1], y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radii[1]);
-    ctx.lineTo(x + width, y + height - radii[2]);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radii[2], y + height);
-    ctx.lineTo(x + radii[3], y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radii[3]);
-    ctx.lineTo(x, y + radii[0]);
-    ctx.quadraticCurveTo(x, y, x + radii[0], y);
-    ctx.closePath();
 }
 
 function parseStatDate(value) {
