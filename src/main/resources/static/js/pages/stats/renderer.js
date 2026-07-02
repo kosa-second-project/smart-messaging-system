@@ -1,4 +1,5 @@
 const StatsRenderer = (function() {
+    const MAX_PERIOD_DAYS = 365;
     const palette = ["#1843FA", "#10B981", "#F59E0B", "#0EA5E9", "#8B5CF6", "#EF4444"];
     const iconNames = ["send", "check", "activity", "target", "refresh", "chart"];
     const colorNames = ["blue", "green", "violet", "amber", "green", "blue"];
@@ -148,8 +149,11 @@ const StatsRenderer = (function() {
     function getPeriod(defaultPeriod) {
         const start = $("#statsStartDate").val() || defaultPeriod.start;
         const end = $("#statsEndDate").val() || defaultPeriod.end;
+        const period = limitPeriod(orderPeriod({ start, end }));
 
-        return orderPeriod({ start, end });
+        syncPeriodInputs(period);
+
+        return period;
     }
 
     function periodLabel(period) {
@@ -229,13 +233,48 @@ const StatsRenderer = (function() {
             : { start: period.end, end: period.start };
     }
 
+    function limitPeriod(period) {
+        if (!isValidDate(period.start) || !isValidDate(period.end) || getPeriodDays(period) <= MAX_PERIOD_DAYS) {
+            return period;
+        }
+
+        return {
+            start: period.start,
+            end: formatDate(addDays(parseDate(period.start), MAX_PERIOD_DAYS - 1))
+        };
+    }
+
     function getPeriodDays(period) {
         return Math.max(1, Math.round((parseDate(period.end).getTime() - parseDate(period.start).getTime()) / 86400000) + 1);
+    }
+
+    function syncPeriodInputs(period) {
+        if (!isValidDate(period.start) || !isValidDate(period.end)) {
+            return;
+        }
+
+        $("#statsStartDate").val(period.start);
+        $("#statsEndDate")
+                .val(period.end)
+                .attr("max", formatDate(addDays(parseDate(period.start), MAX_PERIOD_DAYS - 1)));
     }
 
     function parseDate(value) {
         const parts = value.split("-").map(Number);
         return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function addDays(date, days) {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        return next;
+    }
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
     }
 
     function isValidDate(value) {
