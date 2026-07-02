@@ -246,7 +246,7 @@
   white-space: nowrap;
 }
 
-.history-table__success { color: #047857; }
+.history-table__success { color: var(--success); }
 .history-table__fail { color: var(--destructive); }
 
 .history-badges {
@@ -547,7 +547,7 @@ body.history-modal-open {
   white-space: nowrap;
 }
 
-.history-summary-card--success strong { color: #047857; }
+.history-summary-card--success strong { color: var(--success); }
 .history-summary-card--fail strong { color: var(--destructive); }
 
 .history-detail__actions {
