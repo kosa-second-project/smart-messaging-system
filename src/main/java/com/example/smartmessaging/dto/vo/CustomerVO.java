@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -21,7 +22,6 @@ public class CustomerVO extends BaseVO {
     private Boolean isAdBlocked;
     private LocalDateTime lastActiveAt;
     private LocalDateTime joinedAt;
-    private java.time.LocalDate birthDate;
-    private String gender;
+    private LocalDate birthDate;    // DB: BIRTH_DATE DATE
+    private String gender;           // DB: GENDER CHAR(1) - 'M', 'F' 등
 }
-

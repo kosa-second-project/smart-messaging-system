@@ -123,7 +123,7 @@ function fetchData() {
         nameParam = searchKeyword;
     }
 
-    let url = '/api/customers';
+    let url = '/api/customers/manage';
     let params = `page=${currentPage}&size=${pageSize}&sortOrder=${sortOrder}`;
 
     if (currentTab === 'members') {
@@ -274,7 +274,7 @@ function openDetailModal(customerId) {
     // 1. 고객 상세 카드 및 수신 이력 통합 호출
     Promise.all([
         // 탭 목록에서 해당 고객 정보를 찾아내기
-        fetch(`/api/customers?page=1&size=1000&name=&phone=`) // 간단히 상세 데이터는 고객 목록 API 필터로 대입 조회
+        fetch(`/api/customers/manage?page=1&size=1000&name=&phone=`) // 간단히 상세 데이터는 고객 목록 API 필터로 대입 조회
             .then(res => res.json())
             .then(data => (data.list || []).find(c => c.customerId === customerId)),
         // 메시지 이력 API
