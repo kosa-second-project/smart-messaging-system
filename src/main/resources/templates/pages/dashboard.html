@@ -4,6 +4,112 @@
       layout:decorate="~{layout/default-layout}">
 <head>
     <title>대시보드</title>
+    <link rel="stylesheet" th:href="@{/css/pages/dashboard.css}">
 </head>
-<main layout:fragment="content" class="page"></main>
+<main layout:fragment="content" class="page dashboard-page">
+    <div class="dashboard-shell">
+        <section id="dashboardStatsCards" class="stats-card-grid dashboard-kpi-grid" aria-label="대시보드 주요 지표"></section>
+
+        <section class="stats-card stats-queue-card dashboard-queue-card">
+            <div class="stats-queue-card__head">
+                <div>
+                    <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
+                    <p class="stats-card-subtitle">대량 발송 요청의 현재 처리 흐름입니다.</p>
+                </div>
+                <button type="button" class="dashboard-link-button" data-dashboard-modal-open>
+                    상세 분석
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m9 18 6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="dashboardQueueItems" class="stats-queue-grid"></div>
+            <div id="dashboardQueueBar" class="stats-queue-bar" aria-label="발송 큐 상태 비중"></div>
+        </section>
+
+        <section class="dashboard-chart-row">
+            <article class="stats-card stats-chart-card dashboard-cost-card">
+                <h3 class="stats-card-title">비용 비교 현황</h3>
+                <div class="stats-canvas-wrap dashboard-canvas-wrap">
+                    <canvas id="dashboardCostChart" height="240"></canvas>
+                </div>
+            </article>
+
+            <article class="stats-card stats-chart-card dashboard-channel-card">
+                <h3 class="stats-card-title">채널별 발송 비중</h3>
+                <div class="dashboard-channel-body">
+                    <div class="stats-canvas-wrap dashboard-donut-wrap">
+                        <canvas id="dashboardChannelChart" height="205"></canvas>
+                    </div>
+                    <div id="dashboardChannelLegend" class="dashboard-channel-legend"></div>
+                </div>
+            </article>
+        </section>
+
+        <section class="dashboard-bottom-row">
+            <article class="stats-card dashboard-list-card">
+                <div class="dashboard-card-head">
+                    <h3 class="stats-card-title">최근 전송 기록</h3>
+                    <a href="/history" class="dashboard-link-button">
+                        전체보기
+                        <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </a>
+                </div>
+                <div id="dashboardHistoryList" class="dashboard-history-list"></div>
+            </article>
+
+            <article class="stats-card stats-chart-card dashboard-trend-card">
+                <h3 class="stats-card-title">일별 발송 추이</h3>
+                <div class="stats-canvas-wrap dashboard-canvas-wrap">
+                    <canvas id="dashboardDailyChart" height="240"></canvas>
+                </div>
+            </article>
+
+            <article class="stats-card dashboard-list-card">
+                <div class="dashboard-card-head">
+                    <h3 class="stats-card-title">템플릿별 성과 Top 5</h3>
+                    <a href="/templates" class="dashboard-link-button">
+                        전체보기
+                        <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </a>
+                </div>
+                <div id="dashboardTemplateList" class="dashboard-template-list"></div>
+            </article>
+        </section>
+    </div>
+
+    <div class="dashboard-modal" data-dashboard-modal aria-hidden="true">
+        <button type="button" class="dashboard-modal__backdrop" data-dashboard-modal-close aria-label="상세 분석 닫기"></button>
+        <section class="dashboard-modal__panel" role="dialog" aria-modal="true" aria-labelledby="dashboardQueueModalTitle">
+            <div class="dashboard-modal__head">
+                <h3 id="dashboardQueueModalTitle">실시간 발송 큐 상태</h3>
+                <button type="button" class="dashboard-modal__close" data-dashboard-modal-close aria-label="닫기">
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="dashboard-modal__body">
+                <div id="dashboardModalSummary" class="dashboard-modal-summary"></div>
+                <div class="dashboard-modal-flow">
+                    <article class="dashboard-process-card">
+                        <h4>처리 단계</h4>
+                        <div id="dashboardProcessSteps" class="dashboard-process-steps"></div>
+                    </article>
+                    <article class="dashboard-work-card">
+                        <h4>현재 큐 작업</h4>
+                        <div id="dashboardQueueJobs" class="dashboard-queue-jobs"></div>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script th:src="@{/js/pages/dashboard.js}"></script>
+</main>
 </html>
