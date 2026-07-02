@@ -18,26 +18,31 @@ public class StatApiController {
 
     @GetMapping("/delivery")
     public StatPageResponse getDeliveryStats(@ModelAttribute StatSearchRequest request) {
+        request.validate();
         return statService.getDeliveryStats(request);
     }
 
     @GetMapping("/channel")
     public StatPageResponse getChannelStats(@ModelAttribute StatSearchRequest request) {
+        request.validate();
         return statService.getChannelStats(request);
     }
 
     @GetMapping("/cost")
     public StatPageResponse getCostStats(@ModelAttribute StatSearchRequest request) {
+        request.validate();
         return statService.getCostStats(request);
     }
 
     @GetMapping("/customer")
     public StatPageResponse getCustomerStats(@ModelAttribute StatSearchRequest request) {
+        request.validate();
         return statService.getCustomerStats(request);
     }
 
     @GetMapping("/performance")
     public StatPageResponse getPerformanceStats(@ModelAttribute StatSearchRequest request) {
+        request.validate();
         return statService.getPerformanceStats(request);
     }
 }
