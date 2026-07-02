@@ -1,11 +1,12 @@
 package com.example.smartmessaging.service;
 
+import com.example.smartmessaging.dto.request.CustomerSearchDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
-import com.example.smartmessaging.dto.response.CustomerSummaryResponse;
-import com.example.smartmessaging.dto.response.PagedCustomerResponse;
+import com.example.smartmessaging.dto.response.*;
 import com.example.smartmessaging.dto.vo.CustomerVO;
 import com.example.smartmessaging.mapper.CustomerMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,17 +15,54 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerMapper customerMapper;
     private final CampaignDraftService draftService;
 
+    // ==========================================
+    // 1. 고객 관리 탭 비즈니스 로직 (Customer Management)
+    // ==========================================
+
     @Override
-    @Transactional(readOnly = true)
+    public PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO) {
+        log.debug("[CustomerService] 고객 목록 조회 요청 - 필터: {}", searchDTO);
+        List<CustomerResponseDTO> list = customerMapper.selectCustomerList(searchDTO);
+        int totalCount = customerMapper.selectCustomerCount(searchDTO);
+        return new PageResponse<>(list, totalCount, searchDTO.getPage(), searchDTO.getSize());
+    }
+
+    @Override
+    public CustomerStatResponseDTO getCustomerStats() {
+        log.debug("[CustomerService] 고객 유형별 집계 통계 조회 요청");
+        return customerMapper.selectCustomerStats();
+    }
+
+    @Override
+    public List<CustomerReceiveHistoryResponseDTO> getCustomerReceiveHistory(Long customerId) {
+        log.debug("[CustomerService] 고객 수신 이력 조회 요청 - CustomerID: {}", customerId);
+        return customerMapper.selectCustomerReceiveHistory(customerId);
+    }
+
+    @Override
+    public PageResponse<RejectCustomerResponseDTO> getRejectCustomerList(CustomerSearchDTO searchDTO) {
+        log.debug("[CustomerService] 080 수신거부자 목록 조회 요청 - 필터: {}", searchDTO);
+        List<RejectCustomerResponseDTO> list = customerMapper.selectRejectCustomerList(searchDTO);
+        int totalCount = customerMapper.selectRejectCustomerCount(searchDTO);
+        return new PageResponse<>(list, totalCount, searchDTO.getPage(), searchDTO.getSize());
+    }
+
+    // ==========================================
+    // 2. 메시지 발송 탭 비즈니스 로직 (Campaign Sending Recipient Selection)
+    // ==========================================
+
+    @Override
     public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
+        log.debug("[CustomerService] 메시지 발송용 고객 목록 조회 요청 - ActiveTab: {}", request.getActiveTab());
 
         // 1. 고객 목록 조회
         List<CustomerVO> customers = customerMapper.findBySearch(request);
@@ -81,7 +119,6 @@ public class CustomerServiceImpl implements CustomerService {
                 })
                 .collect(Collectors.toList());
 
-
         // 7. 페이징 메타 계산 후 반환
         int totalPages = request.getSize() > 0 ? (int) Math.ceil((double) totalCount / request.getSize()) : 0;
 
@@ -93,6 +130,16 @@ public class CustomerServiceImpl implements CustomerService {
                 .totalPages(totalPages)
                 .build();
     }
+
+    @Override
+    public List<Long> getCustomerIds(CustomerSearchRequest request) {
+        log.debug("[CustomerService] 필터 조건 고객 ID 전체 조회 요청");
+        return customerMapper.findIdsBySearch(request);
+    }
+
+    // ==========================================
+    // 3. 내부 유틸리티 메서드
+    // ==========================================
 
     private String maskPhoneNumber(String phone) {
         if (phone == null || phone.isBlank()) {
@@ -106,13 +153,5 @@ public class CustomerServiceImpl implements CustomerService {
             return clean.replaceAll("(\\d{3})\\d{3}(\\d{4})", "$1-***-$2");
         }
         return phone; // 기타 규격 외 번호는 그대로 반환
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Long> getCustomerIds(CustomerSearchRequest request) {
-        // 페이지네이션 없이 필터 조건에 맞는 전체 고객 ID 목록 반환
-        // "필터 결과 전체 선택" 기능에서 사용
-        return customerMapper.findIdsBySearch(request);
     }
 }
