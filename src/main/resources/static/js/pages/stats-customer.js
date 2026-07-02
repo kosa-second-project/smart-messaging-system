@@ -72,35 +72,14 @@ function renderCustomerConsent() {
 }
 
 function drawNewCustomerBarChart(canvas, rows) {
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = setupCanvas(canvas);
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const padding = { top: 8, right: 8, bottom: 32, left: 44 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-    const max = Math.max.apply(null, rows.map(function(row) { return row.count; })) * 1.18;
-    const barWidth = Math.min(24, Math.max(8, chartWidth / rows.length - 10));
-
-    clearCanvas(ctx, width, height);
-    drawGrid(ctx, padding, chartWidth, chartHeight, 0, max, 4, function(value) {
-        return Math.round(value).toLocaleString();
-    });
-
-    rows.forEach(function(row, index) {
-        const groupWidth = chartWidth / rows.length;
-        const x = padding.left + index * groupWidth + (groupWidth - barWidth) / 2;
-        const barHeight = Math.max(2, (row.count / max) * chartHeight);
-        const y = padding.top + chartHeight - barHeight;
-        drawRoundedTopBar(ctx, x, y, barWidth, barHeight, 3, "#10B981");
-        drawText(ctx, row.label, padding.left + index * groupWidth + groupWidth / 2, padding.top + chartHeight + 20, {
-            align: "center",
-            fill: "#6B6B80",
-            size: 11
-        });
+    StatsChart.groupedBar(canvas, rows, {
+        keys: ["count"],
+        labels: ["신규 고객"],
+        colors: ["#10B981"],
+        legend: false,
+        yFormatter: function(value) {
+            return Math.round(value).toLocaleString();
+        }
     });
 }
 

@@ -70,36 +70,14 @@ function renderPerformanceCharts(state) {
 }
 
 function drawHourlyClickChart(canvas, rows) {
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = setupCanvas(canvas);
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const padding = { top: 8, right: 16, bottom: 38, left: 42 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom - 18;
-    const max = Math.max.apply(null, rows.map(function(row) { return row.rate; })) * 1.15;
-    const points = getLinePoints(rows, "rate", padding, chartWidth, chartHeight, 0, max);
-
-    clearCanvas(ctx, width, height);
-    drawGrid(ctx, padding, chartWidth, chartHeight, 0, max, 4, function(value) {
-        return `${Math.round(value)}%`;
-    });
-    drawLine(ctx, points, "#1843FA", 2.5);
-    drawDots(ctx, points, "#1843FA");
-
-    rows.forEach(function(row, index) {
-        if (index % 3 !== 0) {
-            return;
+    StatsChart.line(canvas, rows, {
+        keys: ["rate"],
+        labels: ["클릭률"],
+        colors: ["#1843FA"],
+        legend: false,
+        yFormatter: function(value) {
+            return `${Math.round(value)}%`;
         }
-        const x = padding.left + (chartWidth / (rows.length - 1)) * index;
-        drawText(ctx, row.label, x, padding.top + chartHeight + 18, {
-            align: "center",
-            fill: "#6B6B80",
-            size: 11
-        });
     });
 }
 
