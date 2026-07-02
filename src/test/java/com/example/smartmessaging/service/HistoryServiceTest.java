@@ -1,10 +1,9 @@
 package com.example.smartmessaging.service;
 
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
-import com.example.smartmessaging.dto.response.HistoryChannelResponseDTO;
-import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
-import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
-import com.example.smartmessaging.dto.response.PageResponseDTO;
+import com.example.smartmessaging.dto.response.*;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.mapper.HistoryMapper;
 import com.example.smartmessaging.service.impl.HistoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,8 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -104,5 +102,46 @@ class HistoryServiceTest {
                         tuple("SENT", "완료"),
                         tuple("FAILED", "실패")
                 );
+    }
+
+
+    @Test
+    void 상세조회에_채널_태그_대체발송흐름을_조립한다() {
+        HistoryDetailResponseDTO detail = new HistoryDetailResponseDTO();
+        detail.setSendHistoryId(11L);
+
+        HistoryChannelResponseDTO channel = new HistoryChannelResponseDTO();
+        channel.setSendHistoryId(11L);
+        channel.setChannelName("SMS");
+        HistoryTagResponseDTO tag = new HistoryTagResponseDTO();
+        tag.setSendHistoryId(11L);
+        tag.setTagName("이벤트");
+        HistoryAttemptFlowResponseDTO attempt = new HistoryAttemptFlowResponseDTO();
+        attempt.setAttemptOrder(1);
+        attempt.setChannelName("SMS");
+        attempt.setRequestCount(10);
+        attempt.setSuccessCount(8);
+        attempt.setFailCount(2);
+
+        when(historyMapper.findHistoryDetailById(11L)).thenReturn(detail);
+        when(historyMapper.findChannelsByHistoryIds(List.of(11L))).thenReturn(List.of(channel));
+        when(historyMapper.findTagsByHistoryIds(List.of(11L))).thenReturn(List.of(tag));
+        when(historyMapper.findAttemptFlowsByHistoryId(11L)).thenReturn(List.of(attempt));
+
+        HistoryDetailResponseDTO result = historyService.getHistoryDetail(11L);
+
+        assertThat(result.getChannels()).containsExactly("SMS");
+        assertThat(result.getTags()).containsExactly("이벤트");
+        assertThat(result.getAttemptFlows()).containsExactly(attempt);
+    }
+
+    @Test
+    void 삭제되었거나_없는_전송기록은_상세조회할_수_없다() {
+        when(historyMapper.findHistoryDetailById(999L)).thenReturn(null);
+
+        assertThatThrownBy(() -> historyService.getHistoryDetail(999L))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.SEND_HISTORY_NOT_FOUND);
     }
 }
