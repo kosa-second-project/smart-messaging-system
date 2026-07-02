@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.smartmessaging.security.CustomUserDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -32,8 +34,8 @@ public class CampaignDraftApiController {
      * POST /api/campaigns/draft/empty
      */
     @PostMapping("/draft/empty")
-    public ResponseEntity<Map<String, Object>> createEmptyDraft() {
-        String draftId = draftService.createEmptyDraft();
+    public ResponseEntity<Map<String, Object>> createEmptyDraft(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        String draftId = draftService.createEmptyDraft(userDetails.getUserId());
         return ResponseEntity.ok(Map.of("draftId", draftId, "totalCount", 0));
     }
 
@@ -44,7 +46,8 @@ public class CampaignDraftApiController {
     @PostMapping("/draft")
     public ResponseEntity<Map<String, Object>> createOrAppendDraft(
             @ModelAttribute CustomerSearchRequest request,
-            @RequestParam(required = false) String draftId) {
+            @RequestParam(required = false) String draftId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         // 기존 CustomerService의 getCustomerIds를 재활용하여 전체 ID 목록 조회
         List<Long> allIds = customerService.getCustomerIds(request);
@@ -56,12 +59,12 @@ public class CampaignDraftApiController {
         String finalDraftId;
         // draftId 파라미터가 존재하면 기존 항목에 병합(Append), 없으면 새로 생성(Save)
         if (draftId != null && !draftId.isBlank()) {
-            finalDraftId = draftService.appendDraft(draftId, allIds);
+            finalDraftId = draftService.appendDraft(userDetails.getUserId(), draftId, allIds);
         } else {
-            finalDraftId = draftService.saveDraft(allIds);
+            finalDraftId = draftService.saveDraft(userDetails.getUserId(), allIds);
         }
 
-        long totalCount = draftService.getTotalCount(finalDraftId);
+        long totalCount = draftService.getTotalCount(userDetails.getUserId(), finalDraftId);
         log.info("[Draft 일괄 처리] draftId={}, 최종 {}명", finalDraftId, totalCount);
         return ResponseEntity.ok(Map.of("draftId", finalDraftId, "totalCount", totalCount));
     }
@@ -74,7 +77,8 @@ public class CampaignDraftApiController {
     @PatchMapping("/draft/{draftId}/recipients")
     public ResponseEntity<Map<String, Object>> updateRecipients(
             @PathVariable String draftId,
-            @RequestBody Map<String, List<Map<String, Object>>> body) {
+            @RequestBody Map<String, List<Map<String, Object>>> body,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         List<Map<String, Object>> items = body.get("items");
         if (items == null || items.isEmpty()) {
@@ -86,13 +90,13 @@ public class CampaignDraftApiController {
             String action   = item.get("action").toString();
 
             if ("REMOVE".equals(action)) {
-                draftService.removeRecipient(draftId, customerId);
+                draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
             } else if ("ADD".equals(action)) {
-                draftService.addRecipient(draftId, customerId);
+                draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
             }
         }
 
-        long totalCount = draftService.getTotalCount(draftId);
+        long totalCount = draftService.getTotalCount(userDetails.getUserId(), draftId);
         return ResponseEntity.ok(Map.of("success", true, "totalCount", totalCount));
     }
 
@@ -101,8 +105,10 @@ public class CampaignDraftApiController {
      * DELETE /api/campaigns/draft/{draftId}
      */
     @DeleteMapping("/draft/{draftId}")
-    public ResponseEntity<Map<String, Object>> deleteDraft(@PathVariable String draftId) {
-        draftService.deleteDraft(draftId);
+    public ResponseEntity<Map<String, Object>> deleteDraft(
+            @PathVariable String draftId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        draftService.deleteDraft(userDetails.getUserId(), draftId);
         return ResponseEntity.ok(Map.of("success", true));
     }
 

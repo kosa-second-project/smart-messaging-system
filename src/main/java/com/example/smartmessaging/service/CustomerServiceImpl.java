@@ -24,7 +24,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedCustomerResponse getCustomers(CustomerSearchRequest request) {
+    public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
 
         // 1. 고객 목록 조회
         List<CustomerVO> customers = customerMapper.findBySearch(request);
@@ -63,7 +63,7 @@ public class CustomerServiceImpl implements CustomerService {
             // selected 탭은 무조건 모두 임시 저장되어 있는 회원이므로 Redis 조회 생략 (전원 true 강제)
             draftRecipientStatusMap = Map.of();
         } else {
-            draftRecipientStatusMap = draftService.getRecipientStatusMap(request.getDraftId(), customerIds);
+            draftRecipientStatusMap = draftService.getRecipientStatusMap(userId, request.getDraftId(), customerIds);
         }
 
         // 6. VO → Response DTO 변환

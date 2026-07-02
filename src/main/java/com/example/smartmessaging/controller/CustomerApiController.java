@@ -7,6 +7,8 @@ import com.example.smartmessaging.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.smartmessaging.security.CustomUserDetails;
 
 import java.util.List;
 
@@ -31,15 +33,16 @@ public class CustomerApiController {
      */
     @GetMapping
     public ResponseEntity<PagedCustomerResponse> getCustomers(
-            @ModelAttribute CustomerSearchRequest request) {
+            @ModelAttribute CustomerSearchRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         String draftId = request.getDraftId();
 
         // activeTab이 selected이고 draftId가 유효한 경우: 수신자 관리 탭의 Redis 기반 페이징 처리
         if ("selected".equals(request.getActiveTab()) && draftId != null && !draftId.isBlank()) {
             // Redis에서 현재 페이지에 해당하는 ID만 꺼내기
-            List<Long> pagedIds = draftService.getPagedIds(draftId, request.getPage(), request.getSize());
-            long totalCount     = draftService.getTotalCount(draftId);
+            List<Long> pagedIds = draftService.getPagedIds(userDetails.getUserId(), draftId, request.getPage(), request.getSize());
+            long totalCount     = draftService.getTotalCount(userDetails.getUserId(), draftId);
 
             if (pagedIds.isEmpty()) {
                 return ResponseEntity.ok(PagedCustomerResponse.builder()
@@ -50,14 +53,14 @@ public class CustomerApiController {
             // 꺼낸 ID 목록으로 Oracle 상세 조회 (offset 0 고정)
             request.setCustomerIds(pagedIds);
             request.setPage(1);
-            PagedCustomerResponse response = customerService.getCustomers(request);
+            PagedCustomerResponse response = customerService.getCustomers(userDetails.getUserId(), request);
 
             // totalCount와 totalPages는 Redis 기준으로 재계산
             return ResponseEntity.ok(response.withTotalCount(totalCount));
         }
 
         // 일반 필터 탭인 경우 (request.getDraftId()가 담겨 있어 서비스 단에서 isInDraft 판별이 자동으로 됨)
-        return ResponseEntity.ok(customerService.getCustomers(request));
+        return ResponseEntity.ok(customerService.getCustomers(userDetails.getUserId(), request));
     }
 
 

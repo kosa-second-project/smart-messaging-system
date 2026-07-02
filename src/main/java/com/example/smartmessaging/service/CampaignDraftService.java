@@ -34,9 +34,9 @@ public class CampaignDraftService {
     // =============================================
     // 1. 전체 ID 목록 → Redis Sorted Set에 일괄 저장
     // =============================================
-    public String saveDraft(List<Long> customerIds) {
+    public String saveDraft(Long userId, List<Long> customerIds) {
         String draftId = UUID.randomUUID().toString();
-        String key = KEY_PREFIX + draftId;
+        String key = KEY_PREFIX + userId + ":" + draftId;
 
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
 
@@ -60,12 +60,12 @@ public class CampaignDraftService {
     // =============================================
     // 1.5. 기존 Redis Sorted Set에 일괄 추가 (Append)
     // =============================================
-    public String appendDraft(String draftId, List<Long> customerIds) {
+    public String appendDraft(Long userId, String draftId, List<Long> customerIds) {
         if (draftId == null || draftId.isBlank()) {
-            return saveDraft(customerIds);
+            return saveDraft(userId, customerIds);
         }
 
-        String key = KEY_PREFIX + draftId;
+        String key = KEY_PREFIX + userId + ":" + draftId;
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
         Long currentSize = zset.size(key);
         double startScore = currentSize != null ? currentSize : 0;
@@ -86,9 +86,9 @@ public class CampaignDraftService {
         return draftId;
     }
 
-    public String createEmptyDraft() {
+    public String createEmptyDraft(Long userId) {
         String draftId = UUID.randomUUID().toString();
-        log.info("[CampaignDraft] 빈 Draft 생성 - draftId={}", draftId);
+        log.info("[CampaignDraft] 빈 Draft 생성 - userId={}, draftId={}", userId, draftId);
         return draftId;
     }
 
@@ -96,8 +96,8 @@ public class CampaignDraftService {
     // 2. 현재 페이지에 해당하는 ID만 슬라이싱 (Java 힙 부하 없음)
     //    ZRANGE key startIndex endIndex
     // =============================================
-    public List<Long> getPagedIds(String draftId, int page, int size) {
-        String key = KEY_PREFIX + draftId;
+    public List<Long> getPagedIds(Long userId, String draftId, int page, int size) {
+        String key = KEY_PREFIX + userId + ":" + draftId;
         long start = (long)(page - 1) * size;
         long end   = start + size - 1;
 
@@ -112,24 +112,24 @@ public class CampaignDraftService {
     // =============================================
     // 3. 전체 선택 인원 수 조회 (totalCount 페이징 계산용)
     // =============================================
-    public long getTotalCount(String draftId) {
-        Long count = redisTemplate.opsForZSet().size(KEY_PREFIX + draftId);
+    public long getTotalCount(Long userId, String draftId) {
+        Long count = redisTemplate.opsForZSet().size(KEY_PREFIX + userId + ":" + draftId);
         return count != null ? count : 0;
     }
 
     // =============================================
     // 4. 개별 ID 제거 (체크박스 해제 시 - O(log N))
     // =============================================
-    public void removeRecipient(String draftId, Long customerId) {
-        redisTemplate.opsForZSet().remove(KEY_PREFIX + draftId, customerId);
+    public void removeRecipient(Long userId, String draftId, Long customerId) {
+        redisTemplate.opsForZSet().remove(KEY_PREFIX + userId + ":" + draftId, customerId);
         log.debug("[CampaignDraft] 제거 - draftId={}, customerId={}", draftId, customerId);
     }
 
     // =============================================
     // 5. 개별 ID 추가 (체크박스 선택 시 - O(log N))
     // =============================================
-    public void addRecipient(String draftId, Long customerId) {
-        String key = KEY_PREFIX + draftId;
+    public void addRecipient(Long userId, String draftId, Long customerId) {
+        String key = KEY_PREFIX + userId + ":" + draftId;
         // 동시 요청에도 score 충돌이 발생하지 않도록 타임스탬프 기반 단조 증가 score 사용
         double score = System.currentTimeMillis();
         redisTemplate.opsForZSet().add(key, customerId, score);
@@ -140,27 +140,27 @@ public class CampaignDraftService {
     // =============================================
     // 6. Draft 만료 여부 확인 (TTL -2 = 키 없음)
     // =============================================
-    public boolean isExpired(String draftId) {
-        Long ttl = redisTemplate.getExpire(KEY_PREFIX + draftId);
+    public boolean isExpired(Long userId, String draftId) {
+        Long ttl = redisTemplate.getExpire(KEY_PREFIX + userId + ":" + draftId);
         return ttl == null || ttl == -2L;
     }
 
     // =============================================
     // 7. 발송 완료 또는 취소 시 명시적 삭제
     // =============================================
-    public void deleteDraft(String draftId) {
-        redisTemplate.delete(KEY_PREFIX + draftId);
+    public void deleteDraft(Long userId, String draftId) {
+        redisTemplate.delete(KEY_PREFIX + userId + ":" + draftId);
         log.info("[CampaignDraft] 삭제 완료 - draftId={}", draftId);
     }
 
     // =============================================
     // 8. 현재 노출해야 할 고객 ID 목록에 대해 Redis에 임시 저장되어 있는지 여부만 맵으로 부분 조회 (O(log N * pageSize)로 메모리 부하 방지)
     // =============================================
-    public Map<Long, Boolean> getRecipientStatusMap(String draftId, List<Long> customerIds) {
+    public Map<Long, Boolean> getRecipientStatusMap(Long userId, String draftId, List<Long> customerIds) {
         if (draftId == null || draftId.isBlank() || customerIds == null || customerIds.isEmpty()) {
             return Map.of();
         }
-        String key = KEY_PREFIX + draftId;
+        String key = KEY_PREFIX + userId + ":" + draftId;
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
         
         Map<Long, Boolean> statusMap = new HashMap<>();
