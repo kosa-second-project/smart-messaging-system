@@ -335,6 +335,10 @@
     }
 }
 
+.template-detail__content--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .template-message-box {
     min-height: 26rem;
     padding: var(--space-4);

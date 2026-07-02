@@ -393,23 +393,18 @@ function renderTemplateDetail(item) {
             </div>
 
             <div class="template-detail__metrics">
+                ${renderMetric("템플릿 ID", item.id || "-")}
                 ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
+                ${renderMetric("생성일", item.createdAt || "-")}
                 ${renderMetric("최근 수정", item.updatedAt || "-")}
                 ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
-                ${renderMetric("문자 길이", `${(item.content || "").length}자`)}
                 ${renderMetric("카카오 상태", getKakaoStatusLabel(item.kakaoTemplateStatus))}
             </div>
 
-            <div class="template-detail__content">
+            <div class="template-detail__content template-detail__content--single">
                 <section>
                     <div class="template-detail__metric-label">메시지 내용</div>
                     <div class="template-message-box">${escapeHtml(item.content || "")}</div>
-                </section>
-                <section>
-                    <div class="template-preview-header">
-                        <span>미리보기</span>
-                    </div>
-                    ${renderMessagePreview(item.title, item.content, inferPreviewMode(item))}
                 </section>
             </div>
         </div>
