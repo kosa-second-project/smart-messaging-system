@@ -21,4 +21,7 @@ public class CustomerVO extends BaseVO {
     private Boolean isAdBlocked;
     private LocalDateTime lastActiveAt;
     private LocalDateTime joinedAt;
+    private java.time.LocalDate birthDate;
+    private String gender;
 }
+
