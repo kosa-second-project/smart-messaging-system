@@ -12,12 +12,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,22 +64,5 @@ public class TemplateApiController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long templateId = templateService.createTemplate(userDetails.getUserId(), request);
         return ResponseEntity.created(URI.create("/api/templates/" + templateId)).body(templateId);
-    }
-
-    @PutMapping("/{templateId}")
-    public ResponseEntity<Void> updateTemplate(
-            @PathVariable Long templateId,
-            @RequestBody TemplateSaveRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        templateService.updateTemplate(userDetails.getUserId(), templateId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/{templateId}")
-    public ResponseEntity<Void> deleteTemplate(
-            @PathVariable Long templateId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        templateService.deleteTemplate(userDetails.getUserId(), templateId);
-        return ResponseEntity.noContent().build();
     }
 }

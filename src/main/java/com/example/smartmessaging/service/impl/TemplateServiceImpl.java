@@ -71,40 +71,6 @@ public class TemplateServiceImpl implements TemplateService {
         return template.getId();
     }
 
-    @Override
-    @Transactional
-    public void updateTemplate(Long userId, Long templateId, TemplateSaveRequest request) {
-        TemplateVO template = toTemplateVO(userId, templateId, request);
-        int updated = templateMapper.updateTemplate(template);
-        if (updated == 0) {
-            return;
-        }
-
-        TemplateChannelVO channelParam = TemplateChannelVO.builder()
-                .templateId(templateId)
-                .build();
-        templateMapper.deleteTemplateChannels(channelParam);
-        saveTemplateChannels(templateId, request.getChannelIds());
-    }
-
-    @Override
-    @Transactional
-    public void deleteTemplate(Long userId, Long templateId) {
-        TemplateVO template = TemplateVO.builder()
-                .id(templateId)
-                .userId(userId)
-                .build();
-        int deleted = templateMapper.deleteTemplate(template);
-        if (deleted == 0) {
-            return;
-        }
-
-        TemplateChannelVO channelParam = TemplateChannelVO.builder()
-                .templateId(templateId)
-                .build();
-        templateMapper.deleteTemplateChannels(channelParam);
-    }
-
     private void attachChannels(List<TemplateResponse> templates) {
         if (templates.isEmpty()) {
             return;

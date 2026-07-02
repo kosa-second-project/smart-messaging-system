@@ -10,155 +10,169 @@
     <link rel="stylesheet" th:href="@{/css/pages/templates.css}">
 
     <div class="template-page">
-        <section class="template-stats" aria-label="템플릿 통계">
-            <div class="template-stat-card">
-                <span class="template-stat-card__label">전체 템플릿</span>
-                <strong id="statTotalCount" class="template-stat-card__value">0개</strong>
-            </div>
-            <div class="template-stat-card">
-                <span class="template-stat-card__label">AI 생성</span>
-                <strong id="statAiCount" class="template-stat-card__value text-green">0개</strong>
-            </div>
-            <div class="template-stat-card">
-                <span class="template-stat-card__label">카카오 승인</span>
-                <strong id="statApprovedCount" class="template-stat-card__value text-kakao">0개</strong>
-            </div>
-            <div class="template-stat-card">
-                <span class="template-stat-card__label">누적 사용</span>
-                <strong id="statUseCount" class="template-stat-card__value text-blue">0회</strong>
-            </div>
-        </section>
-
         <section class="template-toolbar" aria-label="템플릿 검색 및 필터">
-            <div class="template-toolbar__left">
+            <div class="template-toolbar__filters">
                 <div class="template-search">
-                    <svg class="template-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="template-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input id="templateKeywordInput" type="text" class="template-search__input" placeholder="제목, 내용, 목적 검색">
+                    <input id="templateKeywordInput" type="text" class="ds-input template-search__input" placeholder="템플릿명, 내용, 카테고리 검색...">
                 </div>
 
-                <select id="templateCategoryFilter" class="template-select">
+                <select id="templateCategoryFilter" class="ds-select template-filter-select">
                     <option value="">전체 카테고리</option>
                 </select>
 
-                <select id="templatePurposeFilter" class="template-select">
-                    <option value="">전체 목적</option>
-                </select>
-
-                <select id="templateChannelFilter" class="template-select">
+                <select id="templateChannelFilter" class="ds-select template-filter-select">
                     <option value="">전체 채널</option>
                 </select>
-            </div>
 
-            <div class="template-toolbar__right">
-                <select id="templateSortSelect" class="template-select">
-                    <option value="latest">최근 수정순</option>
-                    <option value="title">제목순</option>
+                <select id="templatePurposeFilter" class="ds-select template-filter-select">
+                    <option value="">전체 광고여부</option>
+                </select>
+
+                <select id="templateSortSelect" class="ds-select template-filter-select">
+                    <option value="latest">최신순</option>
+                    <option value="title">이름순</option>
                     <option value="useCount">사용 많은순</option>
                 </select>
-                <button type="button" class="ds-button ds-button--primary template-create-button" onclick="openTemplateModal()">
-                    <svg class="template-button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14"></path>
-                        <path d="M5 12h14"></path>
-                    </svg>
-                    새 템플릿
-                </button>
             </div>
+
+            <button type="button" class="ds-button ds-button--primary" onclick="openAddTemplateModal()">
+                <svg class="template-button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+                템플릿 추가
+            </button>
         </section>
 
-        <section class="template-table-card">
-            <div class="template-table-scroll">
-                <table class="template-table">
+        <section id="templateQuickFilters" class="template-chip-row" aria-label="빠른 필터"></section>
+
+        <section class="table-panel template-table-panel">
+            <div id="templateMobileList" class="template-mobile-list"></div>
+
+            <div class="table-scroll template-desktop-table">
+                <table class="ds-table template-table">
                     <thead>
                     <tr>
-                        <th>템플릿</th>
-                        <th>카테고리</th>
-                        <th>목적</th>
+                        <th>템플릿명</th>
+                        <th class="template-col-lg">카테고리</th>
+                        <th>광고여부</th>
+                        <th class="template-col-xl">태그</th>
                         <th>채널</th>
-                        <th>카카오 상태</th>
-                        <th>사용</th>
+                        <th class="template-col-lg">사용 횟수</th>
                         <th>수정일</th>
-                        <th class="template-table__actions">관리</th>
                     </tr>
                     </thead>
                     <tbody id="templateTableBody">
                     <tr>
-                        <td colspan="8" class="template-empty-cell">데이터를 불러오는 중입니다...</td>
+                        <td colspan="7" class="template-empty-cell">데이터를 불러오는 중입니다...</td>
                     </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="template-pagination">
-                <span id="templatePageInfo">불러오는 중...</span>
-                <div id="templatePaginationButtons" class="template-pagination__buttons"></div>
+            <div class="ds-pagination">
+                <span id="templatePageInfo" class="ds-pagination__summary">불러오는 중...</span>
+                <div id="templatePaginationButtons" class="ds-pagination__pages"></div>
             </div>
         </section>
 
-        <div id="templateModal" class="template-modal-overlay" onclick="closeTemplateModalOnBackdrop(event)">
-            <div class="template-modal">
-                <div class="template-modal__header">
-                    <h3 id="templateModalTitle" class="template-modal__title">템플릿 등록</h3>
-                    <button type="button" class="template-modal__close" onclick="closeTemplateModal()" aria-label="닫기">×</button>
+        <div id="templateDetailModal" class="ds-modal" onclick="closeTemplateDetailOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel template-detail-modal">
+                <div class="ds-modal__header">
+                    <h3 class="ds-modal__title">템플릿 상세</h3>
+                    <button type="button" class="ds-icon-button" onclick="closeTemplateDetailModal()" aria-label="닫기">×</button>
+                </div>
+                <div id="templateDetailBody" class="ds-modal__body"></div>
+            </div>
+        </div>
+
+        <div id="templateAddModal" class="ds-modal" onclick="closeAddTemplateOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel template-add-modal">
+                <div class="ds-modal__header">
+                    <h3 class="ds-modal__title">새 템플릿 추가</h3>
+                    <button type="button" class="ds-icon-button" onclick="closeAddTemplateModal()" aria-label="닫기">×</button>
                 </div>
 
-                <form id="templateForm" class="template-form">
-                    <input type="hidden" id="templateId">
+                <form id="templateForm">
+                    <div class="ds-modal__body">
+                        <div class="template-form-layout">
+                            <div class="template-form-fields">
+                                <label class="ds-field">
+                                    <span class="ds-label">템플릿명</span>
+                                    <input id="templateTitle" type="text" class="ds-input" maxlength="120" required>
+                                </label>
 
-                    <div class="template-form-grid">
-                        <label class="template-field">
-                            <span class="template-field__label">제목</span>
-                            <input id="templateTitle" type="text" class="template-input" maxlength="120" required>
-                        </label>
+                                <div class="template-form-grid">
+                                    <div class="ds-field">
+                                        <span class="ds-label">채널</span>
+                                        <div id="templateChannelCheckboxes" class="template-channel-grid"></div>
+                                    </div>
 
-                        <label class="template-field">
-                            <span class="template-field__label">카테고리</span>
-                            <input id="templateCategory" type="text" class="template-input" maxlength="50" placeholder="예: 프로모션">
-                        </label>
+                                    <label class="ds-field">
+                                        <span class="ds-label">카테고리</span>
+                                        <input id="templateCategory" type="text" class="ds-input" maxlength="50" placeholder="예: 이벤트">
+                                    </label>
+                                </div>
 
-                        <label class="template-field">
-                            <span class="template-field__label">목적</span>
-                            <input id="templatePurpose" type="text" class="template-input" maxlength="80" placeholder="예: 재구매 유도">
-                        </label>
+                                <div class="template-form-grid">
+                                    <label class="ds-field">
+                                        <span class="ds-label">광고여부</span>
+                                        <select id="templatePurpose" class="ds-select">
+                                            <option value="advertising">광고</option>
+                                            <option value="informational">정보성</option>
+                                        </select>
+                                    </label>
 
-                        <label class="template-field">
-                            <span class="template-field__label">카카오 상태</span>
-                            <select id="templateKakaoStatus" class="template-input">
-                                <option value="PENDING">대기</option>
-                                <option value="APPROVED">승인</option>
-                                <option value="REJECTED">반려</option>
-                            </select>
-                        </label>
+                                    <label class="ds-field">
+                                        <span class="ds-label">카카오 상태</span>
+                                        <select id="templateKakaoStatus" class="ds-select">
+                                            <option value="PENDING">대기</option>
+                                            <option value="APPROVED">승인</option>
+                                            <option value="REJECTED">반려</option>
+                                        </select>
+                                    </label>
+                                </div>
 
-                        <label class="template-field template-field--wide">
-                            <span class="template-field__label">카카오 템플릿 코드</span>
-                            <input id="templateKakaoCode" type="text" class="template-input" maxlength="100">
-                        </label>
+                                <label class="ds-field">
+                                    <span class="ds-label">카카오 템플릿 코드</span>
+                                    <input id="templateKakaoCode" type="text" class="ds-input" maxlength="100">
+                                </label>
 
-                        <div class="template-field template-field--wide">
-                            <span class="template-field__label">채널</span>
-                            <div id="templateChannelCheckboxes" class="template-channel-list"></div>
+                                <label class="ds-field template-checkbox-row">
+                                    <input id="templateAiGenerated" type="checkbox">
+                                    <span>AI 생성 템플릿</span>
+                                </label>
+
+                                <label class="ds-field">
+                                    <span class="ds-label">메시지 내용</span>
+                                    <textarea id="templateContent" class="ds-textarea template-content-input" rows="8" maxlength="2000" required></textarea>
+                                    <span id="templateContentCount" class="ds-help">0자</span>
+                                </label>
+                            </div>
+
+                            <section class="template-form-preview">
+                                <div class="template-preview-header">
+                                    <span>미리보기</span>
+                                    <div class="ds-segment">
+                                        <button type="button" class="ds-segment__item is-active" data-preview-mode="message">메시지</button>
+                                        <button type="button" class="ds-segment__item" data-preview-mode="kakao">카카오톡</button>
+                                        <button type="button" class="ds-segment__item" data-preview-mode="email">이메일</button>
+                                    </div>
+                                </div>
+                                <div id="templateFormPreview"></div>
+                            </section>
                         </div>
-
-                        <label class="template-field template-field--wide template-checkbox-row">
-                            <input id="templateAiGenerated" type="checkbox">
-                            <span>AI 생성 템플릿</span>
-                        </label>
-
-                        <label class="template-field template-field--wide">
-                            <span class="template-field__label">내용</span>
-                            <textarea id="templateContent" class="template-textarea" rows="8" maxlength="2000" required></textarea>
-                        </label>
                     </div>
 
-                    <div class="template-modal__footer">
-                        <button type="button" id="templateDeleteButton" class="ds-button ds-button--danger" onclick="deleteCurrentTemplate()">삭제</button>
-                        <div class="template-modal__footer-right">
-                            <button type="button" class="ds-button ds-button--outline" onclick="closeTemplateModal()">취소</button>
-                            <button type="submit" class="ds-button ds-button--primary">저장</button>
-                        </div>
+                    <div class="ds-modal__footer">
+                        <button type="button" class="ds-button ds-button--outline" onclick="closeAddTemplateModal()">취소</button>
+                        <button type="submit" class="ds-button ds-button--primary">저장</button>
                     </div>
                 </form>
             </div>

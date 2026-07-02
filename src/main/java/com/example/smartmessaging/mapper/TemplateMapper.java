@@ -33,11 +33,5 @@ public interface TemplateMapper {
 
     int insertTemplate(TemplateVO template);
 
-    int updateTemplate(TemplateVO template);
-
-    int deleteTemplate(TemplateVO template);
-
-    int deleteTemplateChannels(TemplateChannelVO templateChannel);
-
     int insertTemplateChannel(TemplateChannelVO templateChannel);
 }

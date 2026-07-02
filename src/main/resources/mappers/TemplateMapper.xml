@@ -174,38 +174,6 @@
         )
     </insert>
 
-    <update id="updateTemplate" parameterType="TemplateVO">
-        UPDATE template
-        SET title = #{title},
-            content = #{content},
-            kakao_template_code = #{kakaoTemplateCode},
-            kakao_template_status = #{kakaoTemplateStatus},
-            is_ai_generated = #{isAiGenerated},
-            category = #{category},
-            purpose = #{purpose},
-            <include refid="Common.auditUpdateValues"/>
-        WHERE id = #{id}
-          AND user_id = #{userId}
-          AND NVL(is_deleted, 0) = 0
-    </update>
-
-    <update id="deleteTemplate" parameterType="TemplateVO">
-        UPDATE template
-        SET is_deleted = 1,
-            <include refid="Common.auditUpdateValues"/>
-        WHERE id = #{id}
-          AND user_id = #{userId}
-          AND NVL(is_deleted, 0) = 0
-    </update>
-
-    <update id="deleteTemplateChannels" parameterType="TemplateChannelVO">
-        UPDATE template_channel
-        SET is_deleted = 1,
-            <include refid="Common.auditUpdateValues"/>
-        WHERE template_id = #{templateId}
-          AND NVL(is_deleted, 0) = 0
-    </update>
-
     <insert id="insertTemplateChannel" parameterType="TemplateChannelVO">
         INSERT INTO template_channel (
             template_id,
