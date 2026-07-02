@@ -3,13 +3,25 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.smartmessaging.mapper.StatMapper">
 
+    <resultMap id="messageStatResultMap" type="MessageStatVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
+    <resultMap id="messageStatByDegreeResultMap" type="MessageStatByDegreeVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
+    <resultMap id="customerStatResultMap" type="CustomerStatVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
     <sql id="messageStatColumns">
         id,
         total_send_count,
         total_success_count,
         billing_cost,
         max_cost,
-        stat_date AS date,
+        stat_date,
         <include refid="Common.auditColumns"/>
     </sql>
 
@@ -18,7 +30,7 @@
         degree,
         send_count,
         success_count,
-        stat_date AS date,
+        stat_date,
         cost,
         channel_id,
         <include refid="Common.auditColumns"/>
@@ -38,7 +50,7 @@
 
     <sql id="customerStatColumns">
         id,
-        stat_date AS date,
+        stat_date,
         total_customer_count,
         normal_customer_count,
         new_customer_count,
@@ -94,7 +106,7 @@
         ORDER BY id
     </select>
 
-    <select id="selectMessageStats" parameterType="StatSearchRequest" resultType="MessageStatVO">
+    <select id="selectMessageStats" parameterType="StatSearchRequest" resultMap="messageStatResultMap">
         SELECT
             <include refid="messageStatColumns"/>
         FROM message_stat
@@ -108,13 +120,13 @@
         ORDER BY stat_date
     </select>
 
-    <select id="selectDeliveryMessageStatByDegrees" parameterType="StatSearchRequest" resultType="MessageStatByDegreeVO">
+    <select id="selectDeliveryMessageStatByDegrees" parameterType="StatSearchRequest" resultMap="messageStatByDegreeResultMap">
         SELECT
             msbd.id,
             msbd.degree,
             msbd.send_count,
             msbd.success_count,
-            msbd.stat_date AS date,
+            msbd.stat_date,
             msbd.cost,
             msbd.channel_id,
             msbd.created_at,
@@ -165,7 +177,7 @@
         ORDER BY cs.channel_id
     </select>
 
-    <select id="selectCustomerStats" parameterType="StatSearchRequest" resultType="CustomerStatVO">
+    <select id="selectCustomerStats" parameterType="StatSearchRequest" resultMap="customerStatResultMap">
         SELECT
             <include refid="customerStatColumns"/>
         FROM customer_stat
