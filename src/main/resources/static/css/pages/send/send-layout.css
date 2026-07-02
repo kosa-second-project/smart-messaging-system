@@ -1,0 +1,121 @@
+/* static/css/pages/send/send-layout.css - templates/layout/send-layout.html 뼈대 및 공통 스타일 */
+
+.send-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1.5rem;
+  max-width: 100%;
+  overflow-x: hidden; /* 페이지 전체 단위 가로 스크롤 발생을 차단 */
+}
+
+.step-content-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.step-section {
+  display: none;
+  height: 100%;
+}
+
+.step-section.active {
+  display: block;
+}
+
+/* ==========================================
+   [1. 상단 3단계 스텝바 디자인 - steps.css 통합]
+   ========================================== */
+.send-steps {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  background: var(--card);
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--muted-foreground);
+  position: relative;
+}
+
+.step-item::after {
+  content: "❯";
+  margin-left: 1rem;
+  color: var(--border-strong);
+  font-size: 0.75rem;
+}
+
+.step-item:last-child::after {
+  content: none;
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+/* 활성화 상태 */
+.step-item.active {
+  color: var(--primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.step-item.active .step-number {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* 완료 상태 */
+.step-item.completed {
+  color: var(--foreground);
+}
+
+.step-item.completed .step-number {
+  background: var(--success);
+  color: var(--success-foreground);
+}
+
+/* 스텝바 전용 반응형 스타일 */
+@media (max-width: 768px) {
+  .send-steps {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .step-item {
+    font-size: 0.75rem;
+  }
+  
+  .step-item::after {
+    margin-left: 0.5rem;
+  }
+}
+
+/* ==========================================
+   [2. 하단 단계 전환 액션바 조각 스타일]
+   ========================================== */
+.action-bar-row {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  margin-top: auto;
+}

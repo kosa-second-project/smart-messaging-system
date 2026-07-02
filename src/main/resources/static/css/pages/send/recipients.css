@@ -1,0 +1,521 @@
+/* static/css/pages/send/recipients/recipients.css - 1단계: 수신자 선택 화면 전용 스타일 */
+
+/* ==========================================
+   1. 수신자 선택 2단 레이아웃
+   ========================================== */
+.send-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.5rem;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ==========================================
+   2. 좌측 필터 패널 스타일
+   ========================================== */
+.send-filter-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  gap: 1.25rem;
+  min-height: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.panel-title {
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--foreground);
+}
+
+.section-title {
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* 조건 선택 버튼 가로 배치 및 Active 시각 피드백 강화 */
+.ds-button-group {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  gap: 0.25rem;
+}
+
+.ds-button-group .ds-button {
+  flex: 1 1 50%;
+  text-align: center;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.ds-button-group .ds-button.ds-button--outline.active {
+  background: var(--primary) !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+  font-weight: var(--font-weight-bold) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.25rem;
+}
+
+.tag-item-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid transparent;
+  transition: all 150ms ease;
+}
+
+.tag-item-btn:hover {
+  background: var(--border);
+}
+
+.tag-item-btn.selected {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.filter-scroll-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.25rem;
+}
+
+.filter-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.ds-button-group--sm {
+  width: auto !important;
+  gap: 0.125rem;
+}
+
+.ds-button-group--sm .ds-button {
+  min-height: 1.5rem !important;
+  padding: 0.125rem 0.5rem !important;
+  font-size: 0.6875rem !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.ds-button-group--sm .ds-button.active {
+  background: var(--primary) !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+}
+
+/* ==========================================
+   3. 우측 회원 목록 패널 및 테이블 스타일
+   ========================================== */
+.send-main-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  gap: 1.25rem;
+  min-height: 0;
+  min-width: 0; /* Flex 아이템 내부 최소너비(900px)에 의한 부모 팽창 방지 */
+  box-shadow: var(--shadow-sm);
+}
+
+.main-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* 필터 정보 탭 */
+.summary-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.125rem;
+}
+
+.summary-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--muted-foreground);
+  border-bottom: 2px solid transparent;
+  transition: all 150ms ease;
+  background: transparent;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  cursor: pointer;
+}
+
+.summary-tab:hover {
+  color: var(--foreground);
+}
+
+.summary-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 테이블 영역 */
+.table-container {
+  flex: 1 1 auto;
+  overflow: auto; /* 가로(overflow-x) 및 세로(overflow-y) 스크롤바가 자연스럽게 발생하도록 유도 */
+  min-height: 420px; /* 테이블 가용 영역 높이를 시원하게 확장하여 한 번에 더 많은 행이 노출되도록 보장 */
+  max-width: 100%; /* 부모 영역 가로폭을 넘어가 삐져나가지 않도록 상한선 제약 */
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.table-container .ds-table {
+  min-width: 900px; /* 해상도가 줄어들 때 내용물이 비좁게 찌그러지지 않고 테이블 단독 가로 스크롤이 발생하도록 최소 가로폭 확보 */
+  width: 100%;
+}
+
+.ds-table th {
+  position: sticky;
+  top: 0;
+  background: var(--secondary);
+  z-index: 10;
+}
+
+/* 수신 거부자 시각 강조 */
+.ds-table td.is-rejected {
+  color: var(--destructive);
+  font-weight: var(--font-weight-bold);
+}
+
+.deny-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-pill);
+  background: rgba(224, 32, 32, 0.1);
+  color: var(--destructive);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.allow-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-pill);
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+}
+
+/* ==========================================
+   4. 테이블 하단 및 페이징 관련 스타일
+   ========================================== */
+.table-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  position: relative;
+  padding: 1rem 0;
+}
+
+.table-footer-row > .pagination-info {
+  flex: 1 1 33%;
+  text-align: left;
+}
+
+.table-footer-row > .pagination-controls-wrapper {
+  flex: 1 1 34%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.table-footer-row > .page-size-selector {
+  flex: 1 1 33%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-link-btn {
+  min-width: 1.875rem;
+  height: 1.875rem;
+  padding: 0 0.5rem;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.page-link-btn:first-child,
+.page-link-btn:last-child {
+  min-width: 3.25rem;
+}
+
+.page-link-btn:hover:not(:disabled) {
+  background: var(--muted);
+}
+
+.page-link-btn.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.page-link-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.table-footer-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* ==========================================
+   5. 1단계 전용 반응형 미디어 쿼리
+   ========================================== */
+@media (max-width: 992px) {
+  .send-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 1.25rem;
+    height: auto;
+    overflow-y: visible;
+  }
+  
+  .send-filter-panel {
+    max-height: none;
+  }
+  
+  .filter-scroll-container {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .send-filter-panel {
+    padding: 1rem;
+    max-height: none;
+  }
+  
+  .send-main-panel {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .main-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .action-buttons {
+    justify-content: flex-end;
+  }
+  
+  .summary-tabs {
+    flex-wrap: wrap;
+    justify-content: center !important;
+    gap: 0.75rem;
+  }
+  
+  .selected-summary-count-badge {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.25rem;
+  }
+  
+  .summary-tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-footer-row {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .table-footer-row > .pagination-info {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .table-footer-row > .pagination-controls-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .table-footer-row > .page-size-selector {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ==========================================
+   6. 인라인 스타일 대체 클래스 (HTML 청정화)
+   ========================================== */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.btn-reset-tags {
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.selected-summary-count-badge {
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+  background: rgba(24, 67, 250, 0.08);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ==========================================
+   7. 반응형 컬럼 제어 (모바일 컬럼 숨김)
+   ========================================== */
+@media (max-width: 992px) {
+  .hide-on-tablet {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  /* 모바일 해상도에서는 숨겨진 컬럼들 덕분에 가로폭이 확보되므로 고정 min-width를 제거 */
+  .table-container .ds-table {
+    min-width: auto !important;
+    width: 100%;
+  }
+}
+
+/* ==========================================
+   8. 마크업 청정화 관련 인라인 스타일 이관
+   ========================================== */
+.panel-title {
+  margin: 0 !important;
+}
+
+.summary-tab-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.selected-summary-count-badge span {
+  font-weight: 800;
+}
+
+.page-size-select {
+  width: 85px;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+  min-height: auto;
+}
+
+/* 테이블 헤더 컬럼별 크기 및 정렬 지정 (인라인 style 제거 대응) */
+.ds-table th:nth-child(1) { width: 45px; text-align: center; }
+.ds-table th:nth-child(2) { width: 12%; text-align: left; }
+.ds-table th:nth-child(3) { width: 18%; text-align: left; }
+.ds-table th:nth-child(4) { width: 10%; text-align: center; }
+.ds-table th:nth-child(5) { width: 10%; text-align: center; }
+.ds-table th:nth-child(6) { width: 10%; text-align: center; }
+.ds-table th:nth-child(7) { width: 13%; text-align: center; }
+.ds-table th:nth-child(8) { width: 8%; text-align: center; }
+.ds-table th:nth-child(9) { width: 8%; text-align: center; }
+.ds-table th:nth-child(10) { width: 8%; text-align: center; }
