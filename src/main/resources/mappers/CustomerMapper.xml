@@ -4,7 +4,7 @@
 <mapper namespace="com.example.smartmessaging.mapper.CustomerMapper">
 
     <!-- 1. CustomerResponseDTO 수집용 ResultMap (태그 컬렉션 서브쿼리 자동 바인딩 포함) -->
-    <resultMap id="CustomerResultMap" type="com.example.smartmessaging.dto.response.CustomerResponseDTO">
+    <resultMap id="CustomerResultMap" type="CustomerResponseDTO">
         <id property="customerId" column="customerId"/>
         <result property="name" column="name"/>
         <result property="phone" column="phone"/>
@@ -155,7 +155,7 @@
     </select>
 
     <!-- 3-1. 고객 유형별 집계 통계 조회 -->
-    <select id="selectCustomerStats" resultType="com.example.smartmessaging.dto.response.CustomerStatResponseDTO">
+    <select id="selectCustomerStats" resultType="CustomerStatResponseDTO">
         SELECT 
             COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS totalCount,
             COUNT(CASE WHEN is_deleted = 0 AND joined_at &lt; SYSTIMESTAMP - 7 AND (last_active_at IS NULL OR last_active_at >= ADD_MONTHS(SYSTIMESTAMP, -12)) THEN 1 END) AS regularCount,
@@ -176,7 +176,7 @@
     </select>
 
     <!-- 5. 특정 고객의 과거 메시지 수신 이력 조회 (다중 로우 방지 서브쿼리 안전장치 포함) -->
-    <select id="selectCustomerReceiveHistory" resultType="com.example.smartmessaging.dto.response.CustomerReceiveHistoryResponseDTO">
+    <select id="selectCustomerReceiveHistory" resultType="CustomerReceiveHistoryResponseDTO">
         SELECT 
             st.id AS sendHistoryId,
             TO_CHAR(sh.completed_at, 'YYYY-MM-DD HH24:MI') AS sentAt,
@@ -198,7 +198,7 @@
     </select>
 
     <!-- 6. 080 수신 거부 등록된 고객 목록 조회 -->
-    <select id="selectRejectCustomerList" resultType="com.example.smartmessaging.dto.response.RejectCustomerResponseDTO" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
+    <select id="selectRejectCustomerList" resultType="RejectCustomerResponseDTO" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
         SELECT 
             c.id AS customerId,
             c.name AS name,
