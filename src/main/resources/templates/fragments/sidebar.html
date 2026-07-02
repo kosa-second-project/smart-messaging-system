@@ -24,7 +24,7 @@
                 </svg>
                 <span>대시보드</span>
             </a>
-            <a href="/send" class="app-nav__item">
+            <a href="/send/recipients" class="app-nav__item">
                 <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="m22 2-7 20-4-9-9-4Z"></path>
                     <path d="M22 2 11 13"></path>
@@ -84,7 +84,8 @@
     </nav>
 
     <div class="app-sidebar__footer">
-        <a th:href="@{/auth/logout}" class="app-nav__item" style="text-decoration: none; display: flex; align-items: center; width: 100%;">
+        <a th:href="@{/auth/logout}" class="app-nav__item"
+            class="sidebar-link-inner">
             <svg class="app-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
@@ -95,4 +96,5 @@
     </div>
 
 </aside>
+
 </html>

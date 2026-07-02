@@ -8,12 +8,12 @@
         <h1 class="app-header__title" th:text="${pageTitle ?: '스마트 메시징 시스템'}">스마트 메시징 시스템</h1>
     </div>
     <div class="app-header__right">
-        <div class="app-header__user">
+        <a th:href="@{/kakao/login}" class="app-header__user no-underline-link" title="카카오 로그인 연동">
             <span class="app-header__avatar">김</span>
-            <span class="d-none d-sm-inline">김이름</span>
-        </div>
+            <span class="d-none d-sm-inline">김이름 (카카오 로그인)</span>
+        </a>
         <!-- 로그아웃 버튼을 시큐리티 로그아웃 GET 주소(/auth/logout) 링크로 연동 -->
-        <a th:href="@{/auth/logout}" class="ds-button ds-button--outline ds-button--sm" style="text-decoration: none;">로그아웃</a>
+        <a th:href="@{/auth/logout}" class="ds-button ds-button--outline ds-button--sm" >로그아웃</a>
     </div>
 </header>
 </html>

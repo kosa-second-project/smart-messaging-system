@@ -11,8 +11,8 @@
     <div layout:fragment="content" class="page page--fill">
         <!-- 발송 화면 전용 스타일 일괄 병렬 로딩 (중첩 레이아웃 헤더 누락 방지) -->
         <link rel="stylesheet" th:href="@{/css/pages/send/send-layout.css}">
-        <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css}">
-
+        <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css(v=${#dates.createNow().getTime()})}">
+        <link rel="stylesheet" th:href="@{/css/pages/send/message.css(v=${#dates.createNow().getTime()})}">
 
 
         <div class="send-container">
@@ -28,8 +28,9 @@
             <div th:replace="~{fragments/send/action-bar :: actionBarFragment(${activeStep})}"></div>
         </div>
 
-        <!-- 발송 화면 전용 JS 추가 (스프링 자동 캐시 버스팅 활성화) -->
-        <script th:src="@{/js/pages/send.js}"></script>
+        <!-- 발송 화면 전용 JS 추가 (매 기동시 캐시 버스팅) -->
+        <script th:src="@{/js/pages/send-api.js(v=${#dates.createNow().getTime()})}"></script>
+        <script th:src="@{/js/pages/send.js(v=${#dates.createNow().getTime()})}"></script>
     </div>
 </body>
 

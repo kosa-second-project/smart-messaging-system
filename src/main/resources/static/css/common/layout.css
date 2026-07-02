@@ -332,3 +332,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* 인라인 스타일 추출 */
+.no-underline-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+.sidebar-link-inner {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
