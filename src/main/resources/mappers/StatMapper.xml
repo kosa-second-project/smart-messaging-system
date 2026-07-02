@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.StatMapper">
+
+    <sql id="messageStatColumns">
+        id,
+        total_send_count,
+        total_success_count,
+        billing_cost,
+        max_cost,
+        stat_date AS date,
+        <include refid="Common.auditColumns"/>
+    </sql>
+
+    <sql id="messageStatByDegreeColumns">
+        id,
+        degree,
+        send_count,
+        success_count,
+        stat_date AS date,
+        cost,
+        channel_id,
+        <include refid="Common.auditColumns"/>
+    </sql>
+
+    <sql id="channelStatColumns">
+        id,
+        click_target_count,
+        click_count,
+        conversion_target_count,
+        conversion_count,
+        consent_target_count,
+        consent_count,
+        channel_id,
+        <include refid="Common.auditColumns"/>
+    </sql>
+
+    <sql id="customerStatColumns">
+        id,
+        stat_date AS date,
+        total_customer_count,
+        normal_customer_count,
+        new_customer_count,
+        dormant_customer_count,
+        sms_consent_count,
+        kakao_consent_count,
+        email_consent_count,
+        joined_customer_count,
+        <include refid="Common.auditColumns"/>
+    </sql>
+
+    <sql id="clickStatColumns">
+        id,
+        stat_date,
+        hour_00,
+        hour_01,
+        hour_02,
+        hour_03,
+        hour_04,
+        hour_05,
+        hour_06,
+        hour_07,
+        hour_08,
+        hour_09,
+        hour_10,
+        hour_11,
+        hour_12,
+        hour_13,
+        hour_14,
+        hour_15,
+        hour_16,
+        hour_17,
+        hour_18,
+        hour_19,
+        hour_20,
+        hour_21,
+        hour_22,
+        hour_23,
+        <include refid="Common.auditColumns"/>
+    </sql>
+
+    <select id="selectActiveChannels" resultType="ChannelVO">
+        SELECT
+            id,
+            channel_type,
+            cost_per_msg,
+            max_length,
+            is_active,
+            <include refid="Common.auditColumns"/>
+        FROM channel
+        WHERE is_deleted = 0
+          AND is_active = 1
+        ORDER BY id
+    </select>
+
+    <select id="selectMessageStats" parameterType="StatSearchRequest" resultType="MessageStatVO">
+        SELECT
+            <include refid="messageStatColumns"/>
+        FROM message_stat
+        WHERE is_deleted = 0
+        <if test="from != null">
+          AND stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND stat_date &lt;= #{to}
+        </if>
+        ORDER BY stat_date
+    </select>
+
+    <select id="selectDeliveryMessageStatByDegrees" parameterType="StatSearchRequest" resultType="MessageStatByDegreeVO">
+        SELECT
+            msbd.id,
+            msbd.degree,
+            msbd.send_count,
+            msbd.success_count,
+            msbd.stat_date AS date,
+            msbd.cost,
+            msbd.channel_id,
+            msbd.created_at,
+            msbd.updated_at,
+            msbd.created_by,
+            msbd.updated_by,
+            msbd.is_deleted
+        FROM message_stat_by_degree msbd
+        INNER JOIN channel c
+                ON c.id = msbd.channel_id
+               AND c.is_deleted = 0
+        WHERE msbd.is_deleted = 0
+        <if test="from != null">
+          AND msbd.stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND msbd.stat_date &lt;= #{to}
+        </if>
+        <if test="channel != null and channel != ''">
+          AND c.channel_type = #{channel}
+        </if>
+        ORDER BY msbd.stat_date, msbd.degree, msbd.channel_id
+    </select>
+
+    <select id="selectChannelStats" parameterType="StatSearchRequest" resultType="ChannelStatVO">
+        SELECT
+            cs.id,
+            cs.click_target_count,
+            cs.click_count,
+            cs.conversion_target_count,
+            cs.conversion_count,
+            cs.consent_target_count,
+            cs.consent_count,
+            cs.channel_id,
+            cs.created_at,
+            cs.updated_at,
+            cs.created_by,
+            cs.updated_by,
+            cs.is_deleted
+        FROM channel_stat cs
+        INNER JOIN channel c
+                ON c.id = cs.channel_id
+               AND c.is_deleted = 0
+        WHERE cs.is_deleted = 0
+        <if test="channel != null and channel != ''">
+          AND c.channel_type = #{channel}
+        </if>
+        ORDER BY cs.channel_id
+    </select>
+
+    <select id="selectCustomerStats" parameterType="StatSearchRequest" resultType="CustomerStatVO">
+        SELECT
+            <include refid="customerStatColumns"/>
+        FROM customer_stat
+        WHERE is_deleted = 0
+        <if test="from != null">
+          AND stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND stat_date &lt;= #{to}
+        </if>
+        ORDER BY stat_date
+    </select>
+
+    <select id="selectCustomerChannelConsents" parameterType="StatSearchRequest" resultType="CustomerChannelConsentVO">
+        SELECT
+            ccc.id,
+            ccc.is_consented,
+            ccc.customer_id,
+            ccc.channel_id,
+            ccc.created_at,
+            ccc.updated_at,
+            ccc.created_by,
+            ccc.updated_by,
+            ccc.is_deleted
+        FROM customer_channel_consent ccc
+        INNER JOIN channel c
+                ON c.id = ccc.channel_id
+               AND c.is_deleted = 0
+        WHERE ccc.is_deleted = 0
+        <if test="channel != null and channel != ''">
+          AND c.channel_type = #{channel}
+        </if>
+        ORDER BY ccc.channel_id, ccc.customer_id
+    </select>
+
+    <select id="selectPerformanceClickStats" parameterType="StatSearchRequest" resultType="ClickStatVO">
+        SELECT
+            <include refid="clickStatColumns"/>
+        FROM click_stat
+        WHERE is_deleted = 0
+        <if test="from != null">
+          AND stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND stat_date &lt;= #{to}
+        </if>
+        ORDER BY stat_date
+    </select>
+</mapper>
