@@ -13,8 +13,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReportChartDatasetResponse {
+public class StatChartResponse {
 
-    private String label;
-    private List<Number> data;
+    private String chartId;
+    private String title;
+    private String type;
+    private List<String> labels;
+    private List<StatChartDatasetResponse> datasets;
 }

@@ -7,30 +7,30 @@ $(function() {
     };
 
     bindEvents(state);
-    loadDeliveryReport(state);
+    loadDeliveryStats(state);
 });
 
 function bindEvents(state) {
     $("#statsPeriodForm").on("change", "input", function() {
-        state.period = ReportRenderer.getPeriod(state.period);
-        loadDeliveryReport(state);
+        state.period = StatsRenderer.getPeriod(state.period);
+        loadDeliveryStats(state);
     });
 }
 
-function loadDeliveryReport(state) {
-    const period = ReportRenderer.getPeriod(state.period);
+function loadDeliveryStats(state) {
+    const period = StatsRenderer.getPeriod(state.period);
     state.period = period;
-    $("#statsPeriodLabel").text(ReportRenderer.periodLabel(period));
+    $("#statsPeriodLabel").text(StatsRenderer.periodLabel(period));
 
-    ApiClient.get("/api/reports/delivery", {
+    ApiClient.get("/api/stats/delivery", {
         from: period.start,
         to: period.end
     }).done(function(response) {
-        ReportRenderer.renderCards("#statsCards", response.cards, {
+        StatsRenderer.renderCards("#statsCards", response.cards, {
             icons: ["send", "check", "activity", "target", "refresh"],
             colors: ["blue", "green", "violet", "amber", "green"]
         });
-        ReportRenderer.renderCharts(response.charts, {
+        StatsRenderer.renderCharts(response.charts, {
             channelTrend: "#channelTrendChart",
             sendSuccessTrend: "#sendTrendChart",
             fallbackSuccess: "#fallbackChart"

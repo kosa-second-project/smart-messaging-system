@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReportTableResponse {
+public class StatTableResponse {
 
     private String tableId;
     private String title;

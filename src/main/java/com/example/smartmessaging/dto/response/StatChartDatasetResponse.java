@@ -13,9 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReportPageResponse {
+public class StatChartDatasetResponse {
 
-    private List<ReportCardResponse> cards;
-    private List<ReportChartResponse> charts;
-    private List<ReportTableResponse> tables;
+    private String label;
+    private List<Number> data;
 }

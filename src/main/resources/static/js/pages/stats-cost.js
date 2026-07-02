@@ -7,31 +7,31 @@ $(function() {
     };
 
     bindCostEvents(state);
-    loadCostReport(state);
+    loadCostStats(state);
 });
 
 function bindCostEvents(state) {
     $("#statsPeriodForm").on("change", "input", function() {
-        state.period = ReportRenderer.getPeriod(state.period);
-        loadCostReport(state);
+        state.period = StatsRenderer.getPeriod(state.period);
+        loadCostStats(state);
     });
 }
 
-function loadCostReport(state) {
-    const period = ReportRenderer.getPeriod(state.period);
+function loadCostStats(state) {
+    const period = StatsRenderer.getPeriod(state.period);
     state.period = period;
-    $("#statsPeriodLabel").text(ReportRenderer.periodLabel(period));
+    $("#statsPeriodLabel").text(StatsRenderer.periodLabel(period));
 
-    ApiClient.get("/api/reports/cost", {
+    ApiClient.get("/api/stats/cost", {
         from: period.start,
         to: period.end
     }).done(function(response) {
-        ReportRenderer.renderCards("#statsCards", response.cards, {
+        StatsRenderer.renderCards("#statsCards", response.cards, {
             icons: ["target", "chart", "refresh", "send"],
             colors: ["amber", "violet", "green", "blue"]
         });
         renderCostChartTitles(response.charts);
-        ReportRenderer.renderCharts(response.charts, {
+        StatsRenderer.renderCharts(response.charts, {
             costComparison: "#analysisPrimaryChart",
             costSavings: "#analysisSecondaryChart"
         }, {
@@ -46,8 +46,8 @@ function loadCostReport(state) {
 }
 
 function renderCostChartTitles(charts) {
-    const primary = ReportRenderer.findById(charts, "costComparison");
-    const secondary = ReportRenderer.findById(charts, "costSavings");
+    const primary = StatsRenderer.findById(charts, "costComparison");
+    const secondary = StatsRenderer.findById(charts, "costSavings");
 
     $("#analysisPrimaryTitle").text(primary?.title || "");
     $("#analysisPrimaryMeta").text("");

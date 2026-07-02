@@ -8,35 +8,35 @@ $(function() {
     };
 
     bindPerformanceEvents(state);
-    loadPerformanceReport(state);
+    loadPerformanceStats(state);
 });
 
 function bindPerformanceEvents(state) {
     $("#statsPeriodForm").on("change", "input", function() {
-        state.period = ReportRenderer.getPeriod(state.period);
-        loadPerformanceReport(state);
+        state.period = StatsRenderer.getPeriod(state.period);
+        loadPerformanceStats(state);
     });
 
     $("#performanceChannelSelect").on("change", function() {
         state.channel = $(this).val();
-        loadPerformanceReport(state);
+        loadPerformanceStats(state);
     });
 }
 
-function loadPerformanceReport(state) {
-    const period = ReportRenderer.getPeriod(state.period);
+function loadPerformanceStats(state) {
+    const period = StatsRenderer.getPeriod(state.period);
     state.period = period;
-    $("#statsPeriodLabel").text(ReportRenderer.periodLabel(period));
+    $("#statsPeriodLabel").text(StatsRenderer.periodLabel(period));
 
-    ApiClient.get("/api/reports/performance", {
+    ApiClient.get("/api/stats/performance", {
         from: period.start,
         to: period.end
     }).done(function(response) {
-        ReportRenderer.renderCards("#statsCards", applySelectedChannel(response.cards, state.channel), {
+        StatsRenderer.renderCards("#statsCards", applySelectedChannel(response.cards, state.channel), {
             icons: ["send", "target", "chart", "check"],
             colors: ["blue", "green", "violet", "amber"]
         });
-        ReportRenderer.renderCharts(response.charts, {
+        StatsRenderer.renderCharts(response.charts, {
             performanceTrend: "#performanceTrendChart",
             weekdayClick: "#weekdayClickChart",
             hourlyClick: "#hourlyClickChart"
