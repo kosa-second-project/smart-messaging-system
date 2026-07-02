@@ -32,6 +32,18 @@
   min-height: 17.5rem;
 }
 
+.stats-analysis-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.stats-analysis-toolbar .stats-period-control {
+  max-width: 100%;
+}
+
 .stats-analysis-stack {
   min-height: 0;
   display: grid;

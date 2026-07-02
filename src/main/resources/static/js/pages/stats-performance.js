@@ -30,9 +30,10 @@ function loadPerformanceStats(state) {
 
     ApiClient.get("/api/stats/performance", {
         from: period.start,
-        to: period.end
+        to: period.end,
+        channel: state.channel
     }).done(function(response) {
-        StatsRenderer.renderCards("#statsCards", applySelectedChannel(response.cards, state.channel), {
+        StatsRenderer.renderCards("#statsCards", response.cards, {
             icons: ["send", "target", "chart", "check"],
             colors: ["blue", "green", "violet", "amber"]
         });
@@ -42,35 +43,23 @@ function loadPerformanceStats(state) {
             hourlyClick: "#hourlyClickChart"
         }, {
             performanceTrend: {
-                yFormatter: percentFormatter
+                tooltipSuffix: "건",
+                yFormatter: countFormatter
             },
             weekdayClick: {
                 legend: false,
-                tooltipSuffix: "%",
-                yFormatter: percentFormatter
+                tooltipSuffix: "건",
+                yFormatter: countFormatter
             },
             hourlyClick: {
                 legend: false,
-                tooltipSuffix: "%",
-                yFormatter: percentFormatter
+                tooltipSuffix: "건",
+                yFormatter: countFormatter
             }
         });
     });
 }
 
-function applySelectedChannel(cards, channel) {
-    return (cards || []).map(function(card) {
-        if (card.title !== "선택 채널") {
-            return card;
-        }
-
-        return {
-            ...card,
-            value: channel
-        };
-    });
-}
-
-function percentFormatter(value) {
-    return `${Math.round(value)}%`;
+function countFormatter(value) {
+    return Number(value).toLocaleString();
 }
