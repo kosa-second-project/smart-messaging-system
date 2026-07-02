@@ -45,12 +45,6 @@ public class PageController {
         return "pages/templates";
     }
 
-    @GetMapping("/history")
-    public String history(Model model) {
-        model.addAttribute("pageTitle", "전송 기록");
-        return "pages/history";
-    }
-
     @GetMapping("/customers")
     public String customers(Model model) {
         model.addAttribute("pageTitle", "고객 관리");
