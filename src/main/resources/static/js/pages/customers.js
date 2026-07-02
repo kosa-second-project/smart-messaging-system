@@ -103,7 +103,7 @@ function filterType(type, element) {
 }
 
 // 정렬 순서 변경
-function changeSort(val) {
+function changeSortOrder(val) {
     sortOrder = val;
     currentPage = 1;
     fetchData();
@@ -124,7 +124,7 @@ function fetchData() {
     }
 
     let url = '/api/customers';
-    let params = `page=${currentPage}&size=${pageSize}`;
+    let params = `page=${currentPage}&size=${pageSize}&sortOrder=${sortOrder}`;
 
     if (currentTab === 'members') {
         if (nameParam) params += `&name=${encodeURIComponent(nameParam)}`;

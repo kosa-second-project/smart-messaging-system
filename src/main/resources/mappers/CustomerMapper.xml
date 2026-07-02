@@ -95,9 +95,23 @@
                   WHERE t.name = #{searchTag} 
                     AND ctm.is_deleted = 0 
                     AND t.is_deleted = 0
-              )
           </if>
-        ORDER BY c.id DESC
+        ORDER BY
+        <choose>
+            <when test="sortOrder == 'name'">
+                c.name ASC
+            </when>
+            <when test="sortOrder == 'type'">
+                (CASE 
+                    WHEN c.joined_at &gt;= SYSTIMESTAMP - 7 THEN '1'
+                    WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '3'
+                    ELSE '2'
+                 END) ASC, c.name ASC
+            </when>
+            <otherwise>
+                c.joined_at DESC, c.id DESC
+            </otherwise>
+        </choose>
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
     </select>
 
@@ -230,7 +244,22 @@
                   </when>
               </choose>
           </if>
-        ORDER BY rh.created_at DESC
+        ORDER BY
+        <choose>
+            <when test="sortOrder == 'name'">
+                c.name ASC
+            </when>
+            <when test="sortOrder == 'type'">
+                (CASE 
+                    WHEN c.joined_at &gt;= SYSTIMESTAMP - 7 THEN '1'
+                    WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '3'
+                    ELSE '2'
+                 END) ASC, c.name ASC
+            </when>
+            <otherwise>
+                rh.created_at DESC
+            </otherwise>
+        </choose>
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
     </select>
 
