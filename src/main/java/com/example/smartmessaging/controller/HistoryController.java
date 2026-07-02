@@ -5,6 +5,7 @@ import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.service.HistoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,7 +37,7 @@ public class HistoryController {
         return "pages/history";
     }
 
-    @GetMapping("/history/{sendHistoryId}")
+    @GetMapping(value = "/history/{sendHistoryId}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public HistoryDetailResponseDTO getHistoryDetail(@PathVariable Long sendHistoryId) {
         return historyService.getHistoryDetail(sendHistoryId);

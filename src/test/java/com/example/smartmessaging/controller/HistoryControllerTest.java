@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -84,6 +85,28 @@ class HistoryControllerTest {
 
         mockMvc.perform(get("/history/999").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("HISTORY-404"));
+    }
+
+    @Test
+    void Accept_헤더가_없어도_없는_전송기록_상세는_404_JSON을_반환한다() throws Exception {
+        when(historyService.getHistoryDetail(999L))
+                .thenThrow(new BusinessException(ErrorCode.SEND_HISTORY_NOT_FOUND));
+
+        mockMvc.perform(get("/history/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("HISTORY-404"));
+    }
+
+    @Test
+    void Accept_헤더가_와일드카드여도_없는_전송기록_상세는_404_JSON을_반환한다() throws Exception {
+        when(historyService.getHistoryDetail(999L))
+                .thenThrow(new BusinessException(ErrorCode.SEND_HISTORY_NOT_FOUND));
+
+        mockMvc.perform(get("/history/999").accept(MediaType.ALL))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value("HISTORY-404"));
     }
 }

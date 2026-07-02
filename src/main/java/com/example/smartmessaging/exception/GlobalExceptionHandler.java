@@ -4,16 +4,20 @@ import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @ControllerAdvice
@@ -25,8 +29,7 @@ public class GlobalExceptionHandler {
         log.error("Business Exception Occurred: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
         
         // AJAX 또는 API 요청인 경우 JSON 응답 반환
-        String acceptHeader = request.getHeader("Accept");
-        if (acceptHeader != null && acceptHeader.contains("application/json")) {
+        if (isJsonRequest(request)) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", e.getErrorCode().getStatus());
             response.put("code", e.getErrorCode().getCode());
@@ -37,6 +40,29 @@ public class GlobalExceptionHandler {
         // 일반 브라우저 웹 페이지 요청인 경우 에러 페이지로 이동
         model.addAttribute("errorMessage", e.getMessage());
         return "error/500";
+    }
+
+    private boolean isJsonRequest(HttpServletRequest request) {
+        String acceptHeader = request.getHeader("Accept");
+        if (acceptHeader != null && acceptHeader.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            return true;
+        }
+
+        Object producibleMediaTypes = request.getAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+        if (producibleMediaTypes instanceof Set<?> mediaTypes) {
+            boolean producesJson = mediaTypes.stream()
+                    .filter(MediaType.class::isInstance)
+                    .map(MediaType.class::cast)
+                    .anyMatch(mediaType -> !mediaType.isWildcardType()
+                            && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON));
+            if (producesJson) {
+                return true;
+            }
+        }
+
+        Object handler = request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
+        return handler instanceof HandlerMethod handlerMethod
+                && handlerMethod.hasMethodAnnotation(ResponseBody.class);
     }
 
     // 2. 일반 웹 화면(Thymeleaf) 요청 도중 발생한 기타 예외 처리
