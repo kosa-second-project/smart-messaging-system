@@ -424,6 +424,38 @@
     pointer-events: none;
 }
 
+.template-purpose-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.375rem;
+}
+
+.template-purpose-option {
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    color: var(--muted-foreground);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.template-purpose-option:hover {
+    border-color: rgba(24, 67, 250, 0.4);
+    color: var(--foreground);
+}
+
+.template-purpose-option.is-active {
+    border-color: var(--primary);
+    background: var(--accent);
+    color: var(--primary);
+}
+
 .template-checkbox-row {
     display: flex;
     grid-template-columns: none;

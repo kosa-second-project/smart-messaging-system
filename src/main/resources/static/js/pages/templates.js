@@ -46,6 +46,15 @@ function bindTemplateEvents() {
         });
     });
 
+    document.querySelectorAll("[data-purpose-value]").forEach(button => {
+        button.addEventListener("click", function() {
+            document.getElementById("templatePurpose").value = button.dataset.purposeValue;
+            document.querySelectorAll("[data-purpose-value]").forEach(item => {
+                item.classList.toggle("is-active", item.dataset.purposeValue === button.dataset.purposeValue);
+            });
+        });
+    });
+
     document.getElementById("templateForm").addEventListener("submit", function(event) {
         event.preventDefault();
         saveTemplate();
@@ -427,6 +436,10 @@ function closeTemplateDetailOnBackdrop(event) {
 
 function resetTemplateForm() {
     document.getElementById("templateForm").reset();
+    document.getElementById("templatePurpose").value = "advertising";
+    document.querySelectorAll("[data-purpose-value]").forEach(button => {
+        button.classList.toggle("is-active", button.dataset.purposeValue === "advertising");
+    });
     document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
 }
