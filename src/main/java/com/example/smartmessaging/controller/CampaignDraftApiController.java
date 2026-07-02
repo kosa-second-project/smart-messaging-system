@@ -86,13 +86,21 @@ public class CampaignDraftApiController {
         }
 
         for (Map<String, Object> item : items) {
-            Long customerId = Long.parseLong(item.get("customerId").toString());
-            String action   = item.get("action").toString();
-
-            if ("REMOVE".equals(action)) {
-                draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
-            } else if ("ADD".equals(action)) {
-                draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
+            Object rawId = item.get("customerId");
+            Object rawAction = item.get("action");
+            if (rawId == null || rawAction == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "customerId and action are required"));
+            }
+            try {
+                Long customerId = Long.parseLong(rawId.toString());
+                String action = rawAction.toString();
+                if ("REMOVE".equals(action)) {
+                    draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
+                } else if ("ADD".equals(action)) {
+                    draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
+                }
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "invalid customerId: " + rawId));
             }
         }
 

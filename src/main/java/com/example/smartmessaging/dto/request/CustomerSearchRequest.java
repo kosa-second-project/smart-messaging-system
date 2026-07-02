@@ -36,6 +36,14 @@ public class CustomerSearchRequest {
     private int page = 1;
     private int size = 20;
 
+    public void setPage(int page) {
+        this.page = Math.max(page, 1);
+    }
+
+    public void setSize(int size) {
+        this.size = Math.min(Math.max(size, 1), 100);
+    }
+
     /**
      * MyBatis OFFSET 페이징 계산용
      * Oracle: OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
