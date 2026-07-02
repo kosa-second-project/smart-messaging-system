@@ -34,4 +34,13 @@ class HistoryListResponseDTOTest {
         assertThat(response.getDisplayTags()).containsExactly("10대", "30대", "sms 동의");
         assertThat(response.getHiddenTagCount()).isEqualTo(4);
     }
+
+    @Test
+    void 전송상태를_enum_기준의_라벨과_CSS_클래스로_표시한다() {
+        HistoryListResponseDTO response = new HistoryListResponseDTO();
+        response.setStatus("SENT   ");
+
+        assertThat(response.getStatusLabel()).isEqualTo("완료");
+        assertThat(response.getStatusStyleClass()).isEqualTo("history-status--completed");
+    }
 }

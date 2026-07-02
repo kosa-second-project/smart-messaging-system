@@ -1,5 +1,6 @@
 package com.example.smartmessaging.dto.request;
 
+import com.example.smartmessaging.dto.type.HistorySortType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,17 +10,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class HistorySearchRequestDTO {
     public static final int PAGE_SIZE = 10;
-    private static final Set<String> ALLOWED_SORTS = Set.of(
-            "latest", "oldest", "mostSent", "highestSuccessRate" // 정렬 기준, 기본은 최신순
-    );
-
     private String keyword;
     private Long channelId;
     private String status;
@@ -41,7 +37,7 @@ public class HistorySearchRequestDTO {
                 .filter(java.util.Objects::nonNull)
                 .distinct()
                 .toList();
-        sort = sort != null && ALLOWED_SORTS.contains(sort) ? sort : "latest";
+        sort = HistorySortType.fromValueOrDefault(sort).getValue();
         page = page == null || page < 1 ? 1 : page;
     }
 

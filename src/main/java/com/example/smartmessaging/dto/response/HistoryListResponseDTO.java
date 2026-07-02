@@ -1,5 +1,6 @@
 package com.example.smartmessaging.dto.response;
 
+import com.example.smartmessaging.dto.type.SendHistoryStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -61,29 +62,11 @@ public class HistoryListResponseDTO {
 
     // 상태값에 맞는 CSS 클래스명을 반환하는 메서드
     public String getStatusStyleClass() {
-        if (status == null || status.isBlank()) {
-            return "history-status--default";
-        }
-        return switch (status.trim().toUpperCase(Locale.ROOT)) {
-            case "SCHEDULED" -> "history-status--scheduled";
-            case "SENDING" -> "history-status--sending";
-            case "SENT" -> "history-status--completed";
-            case "FAILED" -> "history-status--failed";
-            default -> "history-status--default";
-        };
+        return SendHistoryStatus.styleClassOf(status);
     }
 
     // 상태값을 화면에 보이는 글자로 바꿔주는 메서드
     public static String statusLabelOf(String status) {
-        if (status == null || status.isBlank()) {
-            return "-";
-        }
-        return switch (status.trim().toUpperCase(Locale.ROOT)) {
-            case "SCHEDULED" -> "예약";
-            case "SENDING" -> "전송중";
-            case "SENT" -> "완료";
-            case "FAILED" -> "실패";
-            default -> status;
-        };
+        return SendHistoryStatus.labelOf(status);
     }
 }
