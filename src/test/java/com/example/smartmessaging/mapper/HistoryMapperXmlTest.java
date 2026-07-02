@@ -53,4 +53,18 @@ class HistoryMapperXmlTest {
                         "LOWER(t.name) LIKE LOWER(#{keywordLikePattern}) ESCAPE '!'")
                 .doesNotContain("LOWER(#{keyword})");
     }
+
+    @Test
+    void 태그_필터와_목록_태그는_tag_id_오름차순으로_조회한다() throws Exception {
+        String resource = "mappers/HistoryMapper.xml";
+        String mapperXml;
+
+        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+            mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        assertThat(mapperXml)
+                .contains("ORDER BY id ASC",
+                        "ORDER BY tag_rows.send_history_id, tag_rows.tag_id ASC");
+    }
 }

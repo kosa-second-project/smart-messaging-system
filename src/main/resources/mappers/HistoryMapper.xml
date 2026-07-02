@@ -121,17 +121,23 @@
 
     <select id="findTagsByHistoryIds"
             resultType="com.example.smartmessaging.dto.response.HistoryTagResponseDTO">
-        SELECT DISTINCT
-            stt.send_history_id,
-            t.name AS tag_name
-        FROM send_target_tag stt
-        JOIN tag t ON t.id = stt.tag_id AND NVL(t.is_deleted, 0) = 0
-        WHERE NVL(stt.is_deleted, 0) = 0
-          AND stt.send_history_id IN
-        <foreach collection="historyIds" item="historyId" open="(" separator="," close=")">
-            #{historyId}
-        </foreach>
-        ORDER BY stt.send_history_id, tag_name
+        SELECT
+            tag_rows.send_history_id,
+            tag_rows.tag_name
+        FROM (
+            SELECT DISTINCT
+                stt.send_history_id,
+                t.id AS tag_id,
+                t.name AS tag_name
+            FROM send_target_tag stt
+            JOIN tag t ON t.id = stt.tag_id AND NVL(t.is_deleted, 0) = 0
+            WHERE NVL(stt.is_deleted, 0) = 0
+              AND stt.send_history_id IN
+            <foreach collection="historyIds" item="historyId" open="(" separator="," close=")">
+                #{historyId}
+            </foreach>
+        ) tag_rows
+        ORDER BY tag_rows.send_history_id, tag_rows.tag_id ASC
     </select>
 
     <select id="findChannelOptions"
@@ -148,7 +154,7 @@
         SELECT id, name AS label
         FROM tag
         WHERE NVL(is_deleted, 0) = 0
-        ORDER BY name, id
+        ORDER BY id ASC
     </select>
 
     <select id="findPurposeOptions" resultType="string">
