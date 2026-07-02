@@ -450,7 +450,6 @@ function saveTemplate() {
         content: document.getElementById("templateContent").value.trim(),
         category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
-        kakaoTemplateCode: document.getElementById("templateKakaoCode").value.trim(),
         kakaoTemplateStatus: document.getElementById("templateKakaoStatus").value,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
             .map(input => Number(input.value))
