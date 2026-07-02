@@ -149,7 +149,7 @@ const StatsRenderer = (function() {
     function getPeriod(defaultPeriod) {
         const start = $("#statsStartDate").val() || defaultPeriod.start;
         const end = $("#statsEndDate").val() || defaultPeriod.end;
-        const period = limitPeriod(orderPeriod({ start, end }));
+        const period = limitPeriod(limitToSelectableDates(orderPeriod({ start, end })));
 
         syncPeriodInputs(period);
 
@@ -244,6 +244,18 @@ const StatsRenderer = (function() {
         };
     }
 
+    function limitToSelectableDates(period) {
+        if (!isValidDate(period.start) || !isValidDate(period.end)) {
+            return period;
+        }
+
+        const selectableMaxDate = getSelectableMaxDate();
+        const start = minDateString(period.start, selectableMaxDate);
+        const end = minDateString(period.end, selectableMaxDate);
+
+        return orderPeriod({ start, end });
+    }
+
     function getPeriodDays(period) {
         return Math.max(1, Math.round((parseDate(period.end).getTime() - parseDate(period.start).getTime()) / 86400000) + 1);
     }
@@ -253,10 +265,26 @@ const StatsRenderer = (function() {
             return;
         }
 
-        $("#statsStartDate").val(period.start);
+        const selectableMaxDate = getSelectableMaxDate();
+        const endMaxDate = minDateString(
+                formatDate(addDays(parseDate(period.start), MAX_PERIOD_DAYS - 1)),
+                selectableMaxDate
+        );
+
+        $("#statsStartDate")
+                .val(period.start)
+                .attr("max", selectableMaxDate);
         $("#statsEndDate")
                 .val(period.end)
-                .attr("max", formatDate(addDays(parseDate(period.start), MAX_PERIOD_DAYS - 1)));
+                .attr("max", endMaxDate);
+    }
+
+    function getSelectableMaxDate() {
+        return formatDate(addDays(new Date(), -1));
+    }
+
+    function minDateString(first, second) {
+        return parseDate(first) <= parseDate(second) ? first : second;
     }
 
     function parseDate(value) {
