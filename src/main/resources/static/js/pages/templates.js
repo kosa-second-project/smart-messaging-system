@@ -66,6 +66,7 @@ function fetchTemplateOptions() {
 
 function renderTemplateFilters() {
     renderSelectOptions("templateCategoryFilter", templateOptions.categories || [], "전체 카테고리");
+    renderSelectOptions("templateCategory", templateOptions.categories || [], "카테고리 선택");
 
     const purposeOptions = buildPurposeOptions(templateOptions.purposes || []);
     renderSelectOptions("templatePurposeFilter", purposeOptions, "전체 광고여부");
@@ -434,7 +435,7 @@ function saveTemplate() {
     const body = {
         title: document.getElementById("templateTitle").value.trim(),
         content: document.getElementById("templateContent").value.trim(),
-        category: document.getElementById("templateCategory").value.trim(),
+        category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
         kakaoTemplateCode: document.getElementById("templateKakaoCode").value.trim(),
         kakaoTemplateStatus: document.getElementById("templateKakaoStatus").value,
