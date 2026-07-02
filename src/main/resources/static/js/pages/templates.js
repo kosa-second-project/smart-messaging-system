@@ -457,6 +457,11 @@ function resetTemplateForm() {
     document.querySelectorAll("[data-purpose-value]").forEach(button => {
         button.classList.toggle("is-active", button.dataset.purposeValue === "advertising");
     });
+    // 새 템플릿 작성 시 미리보기는 항상 메시지 탭에서 시작한다.
+    templatePreviewMode = "message";
+    document.querySelectorAll("[data-preview-mode]").forEach(button => {
+        button.classList.toggle("is-active", button.dataset.previewMode === "message");
+    });
     document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
 }
