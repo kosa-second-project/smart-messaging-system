@@ -36,15 +36,10 @@ function switchTab(tab) {
     document.getElementById('tabMembersBtn').classList.toggle('active', tab === 'members');
     document.getElementById('tabRejectsBtn').classList.toggle('active', tab === 'rejects');
 
-    // 유형 필터 보임/숨김 제어
+    // 유형 필터 보임/숨김 제어 (수신거부 탭에서도 유형 필터 상시 활성화)
     const typeFilterWrapper = document.getElementById('typeFilterWrapper');
-    if (tab === 'rejects') {
-        typeFilterWrapper.style.opacity = '0.4';
-        typeFilterWrapper.style.pointerEvents = 'none';
-    } else {
-        typeFilterWrapper.style.opacity = '1';
-        typeFilterWrapper.style.pointerEvents = 'auto';
-    }
+    typeFilterWrapper.style.opacity = '1';
+    typeFilterWrapper.style.pointerEvents = 'auto';
 
     // 인풋 및 필터 초기화
     document.getElementById('customerSearchInput').value = '';
@@ -80,9 +75,9 @@ function renderHeader() {
     } else {
         header.innerHTML = `
             <tr>
-                <th style="width: 150px;">고객명</th>
-                <th style="width: 200px;">전화번호</th>
-                <th>수신거부 일시</th>
+                <th style="width: 30%;">고객명</th>
+                <th style="width: 30%;">전화번호</th>
+                <th style="width: 40%;">수신거부 일시</th>
             </tr>
         `;
     }
@@ -139,6 +134,7 @@ function fetchData() {
         url = '/api/customers/rejects';
         if (nameParam) params += `&name=${encodeURIComponent(nameParam)}`;
         if (phoneParam) params += `&phone=${encodeURIComponent(phoneParam)}`;
+        if (selectedType) params += `&customerType=${encodeURIComponent(selectedType)}`;
     }
 
     fetch(`${url}?${params}`)
@@ -159,7 +155,7 @@ function renderTable(list) {
     tbody.innerHTML = '';
 
     if (list.length === 0) {
-        const colSpan = currentTab === 'members' ? 8 : 3;
+        const colSpan = currentTab === 'members' ? 8 : 4;
         tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; padding: 60px; color: var(--muted-foreground);">조건에 부합하는 고객 정보가 없습니다.</td></tr>`;
         return;
     }
@@ -173,6 +169,7 @@ function renderTable(list) {
             let typeBadgeClass = 'badge-gray';
             if (item.customerType === '일반') typeBadgeClass = 'badge-blue';
             else if (item.customerType === '신규') typeBadgeClass = 'badge-green';
+            else if (item.customerType === '휴면') typeBadgeClass = 'badge-purple';
 
             // 수신 동의 여부 체크 기호
             const smsHtml = item.smsConsent ? '<span class="consent-icon ok">✔</span>' : '<span class="consent-icon no">✖</span>';
@@ -187,7 +184,7 @@ function renderTable(list) {
 
             tr.innerHTML = `
                 <td style="font-weight: var(--font-weight-bold);">${escapeHtml(item.name)}</td>
-                <td class="font-mono">${escapeHtml(item.phone)}</td>
+                <td class="font-mono">${escapeHtml(maskPhoneNumber(item.phone))}</td>
                 <td><span class="badge ${typeBadgeClass}">${escapeHtml(item.customerType)}</span></td>
                 <td><div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 260px;">${tagsHtml}</div></td>
                 <td style="text-align: center;">${smsHtml}</td>
@@ -198,7 +195,7 @@ function renderTable(list) {
         } else {
             tr.innerHTML = `
                 <td style="font-weight: var(--font-weight-bold);">${escapeHtml(item.name)}</td>
-                <td class="font-mono">${escapeHtml(item.phone)}</td>
+                <td class="font-mono">${escapeHtml(maskPhoneNumber(item.phone))}</td>
                 <td style="color: var(--muted-foreground);">${item.rejectedAt || '-'}</td>
             `;
         }
@@ -309,6 +306,7 @@ function renderModalBody(customer, history) {
     let typeBadgeClass = 'badge-gray';
     if (customer.customerType === '일반') typeBadgeClass = 'badge-blue';
     else if (customer.customerType === '신규') typeBadgeClass = 'badge-green';
+    else if (customer.customerType === '휴면') typeBadgeClass = 'badge-purple';
 
     // 태그 목록
     let tagsHtml = '';
@@ -351,7 +349,7 @@ function renderModalBody(customer, history) {
                         <span class="detail-name">${escapeHtml(customer.name)}</span>
                         <span class="badge ${typeBadgeClass}">${escapeHtml(customer.customerType)}</span>
                     </div>
-                    <span class="detail-phone">${escapeHtml(customer.phone)}</span>
+                    <span class="detail-phone">${escapeHtml(maskPhoneNumber(customer.phone))}</span>
                 </div>
             </div>
             <div class="detail-dates">
@@ -436,4 +434,16 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// 전화번호 마스킹 유틸리티
+function maskPhoneNumber(phone) {
+    if (!phone) return '';
+    const clean = phone.replace(/[^0-9]/g, '');
+    if (clean.length === 11) {
+        return `${clean.slice(0, 3)}-****-${clean.slice(7)}`;
+    } else if (clean.length === 10) {
+        return `${clean.slice(0, 3)}-***-${clean.slice(6)}`;
+    }
+    return phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
 }

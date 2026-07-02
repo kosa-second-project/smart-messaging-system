@@ -271,6 +271,7 @@
 .badge-green { background: #ECFDF5; color: var(--success); }
 .badge-gray { background: #F3F4F6; color: var(--muted-foreground); }
 .badge-red { background: #FEF2F2; color: var(--destructive); }
+.badge-purple { background: #F3E8FF; color: #8B5CF6; }
 
 .tag-chip {
     display: inline-block;

@@ -215,6 +215,21 @@
           <if test="phone != null and phone != ''">
               AND c.phone LIKE '%' || #{phone} || '%'
           </if>
+          <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+          <if test="customerType != null and customerType != ''">
+              <choose>
+                  <when test="customerType == '신규'">
+                      AND c.joined_at &gt;= SYSTIMESTAMP - 7
+                  </when>
+                  <when test="customerType == '휴면'">
+                      AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                  </when>
+                  <when test="customerType == '일반'">
+                      AND c.joined_at &lt; SYSTIMESTAMP - 7 
+                      AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                  </when>
+              </choose>
+          </if>
         ORDER BY rh.created_at DESC
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
     </select>
@@ -230,6 +245,21 @@
           </if>
           <if test="phone != null and phone != ''">
               AND c.phone LIKE '%' || #{phone} || '%'
+          </if>
+          <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+          <if test="customerType != null and customerType != ''">
+              <choose>
+                  <when test="customerType == '신규'">
+                      AND c.joined_at &gt;= SYSTIMESTAMP - 7
+                  </when>
+                  <when test="customerType == '휴면'">
+                      AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                  </when>
+                  <when test="customerType == '일반'">
+                      AND c.joined_at &lt; SYSTIMESTAMP - 7 
+                      AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                  </when>
+              </choose>
           </if>
     </select>
 
