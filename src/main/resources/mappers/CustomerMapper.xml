@@ -20,7 +20,7 @@
     </resultMap>
 
     <!-- 2. 필터 조건 및 페이징을 적용한 고객 목록 조회 -->
-    <select id="selectCustomerList" resultMap="CustomerResultMap" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
+    <select id="selectCustomerList" resultMap="CustomerResultMap" parameterType="CustomerSearchDTO">
         SELECT 
             c.id AS customerId,
             c.name AS name,
@@ -102,7 +102,7 @@
     </select>
 
     <!-- 3. 필터 조건에 부합하는 총 고객 수 조회 (페이징용) -->
-    <select id="selectCustomerCount" resultType="int" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
+    <select id="selectCustomerCount" resultType="int" parameterType="CustomerSearchDTO">
         SELECT COUNT(*)
         FROM customer c
         LEFT JOIN (
@@ -198,7 +198,7 @@
     </select>
 
     <!-- 6. 080 수신 거부 등록된 고객 목록 조회 -->
-    <select id="selectRejectCustomerList" resultType="RejectCustomerResponseDTO" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
+    <select id="selectRejectCustomerList" resultType="RejectCustomerResponseDTO" parameterType="CustomerSearchDTO">
         SELECT 
             c.id AS customerId,
             c.name AS name,
@@ -220,7 +220,7 @@
     </select>
 
     <!-- 7. 080 수신 거부 등록된 총 고객 수 조회 (페이징용) -->
-    <select id="selectRejectCustomerCount" resultType="int" parameterType="com.example.smartmessaging.dto.request.CustomerSearchDTO">
+    <select id="selectRejectCustomerCount" resultType="int" parameterType="CustomerSearchDTO">
         SELECT COUNT(*)
         FROM reject_history rh
         JOIN customer c ON rh.customer_id = c.id AND c.is_deleted = 0
