@@ -43,6 +43,9 @@ dependencies {
     // Database & MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc11' // Oracle JDBC (JDK 17 호환)
+    
+    // Redis (RedisConfig 및 CampaignDraftService 컴파일용 필수 의존성 추가)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // Developer Tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

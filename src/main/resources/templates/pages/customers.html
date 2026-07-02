@@ -4,6 +4,112 @@
       layout:decorate="~{layout/default-layout}">
 <head>
     <title>고객 관리</title>
+    <!-- 고객 관리 페이지 전용 프리미엄 CSS 연동 -->
+    <link rel="stylesheet" th:href="@{/css/pages/customers.css}">
 </head>
-<main layout:fragment="content" class="page"></main>
+<main layout:fragment="content" class="page">
+    <!-- 타임리프 레이아웃 치환 버그 우회용 로컬 CSS 로드 -->
+    <link rel="stylesheet" th:href="@{/css/pages/customers.css}">
+    
+    <div class="flex h-full min-h-0 flex-col p-3 sm:p-6" style="display: flex; flex-direction: column; height: 100%;">
+
+        
+        <!-- 1. 상단 통계 카드 위젯 (실시간 DB 연동 완료) -->
+        <div class="stats-grid">
+            <div class="stats-card">
+                <div class="stats-card__label">전체 고객</div>
+                <div id="statTotal" class="stats-card__value">0 명</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-card__label">일반 고객</div>
+                <div id="statRegular" class="stats-card__value text-blue">0 명</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-card__label">신규 고객</div>
+                <div id="statNew" class="stats-card__value text-green">0 명</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-card__label">휴면 고객</div>
+                <div id="statDormant" class="stats-card__value text-purple">0 명</div>
+            </div>
+        </div>
+
+
+        <!-- 2. 상단 필터/컨트롤 바 -->
+        <div class="controls-row">
+            <div class="controls-left">
+                <!-- 탭 버튼 컨테이너 -->
+                <div class="tab-container">
+                    <button type="button" id="tabMembersBtn" class="tab-button active" onclick="switchTab('members')">고객 목록</button>
+                    <button type="button" id="tabRejectsBtn" class="tab-button" onclick="switchTab('rejects')">수신 거부 목록</button>
+                </div>
+                
+                <!-- 실시간 검색어 인풋 -->
+                <div class="search-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="customerSearchInput" class="search-input" placeholder="고객명 또는 전화번호 검색" onkeyup="handleSearch(event)">
+                </div>
+
+                <!-- 고객 유형 필터 버튼 (고객 목록 탭에서만 유효) -->
+                <div id="typeFilterWrapper" style="display: flex; gap: 8px;">
+                    <button type="button" class="filter-button active" onclick="filterType('', this)">전체</button>
+                    <button type="button" class="filter-button" onclick="filterType('일반', this)">일반</button>
+                    <button type="button" class="filter-button" onclick="filterType('신규', this)">신규</button>
+                    <button type="button" class="filter-button" onclick="filterType('휴면', this)">휴면</button>
+                </div>
+            </div>
+
+            <!-- 정렬 및 추가 기능 -->
+            <div style="display: flex; items-center; gap: 8px;">
+                <select id="sortOrderSelect" class="sort-select" onchange="changeSortOrder(this.value)">
+                    <option value="latest">최신순</option>
+                    <option value="name">이름순</option>
+                    <option value="type">유형순</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 3. 메인 테이블 데이터 카드 -->
+        <div class="data-card">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead id="tableHeader">
+                        <!-- 동적으로 헤더 교체 -->
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- AJAX 로딩 결과 주입 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이징 풋터 -->
+            <div class="pagination-container">
+                <span id="pageInfoText">불러오는 중...</span>
+                <div class="pagination-buttons" id="paginationButtons">
+                    <!-- 동적 페이징 버튼 생성 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 고객 상세 모달 팝업 -->
+        <div id="customerDetailModal" class="modal-overlay" onclick="closeModalOnBackdrop(event)">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">고객 상세 정보</h3>
+                    <button type="button" class="modal-close" onclick="closeDetailModal()">×</button>
+                </div>
+                <div class="modal-body" id="modalBodyContent">
+                    <!-- AJAX 상세 결과 주입 영역 -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 5. 연동 인터랙션 자바스크립트 (외부 파일 분리 완료) -->
+    <script th:src="@{/js/pages/customers.js}"></script>
+</main>
 </html>

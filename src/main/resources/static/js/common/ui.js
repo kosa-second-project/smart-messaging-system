@@ -1,26 +1,26 @@
 /**
  * 글로벌 UI 이벤트 핸들링 (모달 제어, 네비게이션 활성화 등)
  */
-$(function() {
-    console.log("Global UI Module Loaded.");
-    
+$(function () {
+
+
     // GNB/LNB 현재 메뉴 활성화 자동 처리 예시
     const currentPath = window.location.pathname === "/" ? "/dashboard" : window.location.pathname;
-    $(".list-group-item").each(function() {
+    $(".list-group-item").each(function () {
         const href = $(this).attr("href");
         if (currentPath === href) {
             $(this).addClass("active").removeClass("bg-light");
         }
     });
 
-    $(".app-nav__item").each(function() {
+    $(".app-nav__item").each(function () {
         const href = $(this).attr("href");
         if (href && currentPath === href.split("#")[0]) {
             $(this).addClass("is-active");
         }
     });
 
-    $(".app-nav__subitem").each(function() {
+    $(".app-nav__subitem").each(function () {
         const href = $(this).attr("href");
         if (href && currentPath === href.split("#")[0]) {
             $(this).addClass("is-active");
@@ -39,19 +39,19 @@ $(function() {
 
     setStatsOpen(isStatsPage);
 
-    $statsToggle.on("click", function() {
+    $statsToggle.on("click", function () {
         setStatsOpen(!$statsNav.hasClass("is-open"));
     });
 
     const $sidebar = $("#appSidebar");
     const $backdrop = $("[data-sidebar-close]");
 
-    $("[data-sidebar-open]").on("click", function() {
+    $("[data-sidebar-open]").on("click", function () {
         $sidebar.addClass("is-open");
         $backdrop.addClass("is-open");
     });
 
-    $("[data-sidebar-close], .app-nav__item").on("click", function() {
+    $("[data-sidebar-close], .app-nav__item").on("click", function () {
         $sidebar.removeClass("is-open");
         $backdrop.removeClass("is-open");
     });

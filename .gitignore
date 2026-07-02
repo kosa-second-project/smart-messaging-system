@@ -48,3 +48,4 @@ tmp/
 # Local sensitive properties
 src/main/resources/application-local.yml
 
+AGENTS.md
