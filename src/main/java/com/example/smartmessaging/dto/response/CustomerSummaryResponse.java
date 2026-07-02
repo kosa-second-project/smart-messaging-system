@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * 고객 목록 조회 API 응답 DTO (단건)
@@ -20,5 +21,6 @@ public class CustomerSummaryResponse {
     private String name;
     private String phone;
     private List<String> tags; // TAG 테이블에서 조회한 태그 이름 목록 (예: "남자", "30대", "카카오 동의")
+    @JsonProperty("isInDraft")
     private boolean isInDraft; // 현재 임시 저장된 수신자(Draft)에 포함되어 있는지 여부
 }
