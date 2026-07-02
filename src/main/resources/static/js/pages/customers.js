@@ -320,18 +320,51 @@ function renderModalBody(customer, history) {
     let historyRowsHtml = '';
     if (history && history.length > 0) {
         history.forEach(row => {
-            const statusClass = row.status === '성공' ? 'badge-green' : 'badge-red';
-            const failReasonText = row.failReason ? `<div style="font-size: 0.65rem; color: var(--destructive); margin-top:2px;">사유: ${escapeHtml(row.failReason)}</div>` : '';
+            // 1. 성공/실패/진행중 한글화 및 클래스 분기
+            const statusUpper = (row.status || '').toUpperCase();
+            let statusText = '실패';
+            let statusClass = 'badge-red';
+            
+            if (statusUpper === 'SUCCEEDED' || statusUpper === '성공') {
+                statusText = '성공';
+                statusClass = 'badge-green';
+            } else if (statusUpper === 'SENDING' || statusUpper === '전송중') {
+                statusText = '전송중';
+                statusClass = 'badge-blue';
+            } else if (statusUpper === 'PENDING' || statusUpper === '대기중') {
+                statusText = '대기중';
+                statusClass = 'badge-gray';
+            }
+
+            // 2. 채널별 배지 컬러 분기
+            let channelClass = 'badge-blue'; // SMS, LMS, MMS 등 기본값
+            const channelUpper = (row.channel || '').toUpperCase();
+            if (channelUpper.includes('KAKAO') || channelUpper.includes('카카오') || channelUpper.includes('ALIM') || channelUpper.includes('FRIEND')) {
+                channelClass = 'badge-kakao';
+            } else if (channelUpper.includes('EMAIL') || channelUpper.includes('이메일')) {
+                channelClass = 'badge-green';
+            } else if (channelUpper.includes('RCS')) {
+                channelClass = 'badge-orange';
+            }
+
+            // 3. 실패 시 UI 깨짐 방지를 위한 말풍선 툴팁 구조 적용
+            const isFailed = (statusText === '실패');
+            let statusBadgeHtml = `<span class="badge ${statusClass}">${statusText}</span>`;
+            if (isFailed && row.failReason) {
+                statusBadgeHtml = `
+                    <div class="tooltip-wrapper">
+                        <span class="badge ${statusClass}">${statusText}</span>
+                        <span class="tooltip-content">사유: ${escapeHtml(row.failReason)}</span>
+                    </div>
+                `;
+            }
             
             historyRowsHtml += `
                 <tr>
                     <td class="font-mono" style="color:var(--muted-foreground);">${row.sentAt}</td>
                     <td style="font-weight:var(--font-weight-medium);">${escapeHtml(row.templateName)}</td>
-                    <td><span class="badge badge-blue">${escapeHtml(row.channel)}</span></td>
-                    <td>
-                        <span class="badge ${statusClass}">${escapeHtml(row.status)}</span>
-                        ${failReasonText}
-                    </td>
+                    <td><span class="badge ${channelClass}">${escapeHtml(row.channel)}</span></td>
+                    <td>${statusBadgeHtml}</td>
                 </tr>
             `;
         });
@@ -354,12 +387,12 @@ function renderModalBody(customer, history) {
             </div>
             <div class="detail-dates">
                 <div>
-                    <div class="date-item__label">가입일자</div>
+                    <div class="date-item__label">가입일</div>
                     <div class="date-item__value">${customer.joinedAt || '-'}</div>
                 </div>
                 <div>
-                    <div class="date-item__label">최근발송</div>
-                    <div class="date-item__value">${customer.lastSend || '기록 없음'}</div>
+                    <div class="date-item__label">마지막 발송</div>
+                    <div class="date-item__value">${customer.lastSend ? customer.lastSend.split(' ')[0] : '기록 없음'}</div>
                 </div>
             </div>
         </div>
@@ -396,7 +429,7 @@ function renderModalBody(customer, history) {
                     <thead>
                         <tr>
                             <th style="width: 140px;">발송일시</th>
-                            <th>메시지 제목(템플릿)</th>
+                            <th>템플릿 제목</th>
                             <th style="width: 100px;">채널</th>
                             <th style="width: 100px;">결과</th>
                         </tr>

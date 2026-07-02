@@ -78,6 +78,7 @@
                     AND c.joined_at >= SYSTIMESTAMP - 7
                 </when>
                 <when test="customerType == '휴면'">
+                    AND c.joined_at &lt; SYSTIMESTAMP - 7
                     AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
                 </when>
                 <when test="customerType == '일반'">
@@ -174,7 +175,7 @@
             COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS totalCount,
             COUNT(CASE WHEN is_deleted = 0 AND joined_at &lt; SYSTIMESTAMP - 7 AND (last_active_at IS NULL OR last_active_at >= ADD_MONTHS(SYSTIMESTAMP, -12)) THEN 1 END) AS regularCount,
             COUNT(CASE WHEN is_deleted = 0 AND joined_at >= SYSTIMESTAMP - 7 THEN 1 END) AS newCount,
-            COUNT(CASE WHEN is_deleted = 0 AND last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN 1 END) AS dormantCount
+            COUNT(CASE WHEN is_deleted = 0 AND joined_at &lt; SYSTIMESTAMP - 7 AND last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN 1 END) AS dormantCount
         FROM customer
     </select>
 
@@ -193,7 +194,7 @@
     <select id="selectCustomerReceiveHistory" resultType="CustomerReceiveHistoryResponseDTO">
         SELECT
             st.id AS sendHistoryId,
-            TO_CHAR(sh.completed_at, 'YYYY-MM-DD HH24:MI') AS sentAt,
+            TO_CHAR(sh.created_at, 'YYYY-MM-DD HH24:MI') AS sentAt,
             sh.title AS templateName,
             ch.channel_type AS channel,
             st.status AS status,
@@ -208,7 +209,7 @@
                  LEFT JOIN channel ch ON st.final_channel_id = ch.id AND ch.is_deleted = 0
         WHERE st.customer_id = #{customerId}
           AND st.is_deleted = 0
-        ORDER BY sh.completed_at DESC
+        ORDER BY sh.created_at DESC
     </select>
 
     <!-- 6. 080 수신 거부 등록된 고객 목록 조회 -->
@@ -282,6 +283,7 @@
                     AND c.joined_at &gt;= SYSTIMESTAMP - 7
                 </when>
                 <when test="customerType == '휴면'">
+                    AND c.joined_at &lt; SYSTIMESTAMP - 7
                     AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
                 </when>
                 <when test="customerType == '일반'">
