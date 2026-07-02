@@ -7,39 +7,39 @@ $(function() {
     };
 
     bindCustomerEvents(state);
-    loadCustomerReport(state);
+    loadCustomerStats(state);
 });
 
 function bindCustomerEvents(state) {
     $("#statsPeriodForm").on("change", "input", function() {
-        state.period = ReportRenderer.getPeriod(state.period);
-        loadCustomerReport(state);
+        state.period = StatsRenderer.getPeriod(state.period);
+        loadCustomerStats(state);
     });
 }
 
-function loadCustomerReport(state) {
-    const period = ReportRenderer.getPeriod(state.period);
+function loadCustomerStats(state) {
+    const period = StatsRenderer.getPeriod(state.period);
     state.period = period;
-    $("#statsPeriodLabel").text(ReportRenderer.periodLabel(period));
+    $("#statsPeriodLabel").text(StatsRenderer.periodLabel(period));
 
-    ApiClient.get("/api/reports/customer", {
+    ApiClient.get("/api/stats/customer", {
         from: period.start,
         to: period.end
     }).done(function(response) {
-        ReportRenderer.renderCards("#statsCards", response.cards, {
+        StatsRenderer.renderCards("#statsCards", response.cards, {
             icons: ["chart", "send", "check", "activity"],
             colors: ["amber", "blue", "green", "violet"]
         });
-        ReportRenderer.renderCharts(response.charts, {
+        StatsRenderer.renderCharts(response.charts, {
             newCustomerTrend: "#newCustomerChart"
         }, {
             newCustomerTrend: {
                 legend: false
             }
         });
-        ReportRenderer.renderProgressTable(
+        StatsRenderer.renderProgressTable(
                 "#customerConsentList",
-                ReportRenderer.findById(response.tables, "customerConsent")
+                StatsRenderer.findById(response.tables, "customerConsent")
         );
     });
 }

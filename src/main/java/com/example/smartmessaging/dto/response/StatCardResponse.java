@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReportCardResponse {
+public class StatCardResponse {
 
     private String title;
     private String value;

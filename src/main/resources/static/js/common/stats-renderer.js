@@ -1,4 +1,4 @@
-const ReportRenderer = (function() {
+const StatsRenderer = (function() {
     const palette = ["#1843FA", "#10B981", "#F59E0B", "#0EA5E9", "#8B5CF6", "#EF4444"];
     const iconNames = ["send", "check", "activity", "target", "refresh", "chart"];
     const colorNames = ["blue", "green", "violet", "amber", "green", "blue"];

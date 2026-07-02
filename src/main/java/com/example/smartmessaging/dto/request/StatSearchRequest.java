@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
-public class ReportSearchRequest {
+public class StatSearchRequest {
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate from;

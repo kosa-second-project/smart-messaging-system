@@ -7,26 +7,26 @@ $(function() {
     };
 
     bindChannelEvents(state);
-    loadChannelReport(state);
+    loadChannelStats(state);
 });
 
 function bindChannelEvents(state) {
     $("#statsPeriodForm").on("change", "input", function() {
-        state.period = ReportRenderer.getPeriod(state.period);
-        loadChannelReport(state);
+        state.period = StatsRenderer.getPeriod(state.period);
+        loadChannelStats(state);
     });
 }
 
-function loadChannelReport(state) {
-    const period = ReportRenderer.getPeriod(state.period);
+function loadChannelStats(state) {
+    const period = StatsRenderer.getPeriod(state.period);
     state.period = period;
-    $("#statsPeriodLabel").text(ReportRenderer.periodLabel(period));
+    $("#statsPeriodLabel").text(StatsRenderer.periodLabel(period));
 
-    ApiClient.get("/api/reports/channel", {
+    ApiClient.get("/api/stats/channel", {
         from: period.start,
         to: period.end
     }).done(function(response) {
-        ReportRenderer.renderCharts(response.charts, {
+        StatsRenderer.renderCharts(response.charts, {
             channelSuccessRate: "#channelSuccessChart",
             channelTrend: "#channelTrendChart",
             channelShare: "#channelShareChart"
@@ -45,8 +45,8 @@ function loadChannelReport(state) {
                 tooltipSuffix: "%"
             }
         });
-        renderChannelShareLegend(ReportRenderer.findById(response.charts, "channelShare"));
-        renderChannelCost(ReportRenderer.findById(response.tables, "channelCost"));
+        renderChannelShareLegend(StatsRenderer.findById(response.charts, "channelShare"));
+        renderChannelCost(StatsRenderer.findById(response.tables, "channelCost"));
     });
 }
 
