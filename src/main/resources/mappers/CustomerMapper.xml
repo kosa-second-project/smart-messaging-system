@@ -11,13 +11,16 @@
         AND id NOT IN (
             SELECT customer_id
             FROM   customer_tag_mapping
-            WHERE  tag_id = 25
+            WHERE  tag_id = #{dormantTagId}
               AND  is_deleted = 0
         )
         AND id IN (
             SELECT customer_id
             FROM   customer_tag_mapping
-            WHERE  tag_id IN (27, 28, 29)
+            WHERE  tag_id IN
+            <foreach item="tid" collection="consentTagIds" open="(" separator="," close=")">
+                #{tid}
+            </foreach>
               AND  is_deleted = 0
         )
         <if test="customerIds != null and customerIds.size() > 0">

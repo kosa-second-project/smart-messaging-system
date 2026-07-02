@@ -44,9 +44,9 @@ const SendPage = {
         const path = window.location.pathname;
         if (path.includes("/send/recipients")) {
             this.state.currentStep = 1;
-            // 1단계 최초 진입 시: 이전 찌꺼기 완전 청소
-            localStorage.removeItem("draftId");
-            localStorage.removeItem("draftTotalCount");
+            // 1단계 진입 시에도 이전 단계에서 이동해 온 경우를 위해 로컬스토리지에서 복원
+            this.state.draftId = localStorage.getItem("draftId") || null;
+            this.state.draftTotalCount = parseInt(localStorage.getItem("draftTotalCount") || "0");
         } else if (path.includes("/send/message")) {
             this.state.currentStep = 2;
             // 2단계 진입: 1단계에서 저장해 둔 draftId 복원
@@ -108,11 +108,16 @@ const SendPage = {
             // 발송 완료 시 Redis Draft 정리 + 로컬스토리지 초기화
             const draftId = this.state.draftId;
             if (draftId) {
-                DraftApi.delete(draftId);
+                DraftApi.delete(draftId).always(function () {
+                    localStorage.removeItem("draftId");
+                    localStorage.removeItem("draftTotalCount");
+                    window.location.href = "/dashboard";
+                });
+            } else {
+                localStorage.removeItem("draftId");
+                localStorage.removeItem("draftTotalCount");
+                window.location.href = "/dashboard";
             }
-            localStorage.removeItem("draftId");
-            localStorage.removeItem("draftTotalCount");
-            window.location.href = "/dashboard";
         }
     },
 
@@ -356,6 +361,9 @@ const RecipientSelector = {
                         SendPage.state.draftId = null;
                         SendPage.state.draftTotalCount = 0;
                         self.renderAll();
+                    })
+                    .fail(function () {
+                        alert("선택된 회원 제거 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
                     });
             }
         });
@@ -394,13 +402,30 @@ const RecipientSelector = {
         });
     },
 
+    // 진행 중인 빈 Draft 생성 요청 (동시 호출 방지용)
+    pendingDraftPromise: null,
+
     // Draft ID 보장 헬퍼: draftId가 없으면 빈 Draft 생성 후 콜백 실행
     ensureDraft: function (callback, onFail) {
         if (SendPage.state.draftId) {
             callback(SendPage.state.draftId);
             return;
         }
-        DraftApi.createEmpty()
+
+        if (this.pendingDraftPromise) {
+            this.pendingDraftPromise
+                .done(function (res) {
+                    if (res && res.draftId) callback(res.draftId);
+                    else if (onFail) onFail();
+                })
+                .fail(function () {
+                    if (onFail) onFail();
+                });
+            return;
+        }
+
+        const self = this;
+        this.pendingDraftPromise = DraftApi.createEmpty()
             .done(function (res) {
                 if (res && res.draftId) {
                     SendPage.state.draftId = res.draftId;
@@ -412,6 +437,9 @@ const RecipientSelector = {
             })
             .fail(function () {
                 if (onFail) onFail();
+            })
+            .always(function () {
+                self.pendingDraftPromise = null;
             });
     },
 
@@ -512,6 +540,7 @@ const RecipientSelector = {
                 }
             })
             .fail(function () {
+                if (mySeq !== SendPage.state.renderSeq) return;
                 $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>');
             });
     },

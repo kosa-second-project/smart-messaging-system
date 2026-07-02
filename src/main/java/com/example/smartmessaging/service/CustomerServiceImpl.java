@@ -83,7 +83,7 @@ public class CustomerServiceImpl implements CustomerService {
 
 
         // 7. 페이징 메타 계산 후 반환
-        int totalPages = (int) Math.ceil((double) totalCount / request.getSize());
+        int totalPages = request.getSize() > 0 ? (int) Math.ceil((double) totalCount / request.getSize()) : 0;
 
         return PagedCustomerResponse.builder()
                 .content(content)

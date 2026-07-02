@@ -31,6 +31,19 @@ public class CampaignDraftService {
     private static final String KEY_PREFIX = "draft:recipient:";
     private static final Duration TTL = Duration.ofMinutes(30);
 
+    /**
+     * ZSET 내 가장 큰 score 값을 찾아 +1 한 값을 반환합니다.
+     * 동시성 문제가 발생하더라도 사용자별 격리된 Draft이므로 실질적인 충돌 가능성은 희박합니다.
+     */
+    private double getNextScore(ZSetOperations<String, Object> zset, String key) {
+        Set<ZSetOperations.TypedTuple<Object>> maxTuples = zset.reverseRangeWithScores(key, 0, 0);
+        if (maxTuples != null && !maxTuples.isEmpty()) {
+            Double maxScore = maxTuples.iterator().next().getScore();
+            return maxScore != null ? maxScore + 1.0 : 0.0;
+        }
+        return 0.0;
+    }
+
     // =============================================
     // 1. 전체 ID 목록 → Redis Sorted Set에 일괄 저장
     // =============================================
@@ -67,8 +80,7 @@ public class CampaignDraftService {
 
         String key = KEY_PREFIX + userId + ":" + draftId;
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
-        Long currentSize = zset.size(key);
-        double startScore = currentSize != null ? currentSize : 0;
+        double startScore = getNextScore(zset, key);
 
         Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>();
         for (int i = 0; i < customerIds.size(); i++) {
@@ -130,9 +142,9 @@ public class CampaignDraftService {
     // =============================================
     public void addRecipient(Long userId, String draftId, Long customerId) {
         String key = KEY_PREFIX + userId + ":" + draftId;
-        // 동시 요청에도 score 충돌이 발생하지 않도록 타임스탬프 기반 단조 증가 score 사용
-        double score = System.currentTimeMillis();
-        redisTemplate.opsForZSet().add(key, customerId, score);
+        ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
+        double score = getNextScore(zset, key);
+        zset.add(key, customerId, score);
         redisTemplate.expire(key, TTL);
         log.debug("[CampaignDraft] 추가 - draftId={}, customerId={}", draftId, customerId);
     }

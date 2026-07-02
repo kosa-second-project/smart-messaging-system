@@ -24,6 +24,10 @@ public class CustomerSearchRequest {
     private String draftId; // 임시 저장소(Redis) 식별자
     private String activeTab; // "filtered" 또는 "selected"
 
+    // 매퍼에서 하드코딩을 제거하기 위해 애플리케이션 계층에서 주입하는 상수 값 (기본값 설정)
+    private Long dormantTagId = 25L;
+    private List<Long> consentTagIds = List.of(27L, 28L, 29L);
+
     /** "ANY"(기본) = OR 조건, "ALL" = AND 조건 */
     private String matchType = "ANY";
 
