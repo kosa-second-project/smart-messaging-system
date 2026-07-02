@@ -162,35 +162,94 @@
   gap: 0.5rem;
 }
 
-/* 필터 정보 탭 */
-.summary-tabs {
+/* 테이블 컨트롤 바 */
+.table-control-bar {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 0.125rem;
+  margin-bottom: 1rem;
 }
 
-.summary-tab {
-  padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: var(--font-weight-medium);
-  color: var(--muted-foreground);
-  border-bottom: 2px solid transparent;
-  transition: all 150ms ease;
-  background: transparent;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  cursor: pointer;
-}
-
-.summary-tab:hover {
+.table-control-left .search-result-text {
+  font-size: 1rem;
   color: var(--foreground);
 }
 
-.summary-tab.active {
+.table-control-left .search-result-text b {
   color: var(--primary);
-  border-bottom-color: var(--primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.table-control-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border);
+  margin: 0 0.25rem;
+}
+
+/* 토글 스위치 디자인 */
+.ds-toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.ds-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ds-toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background-color: var(--muted);
+  border-radius: 24px;
+  transition: .3s cubic-bezier(.25,.8,.25,1);
+}
+
+.ds-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: .3s cubic-bezier(.25,.8,.25,1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ds-toggle-switch input:checked + .ds-toggle-slider {
+  background-color: var(--primary);
+}
+
+.ds-toggle-switch input:checked + .ds-toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.ds-toggle-label {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--muted-foreground);
+  transition: color 0.2s ease;
+}
+
+.ds-toggle-switch input:checked ~ .ds-toggle-label {
+  color: var(--primary);
   font-weight: var(--font-weight-bold);
 }
 
@@ -519,3 +578,48 @@
 .ds-table th:nth-child(8) { width: 8%; text-align: center; }
 .ds-table th:nth-child(9) { width: 8%; text-align: center; }
 .ds-table th:nth-child(10) { width: 8%; text-align: center; }
+
+/* ==========================================
+   9. 현재 회원 모두 추가 버튼 영역
+   ========================================== */
+.summary-tabs-right {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.btn-add-all {
+  font-size: 0.78rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-add-all:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-remove-all {
+  font-size: 0.78rem;
+  font-weight: var(--font-weight-bold);
+  color: #ef4444;
+  border: 1.5px solid #ef4444;
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-remove-all:hover {
+  background: #ef4444;
+  color: #fff;
+}

@@ -13,9 +13,6 @@
                                 태그 선택 초기화 🔄
                             </button>
                         </div>
-                        <div class="search-box">
-                            <input type="text" id="tagSearchInput" class="ds-input" placeholder="태그 검색" autocomplete="off">
-                        </div>
                     </div>
                     
                     <div class="panel-section">
@@ -36,7 +33,6 @@
                             <div class="tag-cloud">
                                 <button type="button" class="tag-item-btn" data-tag="일반">일반</button>
                                 <button type="button" class="tag-item-btn" data-tag="신규">신규</button>
-                                <button type="button" class="tag-item-btn" data-tag="휴면">휴면</button>
                                 <button type="button" class="tag-item-btn" data-tag="생일 대상자">생일 대상자</button>
                             </div>
                         </div>
@@ -87,22 +83,37 @@
                 <div class="send-main-panel">
                     <div class="main-header-row">
                         <div class="search-box flex-grow-1">
-                            <input type="text" id="customerSearchInput" class="ds-input" placeholder="고객명, 번호, 태그 검색" autocomplete="off">
+                            <input type="text" id="customerSearchInput" class="ds-input" placeholder="고객명, 태그 검색" autocomplete="off">
                         </div>
                     </div>
                     
-                    <!-- 필터 요약 정보 탭 -->
-                    <div class="summary-tabs">
-                        <div class="summary-tab-group">
-                            <button type="button" class="summary-tab active" data-tab-type="filtered">
-                                태그 후보 <span id="lblCandidateCount">0</span>명
-                            </button>
-                            <button type="button" class="summary-tab" data-tab-type="selected">
-                                선택된 회원 목록 보기
-                            </button>
+                    <!-- 테이블 컨트롤 바 -->
+                    <div class="table-control-bar">
+                        <div class="table-control-left">
+                            <span class="search-result-text">검색 결과 <b><span id="lblCandidateCount">0</span></b>명</span>
                         </div>
-                        <div class="selected-summary-count-badge">
-                            선택된 회원 수: <span id="lblSelectedCount">0</span>명
+                        <div class="table-control-right">
+                            <!-- 토글 스위치 -->
+                            <label class="ds-toggle-switch">
+                                <input type="checkbox" id="toggleShowSelected">
+                                <span class="ds-toggle-slider"></span>
+                                <span class="ds-toggle-label">선택된 회원만 보기</span>
+                            </label>
+                            
+                            <div class="divider"></div>
+
+                            <!-- 일괄 액션 버튼 -->
+                            <button type="button" id="btnAddAllFiltered" class="ds-button ds-button--outline ds-button--sm btn-add-all">
+                                ✚ 필터 결과 일괄 추가
+                            </button>
+                            <button type="button" id="btnRemoveAllSelected" class="ds-button ds-button--outline ds-button--sm btn-remove-all" style="display: none;">
+                                ➖ 수신 대상 전체 초기화
+                            </button>
+                            
+                            <!-- 장바구니 요약 뱃지 -->
+                            <div class="selected-summary-count-badge">
+                                선택됨: <span id="lblSelectedCount">0</span>명
+                            </div>
                         </div>
                     </div>
                     
@@ -149,9 +160,9 @@
                         <div class="page-size-selector">
                             <label for="pageSizeSelect">페이지 당 보기:</label>
                             <select id="pageSizeSelect" class="ds-input ds-input--sm page-size-select">
-                                <option value="5">5개</option>
-                                <option value="10">10개</option>
                                 <option value="20">20개</option>
+                                <option value="50">50개</option>
+                                <option value="100">100개</option>
                             </select>
                         </div>
                     </div>
