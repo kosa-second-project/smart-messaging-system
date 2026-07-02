@@ -6,13 +6,6 @@
     <title>전송 기록</title>
 </head>
 <main layout:fragment="content" class="page history-page">
-    <section class="page-toolbar">
-        <div>
-            <h1 class="page-toolbar__title">전송 기록</h1>
-            <p class="page-toolbar__description">전체 직원의 메시지 발송 결과와 비용 절감 내역을 확인합니다.</p>
-        </div>
-    </section>
-
     <form id="historySearchForm" class="history-filter" method="get" th:action="@{/history}"
           th:object="${searchCondition}">
         <div class="history-filter__controls">

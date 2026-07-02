@@ -47,6 +47,13 @@ class HistoryTemplateRenderTest {
 
         mockMvc.perform(get("/history"))
                 .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("class=\"app-header__title\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                        "class=\"history-content\""
+                ))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                        "전체 직원의 메시지 발송 결과와 비용 절감 내역을 확인합니다."
+                ))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("조회된 전송 기록이 없습니다.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(">예약</option>")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(">전송중</option>")))
