@@ -2,6 +2,7 @@ package com.example.smartmessaging.service.impl;
 
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
 import com.example.smartmessaging.dto.response.HistoryChannelResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryStatusOptionDTO;
@@ -9,6 +10,8 @@ import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
 import com.example.smartmessaging.dto.response.PageResponseDTO;
 import com.example.smartmessaging.dto.type.SendHistoryStatus;
 import com.example.smartmessaging.mapper.HistoryMapper;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.service.HistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -48,6 +51,24 @@ public class HistoryServiceImpl implements HistoryService {
 
         // 페이지 응답 DTO로 감싸서 반환
         return PageResponseDTO.of(histories, condition.getPage(), HistorySearchRequestDTO.PAGE_SIZE, totalElements);
+    }
+
+    @Override
+    public HistoryDetailResponseDTO getHistoryDetail(Long sendHistoryId) {
+        HistoryDetailResponseDTO detail = historyMapper.findHistoryDetailById(sendHistoryId);
+        if (detail == null) {
+            throw new BusinessException(ErrorCode.SEND_HISTORY_NOT_FOUND);
+        }
+
+        List<Long> historyIds = List.of(sendHistoryId);
+        detail.setChannels(historyMapper.findChannelsByHistoryIds(historyIds).stream()
+                .map(HistoryChannelResponseDTO::getChannelName)
+                .toList());
+        detail.setTags(historyMapper.findTagsByHistoryIds(historyIds).stream()
+                .map(HistoryTagResponseDTO::getTagName)
+                .toList());
+        detail.setAttemptFlows(historyMapper.findAttemptFlowsByHistoryId(sendHistoryId));
+        return detail;
     }
 
     @Override

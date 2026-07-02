@@ -34,6 +34,12 @@ class HistoryMapperXmlTest {
                 "com.example.smartmessaging.mapper.HistoryMapper.countHistories"
         )).isTrue();
         assertThat(configuration.hasStatement(
+                "com.example.smartmessaging.mapper.HistoryMapper.findHistoryDetailById"
+        )).isTrue();
+        assertThat(configuration.hasStatement(
+                "com.example.smartmessaging.mapper.HistoryMapper.findAttemptFlowsByHistoryId"
+        )).isTrue();
+        assertThat(configuration.hasStatement(
                 "com.example.smartmessaging.mapper.HistoryMapper.findStatusOptions"
         )).isFalse();
     }
@@ -66,5 +72,25 @@ class HistoryMapperXmlTest {
         assertThat(mapperXml)
                 .contains("ORDER BY id ASC",
                         "ORDER BY tag_rows.send_history_id, tag_rows.tag_id ASC");
+    }
+
+    @Test
+    void 상세조회는_soft_delete를_제외하고_차수별_성공실패를_집계한다() throws Exception {
+        String resource = "mappers/HistoryMapper.xml";
+        String mapperXml;
+
+        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+            mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        assertThat(mapperXml)
+                .contains("NVL(sh.is_deleted, 0) = 0",
+                        "NVL(st.is_deleted, 0) = 0",
+                        "NVL(sa.is_deleted, 0) = 0",
+                        "NVL(c.is_deleted, 0) = 0",
+                        "COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END)",
+                        "COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END)",
+                        "ORDER BY sa.attempt_order ASC")
+                .doesNotContain("fail_reason");
     }
 }

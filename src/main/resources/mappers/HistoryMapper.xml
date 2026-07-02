@@ -104,6 +104,51 @@
         OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
     </select>
 
+
+    <select id="findHistoryDetailById"
+            resultType="com.example.smartmessaging.dto.response.HistoryDetailResponseDTO">
+        SELECT
+            sh.id AS send_history_id,
+            sh.title,
+            sh.content,
+            sh.scheduled_at,
+            sh.purpose,
+            sh.status,
+            NVL(sh.total_target_count, 0) AS total_target_count,
+            NVL(sh.success_count, 0) AS success_count,
+            NVL(sh.fail_count, 0) AS fail_count,
+            NVL(sh.actual_cost, 0) AS actual_cost,
+            NVL(sh.estimated_saving, 0) AS estimated_saving,
+            CASE
+                WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
+                ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
+                END AS success_rate
+        FROM send_history sh
+        WHERE sh.id = #{sendHistoryId}
+          AND NVL(sh.is_deleted, 0) = 0
+    </select>
+
+    <select id="findAttemptFlowsByHistoryId"
+            resultType="com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO">
+        SELECT
+            sa.attempt_order,
+            c.channel_type AS channel_name,
+            COUNT(*) AS request_count,
+            COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END) AS success_count,
+            COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END) AS fail_count
+        FROM send_target st
+                 JOIN send_attempt sa
+                      ON sa.send_target_id = st.id
+                          AND NVL(sa.is_deleted, 0) = 0
+                 JOIN channel c
+                      ON c.id = sa.channel_id
+                          AND NVL(c.is_deleted, 0) = 0
+        WHERE st.send_history_id = #{sendHistoryId}
+          AND NVL(st.is_deleted, 0) = 0
+        GROUP BY sa.attempt_order, c.channel_type
+        ORDER BY sa.attempt_order ASC, c.channel_type ASC
+    </select>
+
     <select id="findChannelsByHistoryIds"
             resultType="com.example.smartmessaging.dto.response.HistoryChannelResponseDTO">
         SELECT DISTINCT

@@ -46,10 +46,14 @@ public class HistoryListResponseDTO {
     }
 
     public String getPurposeLabel() {
+        return purposeLabelOf(purpose);
+    }
+
+    public static String purposeLabelOf(String purpose) {
         if (purpose == null || purpose.isBlank()) {
             return "-";
         }
-        return switch (purpose.toUpperCase(Locale.ROOT)) {
+        return switch (purpose.trim().toUpperCase(Locale.ROOT)) {
             case "AD" -> "광고성";
             case "INFO" -> "정보성";
             default -> purpose;
