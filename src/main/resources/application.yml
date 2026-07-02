@@ -24,7 +24,7 @@ spring:
 # MyBatis 공통 설정
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: com.example.smartmessaging.dto.vo   # XML에서 com.example...VO 대신 클래스명(e.g., UserVO)만 적을 수 있게 축약 설정
+  type-aliases-package: com.example.smartmessaging.dto.vo,com.example.smartmessaging.dto.request   # XML에서 com.example...VO 대신 클래스명(e.g., UserVO)만 적을 수 있게 축약 설정
   configuration:
     map-underscore-to-camel-case: true
 
