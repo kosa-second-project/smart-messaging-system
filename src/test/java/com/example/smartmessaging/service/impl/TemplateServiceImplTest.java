@@ -1,12 +1,15 @@
 package com.example.smartmessaging.service.impl;
 
+import com.example.smartmessaging.dto.request.TemplateSaveRequest;
 import com.example.smartmessaging.dto.response.TemplateChannelResponse;
 import com.example.smartmessaging.dto.response.TemplateFilterOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateResponse;
+import com.example.smartmessaging.dto.vo.TemplateVO;
 import com.example.smartmessaging.mapper.TemplateMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,5 +73,25 @@ class TemplateServiceImplTest {
                 .first()
                 .extracting(TemplateChannelResponse::getChannelType)
                 .isEqualTo("SMS");
+    }
+
+    @Test
+    void 생성시_카카오_입력값이_없으면_DB저장용_기본값을_채운다() {
+        TemplateSaveRequest request = new TemplateSaveRequest();
+        request.setTitle("신규 템플릿");
+        request.setContent("메시지 내용");
+        request.setCategory("NOTICE");
+        request.setPurpose("informational");
+        request.setTagIds(List.of(1L, 2L));
+
+        templateService.createTemplate(10L, request);
+
+        ArgumentCaptor<TemplateVO> captor = ArgumentCaptor.forClass(TemplateVO.class);
+        verify(templateMapper).insertTemplate(captor.capture());
+
+        TemplateVO template = captor.getValue();
+        assertThat(template.getKakaoTemplateCode()).startsWith("TPL10");
+        assertThat(template.getKakaoTemplateStatus()).isEqualTo("PENDING");
+        assertThat(request.getTagIds()).containsExactly(1L, 2L);
     }
 }

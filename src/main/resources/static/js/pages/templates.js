@@ -76,8 +76,12 @@ function fetchTemplateOptions() {
 }
 
 function renderTemplateFilters() {
-    renderSelectOptions("templateCategoryFilter", templateOptions.categories || [], "전체 카테고리");
-    renderSelectOptions("templateCategory", templateOptions.categories || [], "카테고리 선택");
+    const categoryOptions = (templateOptions.categories || []).map(option => ({
+        value: option.value,
+        label: getCategoryLabel(option.value || option.label)
+    }));
+    renderSelectOptions("templateCategoryFilter", categoryOptions, "전체 카테고리");
+    renderSelectOptions("templateCategory", categoryOptions, "카테고리 선택");
 
     const purposeOptions = buildPurposeOptions(templateOptions.purposes || []);
     renderSelectOptions("templatePurposeFilter", purposeOptions, "전체 광고여부");
@@ -107,7 +111,7 @@ function renderSelectOptions(selectId, options, firstLabel) {
 function renderQuickFilters() {
     const wrapper = document.getElementById("templateQuickFilters");
     const chips = [
-        ...(templateOptions.categories || []).slice(0, 6).map(option => ({ type: "category", value: option.value, label: option.label })),
+        ...(templateOptions.categories || []).slice(0, 6).map(option => ({ type: "category", value: option.value, label: getCategoryLabel(option.value || option.label) })),
         ...buildPurposeOptions(templateOptions.purposes || []).slice(0, 4).map(option => ({ type: "purpose", value: option.value, label: option.label })),
         ...(templateOptions.channels || []).slice(0, 6).map(channel => ({ type: "channel", value: channel.channelType, label: channel.channelType }))
     ];
@@ -161,9 +165,14 @@ function renderTemplateTagOptions() {
         return;
     }
 
-    // 템플릿-태그 매핑 테이블이 확인되면 저장 로직을 별도로 연결한다.
+    // DB 태그 목록을 다중 선택 칩으로 노출한다.
     wrapper.innerHTML = tags
-        .map(tag => `<span class="ds-badge" data-tag-id="${escapeHtml(tag.value)}">${escapeHtml(tag.label)}</span>`)
+        .map(tag => `
+            <label class="template-tag-option">
+                <input type="checkbox" name="templateTag" value="${escapeHtml(tag.value)}">
+                <span>${escapeHtml(tag.label)}</span>
+            </label>
+        `)
         .join("");
 }
 
@@ -222,7 +231,7 @@ function renderTemplateTable(list) {
                 <div class="template-title">${escapeHtml(item.title)}</div>
                 <div class="template-snippet">${escapeHtml(flattenText(item.content))}</div>
             </td>
-            <td class="template-col-lg">${renderBadge(item.category || "-", "default")}</td>
+            <td class="template-col-lg">${renderBadge(getCategoryLabel(item.category), "default")}</td>
             <td>${renderPurposeBadge(item.purpose)}</td>
             <td class="template-col-xl">${renderTagList(item)}</td>
             <td>${renderChannelChips(item.channels || [])}</td>
@@ -252,7 +261,7 @@ function renderTemplateMobileList(list) {
             </div>
             <div class="template-mobile-card__chips">
                 ${renderChannelChips(item.channels || [])}
-                ${renderBadge(item.category || "-", "default")}
+                ${renderBadge(getCategoryLabel(item.category), "default")}
                 ${renderTagList(item, 2)}
             </div>
             <div class="template-mobile-card__footer">
@@ -273,7 +282,7 @@ function renderTagList(item, limit = 3) {
 
 function buildTemplateTags(item) {
     const tags = [];
-    if (item.category) tags.push(item.category);
+    if (item.category) tags.push(getCategoryLabel(item.category));
     if (item.purpose) tags.push(getPurposeLabel(item.purpose));
     (item.channels || []).forEach(channel => tags.push(channel.channelType));
     if (item.isAiGenerated) tags.push("AI");
@@ -378,7 +387,7 @@ function renderTemplateDetail(item) {
                         </div>
                         <div class="template-detail__meta-item">
                             <span class="template-detail__label">카테고리</span>
-                            <span class="template-detail__value">${escapeHtml(item.category || "-")}</span>
+                            <span class="template-detail__value">${escapeHtml(getCategoryLabel(item.category))}</span>
                         </div>
                         <div class="template-detail__meta-item">
                             <span class="template-detail__label">광고여부</span>
@@ -398,7 +407,6 @@ function renderTemplateDetail(item) {
                 ${renderMetric("생성일", item.createdAt || "-")}
                 ${renderMetric("최근 수정", item.updatedAt || "-")}
                 ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
-                ${renderMetric("카카오 상태", getKakaoStatusLabel(item.kakaoTemplateStatus))}
             </div>
 
             <div class="template-detail__content template-detail__content--single">
@@ -459,6 +467,7 @@ function resetTemplateForm() {
     });
     document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
+    document.querySelectorAll("input[name='templateTag']").forEach(input => input.checked = false);
 }
 
 function saveTemplate() {
@@ -467,8 +476,9 @@ function saveTemplate() {
         content: document.getElementById("templateContent").value.trim(),
         category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
-        kakaoTemplateStatus: document.getElementById("templateKakaoStatus").value,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
+            .map(input => Number(input.value)),
+        tagIds: Array.from(document.querySelectorAll("input[name='templateTag']:checked"))
             .map(input => Number(input.value))
     };
 
@@ -545,6 +555,30 @@ function inferPreviewMode(item) {
     if (channels.includes("EMAIL")) return "email";
     if (channels.includes("KAKAO") || channels.includes("알림") || channels.includes("친구")) return "kakao";
     return "message";
+}
+
+function getCategoryLabel(category) {
+    if (!category) return "-";
+
+    const key = String(category).trim().toUpperCase();
+    const labels = {
+        GENERAL: "일반",
+        DEFAULT: "일반",
+        INFO: "안내",
+        INFORMATION: "안내",
+        NOTICE: "공지",
+        NOTIFICATION: "알림",
+        PROMOTION: "프로모션",
+        PROMOTIONAL: "프로모션",
+        EVENT: "이벤트",
+        BENEFIT: "혜택",
+        COUPON: "쿠폰",
+        BIRTHDAY: "생일",
+        WELCOME: "환영",
+        REMINDER: "리마인드"
+    };
+
+    return labels[key] || category;
 }
 
 function buildPurposeOptions(options) {

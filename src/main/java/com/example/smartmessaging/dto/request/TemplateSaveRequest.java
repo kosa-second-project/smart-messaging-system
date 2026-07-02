@@ -15,4 +15,5 @@ public class TemplateSaveRequest {
     private String category;
     private String purpose;
     private List<Long> channelIds;
+    private List<Long> tagIds;
 }
