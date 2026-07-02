@@ -40,30 +40,30 @@ public class PageController {
     @GetMapping("/stats/delivery")
     public String statsDelivery(Model model) {
         model.addAttribute("pageTitle", "발송 현황");
-        return "pages/stats/stats-delivery";
+        return "pages/stats/delivery";
     }
 
     @GetMapping("/stats/channel")
     public String statsChannel(Model model) {
         model.addAttribute("pageTitle", "채널 분석");
-        return "pages/stats/stats-channel";
+        return "pages/stats/channel";
     }
 
     @GetMapping("/stats/cost")
     public String statsCost(Model model) {
         model.addAttribute("pageTitle", "비용 분석");
-        return "pages/stats/stats-cost";
+        return "pages/stats/cost";
     }
 
     @GetMapping("/stats/customer")
     public String statsCustomer(Model model) {
         model.addAttribute("pageTitle", "고객 분석");
-        return "pages/stats/stats-customer";
+        return "pages/stats/customer";
     }
 
     @GetMapping("/stats/performance")
     public String statsPerformance(Model model) {
         model.addAttribute("pageTitle", "성과 분석");
-        return "pages/stats/stats-performance";
+        return "pages/stats/performance";
     }
 }
