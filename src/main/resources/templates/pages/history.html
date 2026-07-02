@@ -5,5 +5,173 @@
 <head>
     <title>전송 기록</title>
 </head>
-<main layout:fragment="content" class="page"></main>
+<main layout:fragment="content" class="page history-page">
+    <section class="page-toolbar">
+        <div>
+            <h1 class="page-toolbar__title">전송 기록</h1>
+            <p class="page-toolbar__description">전체 직원의 메시지 발송 결과와 비용 절감 내역을 확인합니다.</p>
+        </div>
+    </section>
+
+    <form id="historySearchForm" class="history-filter" method="get" th:action="@{/history}"
+          th:object="${searchCondition}">
+        <div class="history-filter__controls">
+            <label class="history-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <span class="visually-hidden">전송 기록 검색</span>
+                <input class="ds-input" type="search" th:field="*{keyword}"
+                       placeholder="제목, 내용, 태그 검색..." autocomplete="off">
+            </label>
+
+            <label class="history-filter__select">
+                <span class="visually-hidden">채널</span>
+                <select class="ds-select" th:field="*{channelId}" data-auto-submit>
+                    <option value="">전체 채널</option>
+                    <option th:each="channel : ${channels}" th:value="${channel.id}" th:text="${channel.label}"></option>
+                </select>
+            </label>
+
+            <label class="history-filter__select">
+                <span class="visually-hidden">상태</span>
+                <select class="ds-select" th:field="*{status}" data-auto-submit>
+                    <option value="">전체 상태</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption.value}"
+                            th:text="${statusOption.label}"></option>
+                </select>
+            </label>
+
+            <label class="history-filter__select">
+                <span class="visually-hidden">광고 여부</span>
+                <select class="ds-select" th:field="*{purpose}" data-auto-submit>
+                    <option value="">전체 광고여부</option>
+                    <option th:each="purposeOption : ${purposes}"
+                            th:value="${purposeOption}"
+                            th:text="${#strings.equalsIgnoreCase(purposeOption, 'INFO') ? '정보성' : (#strings.equalsIgnoreCase(purposeOption, 'AD') ? '광고성' : purposeOption)}"></option>
+                </select>
+            </label>
+
+            <label class="history-filter__sort">
+                <span class="visually-hidden">정렬 기준</span>
+                <select class="ds-select" th:field="*{sort}" data-auto-submit>
+                    <option value="latest">최신순</option>
+                    <option value="oldest">오래된순</option>
+                    <option value="mostSent">발송많은순</option>
+                    <option value="highestSuccessRate">성공률높은순</option>
+                </select>
+            </label>
+
+            <div class="history-filter__period" aria-label="발송 기간">
+                <label>
+                    <span class="visually-hidden">시작일</span>
+                    <input class="ds-input" type="date" th:field="*{startDate}">
+                </label>
+                <span aria-hidden="true">~</span>
+                <label>
+                    <span class="visually-hidden">종료일</span>
+                    <input class="ds-input" type="date" th:field="*{endDate}">
+                </label>
+            </div>
+
+            <button class="ds-button ds-button--primary history-filter__submit" type="submit">조회</button>
+            <a class="ds-button ds-button--ghost" th:href="@{/history}">초기화</a>
+        </div>
+
+        <div class="history-tags" aria-label="태그 필터">
+            <a class="history-tag"
+               th:classappend="${searchCondition.tagIds.isEmpty()} ? ' is-active'"
+               th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=1)}">전체</a>
+            <label class="history-tag" th:each="tag : ${tags}"
+                   th:classappend="${#lists.contains(searchCondition.tagIds, tag.id)} ? ' is-active'">
+                <input class="history-tag__input" type="checkbox" th:field="*{tagIds}"
+                       th:value="${tag.id}" data-tag-submit>
+                <span th:text="${tag.label}">태그</span>
+            </label>
+        </div>
+    </form>
+
+    <section class="table-panel history-table" aria-label="전송 기록 목록">
+        <div class="table-scroll">
+            <table class="ds-table">
+                <thead>
+                <tr>
+                    <th>발송일시</th>
+                    <th>제목</th>
+                    <th>채널</th>
+                    <th>광고여부</th>
+                    <th>태그</th>
+                    <th class="history-table__number">발송</th>
+                    <th class="history-table__number">성공</th>
+                    <th class="history-table__number">실패</th>
+                    <th class="history-table__number">성공률</th>
+                    <th class="history-table__number">절감 비용</th>
+                    <th>상태</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="history : ${historyPage.content}">
+                    <td class="history-table__date"
+                        th:text="${history.scheduledAt == null ? '-' : #temporals.format(history.scheduledAt, 'yyyy.MM.dd HH:mm')}">-</td>
+                    <td class="history-table__title" th:text="${history.title ?: '-'}">-</td>
+                    <td>
+                        <div class="history-badges" th:if="${!history.channels.isEmpty()}">
+                            <span class="ds-badge ds-badge--primary" th:each="channel : ${history.channels}" th:text="${channel}">채널</span>
+                        </div>
+                        <span th:if="${history.channels.isEmpty()}">-</span>
+                    </td>
+                    <td><span class="ds-badge" th:text="${history.purposeLabel}">-</span></td>
+                    <td>
+                        <div class="history-badges" th:if="${!history.tags.isEmpty()}">
+                            <span class="ds-badge history-tag-badge" th:each="tag : ${history.displayTags}" th:text="${tag}">태그</span>
+                            <span class="ds-badge history-tag-count" th:if="${history.hiddenTagCount > 0}"
+                                  th:text="'+' + ${history.hiddenTagCount}">+1</span>
+                        </div>
+                        <span th:if="${history.tags.isEmpty()}">-</span>
+                    </td>
+                    <td class="history-table__number" th:text="${#numbers.formatInteger(history.totalTargetCount, 1, 'COMMA')}">0</td>
+                    <td class="history-table__number history-table__success" th:text="${#numbers.formatInteger(history.successCount, 1, 'COMMA')}">0</td>
+                    <td class="history-table__number history-table__fail" th:text="${#numbers.formatInteger(history.failCount, 1, 'COMMA')}">0</td>
+                    <td class="history-table__number" th:text="${history.displaySuccessRate} + '%'">0.0%</td>
+                    <td class="history-table__number"
+                        th:text="${history.estimatedSaving == null ? '-' : '₩' + #numbers.formatDecimal(history.estimatedSaving, 1, 'COMMA', 0, 'POINT')}">-</td>
+                    <td><span class="ds-badge history-status"
+                              th:classappend="${history.statusStyleClass}"
+                              th:text="${history.statusLabel}">-</span></td>
+                </tr>
+                <tr th:if="${historyPage.empty}">
+                    <td class="history-empty" colspan="11">
+                        <strong>조회된 전송 기록이 없습니다.</strong>
+                        <span>검색어나 필터 조건을 변경해 보세요.</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <nav class="ds-pagination" th:if="${historyPage.totalPages > 0}" aria-label="전송 기록 페이지">
+            <span class="ds-pagination__summary"
+                  th:text="'총 ' + ${#numbers.formatInteger(historyPage.totalElements, 1, 'COMMA')} + '건 중 ' + ${historyPage.startElement} + '-' + ${historyPage.endElement}">총 40건 중 1-10</span>
+            <div class="ds-pagination__pages">
+                <a class="ds-page-button" th:if="${historyPage.hasPrevious}" aria-label="이전 페이지"
+                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${historyPage.currentPage - 1})}">‹</a>
+                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasPrevious}" aria-hidden="true">‹</span>
+
+                <a class="ds-page-button" th:each="pageNumber : ${#numbers.sequence(historyPage.startPage, historyPage.endPage)}"
+                   th:classappend="${pageNumber == historyPage.currentPage} ? ' is-active'"
+                   th:text="${pageNumber}"
+                   th:aria-current="${pageNumber == historyPage.currentPage} ? 'page'"
+                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${pageNumber})}">1</a>
+
+                <a class="ds-page-button" th:if="${historyPage.hasNext}" aria-label="다음 페이지"
+                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${historyPage.currentPage + 1})}">›</a>
+                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasNext}" aria-hidden="true">›</span>
+            </div>
+        </nav>
+    </section>
+
+    <script th:src="@{/js/pages/history.js}"></script>
+</main>
 </html>
