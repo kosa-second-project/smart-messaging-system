@@ -96,6 +96,7 @@
             WHERE t.name = #{searchTag}
             AND ctm.is_deleted = 0
             AND t.is_deleted = 0
+            )
         </if>
         ORDER BY
         <choose>
