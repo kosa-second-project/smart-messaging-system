@@ -452,7 +452,6 @@ function saveTemplate() {
         purpose: document.getElementById("templatePurpose").value,
         kakaoTemplateCode: document.getElementById("templateKakaoCode").value.trim(),
         kakaoTemplateStatus: document.getElementById("templateKakaoStatus").value,
-        isAiGenerated: document.getElementById("templateAiGenerated").checked,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
             .map(input => Number(input.value))
     };
