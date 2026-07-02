@@ -16,9 +16,13 @@ import java.util.List;
 @Builder
 public class CustomerSummaryResponse {
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
     private Long id;
     private String name;
     private String phone;
     private List<String> tags; // TAG 테이블에서 조회한 태그 이름 목록 (예: "남자", "30대", "카카오 동의")
+
+    `@JsonProperty`("isInDraft")
     private boolean isInDraft; // 현재 임시 저장된 수신자(Draft)에 포함되어 있는지 여부
 }
