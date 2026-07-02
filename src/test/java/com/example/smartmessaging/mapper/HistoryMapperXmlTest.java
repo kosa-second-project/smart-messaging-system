@@ -33,6 +33,9 @@ class HistoryMapperXmlTest {
         assertThat(configuration.hasStatement(
                 "com.example.smartmessaging.mapper.HistoryMapper.countHistories"
         )).isTrue();
+        assertThat(configuration.hasStatement(
+                "com.example.smartmessaging.mapper.HistoryMapper.findStatusOptions"
+        )).isFalse();
     }
 
     @Test

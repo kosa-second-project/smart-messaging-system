@@ -7,12 +7,14 @@ import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryStatusOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
 import com.example.smartmessaging.dto.response.PageResponseDTO;
+import com.example.smartmessaging.dto.type.SendHistoryStatus;
 import com.example.smartmessaging.mapper.HistoryMapper;
 import com.example.smartmessaging.service.HistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +62,8 @@ public class HistoryServiceImpl implements HistoryService {
 
     @Override
     public List<HistoryStatusOptionDTO> getStatusOptions() {
-        return historyMapper.findStatusOptions().stream()
-                .map(status -> new HistoryStatusOptionDTO(status, HistoryListResponseDTO.statusLabelOf(status)))
+        return Arrays.stream(SendHistoryStatus.values())
+                .map(status -> new HistoryStatusOptionDTO(status.getValue(), status.getLabel()))
                 .toList();
     }
 

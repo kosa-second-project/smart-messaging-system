@@ -18,6 +18,5 @@ public interface HistoryMapper {
     List<HistoryTagResponseDTO> findTagsByHistoryIds(@Param("historyIds") List<Long> historyIds);
     List<HistoryFilterOptionDTO> findChannelOptions();
     List<HistoryFilterOptionDTO> findTagOptions();
-    List<String> findStatusOptions();
     List<String> findPurposeOptions();
 }

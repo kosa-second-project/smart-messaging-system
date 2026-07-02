@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -91,5 +92,17 @@ class HistoryServiceTest {
         assertThat(condition.getPage()).isEqualTo(3);
         assertThat(result.getCurrentPage()).isEqualTo(3);
         assertThat(condition.getOffset()).isEqualTo(20);
+    }
+
+    @Test
+    void 상태필터는_DB_CHECK_제약조건에_정의된_네_상태를_제공한다() {
+        assertThat(historyService.getStatusOptions())
+                .extracting("value", "label")
+                .containsExactly(
+                        tuple("SCHEDULED", "예약"),
+                        tuple("SENDING", "전송중"),
+                        tuple("SENT", "완료"),
+                        tuple("FAILED", "실패")
+                );
     }
 }

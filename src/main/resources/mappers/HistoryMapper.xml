@@ -151,14 +151,6 @@
         ORDER BY name, id
     </select>
 
-    <select id="findStatusOptions" resultType="string">
-        SELECT DISTINCT status
-        FROM send_history
-        WHERE NVL(is_deleted, 0) = 0
-          AND status IS NOT NULL
-        ORDER BY status
-    </select>
-
     <select id="findPurposeOptions" resultType="string">
         SELECT DISTINCT purpose
         FROM send_history
