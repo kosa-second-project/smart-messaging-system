@@ -71,10 +71,10 @@ public class CampaignDraftApiController {
      * PATCH /api/campaigns/draft/{draftId}/recipients
      * Body: { "items": [{"customerId": 5, "action": "REMOVE"}, {"customerId": 12, "action": "ADD"}] }
      */
-    @PatchMapping("/draft/{draftId}/recipients")
+    `@PatchMapping`("/draft/{draftId}/recipients")
     public ResponseEntity<Map<String, Object>> updateRecipients(
-            @PathVariable String draftId,
-            @RequestBody Map<String, List<Map<String, Object>>> body) {
+            `@PathVariable` String draftId,
+            `@RequestBody` Map<String, List<Map<String, Object>>> body) {
 
         List<Map<String, Object>> items = body.get("items");
         if (items == null || items.isEmpty()) {
@@ -82,13 +82,21 @@ public class CampaignDraftApiController {
         }
 
         for (Map<String, Object> item : items) {
-            Long customerId = Long.parseLong(item.get("customerId").toString());
-            String action   = item.get("action").toString();
-
-            if ("REMOVE".equals(action)) {
-                draftService.removeRecipient(draftId, customerId);
-            } else if ("ADD".equals(action)) {
-                draftService.addRecipient(draftId, customerId);
+            Object rawId = item.get("customerId");
+            Object rawAction = item.get("action");
+            if (rawId == null || rawAction == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "customerId and action are required"));
+            }
+            try {
+                Long customerId = Long.parseLong(rawId.toString());
+                String action = rawAction.toString();
+                if ("REMOVE".equals(action)) {
+                    draftService.removeRecipient(draftId, customerId);
+                } else if ("ADD".equals(action)) {
+                    draftService.addRecipient(draftId, customerId);
+                }
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "invalid customerId: " + rawId));
             }
         }
 
