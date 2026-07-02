@@ -224,12 +224,36 @@ public class ReportServiceImpl implements ReportService {
                                         .data(List.<Number>of(7600, 8800, 10800, 12400, 6500, 8400, 10000))
                                         .build()
                         ))
+                        .build(),
+                ReportChartResponse.builder()
+                        .chartId("channelShare")
+                        .title("채널별 발송 비중")
+                        .type("doughnut")
+                        .labels(List.of("카카오톡", "SMS", "LMS", "이메일"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("발송 비중")
+                                        .data(List.<Number>of(60, 28, 9, 3))
+                                        .build()
+                        ))
                         .build()
         );
     }
 
     private List<ReportTableResponse> buildChannelTables() {
-        return List.of();
+        return List.of(
+                ReportTableResponse.builder()
+                        .tableId("channelCost")
+                        .title("채널별 비용")
+                        .columns(List.of("채널", "발송량", "성공률", "총 비용"))
+                        .rows(List.of(
+                                List.of("카카오톡", "535,279건", "99.1%", "3,586,503원"),
+                                List.of("SMS", "249,886건", "99.1%", "2,498,860원"),
+                                List.of("LMS", "80,241건", "98.2%", "2,407,230원"),
+                                List.of("이메일", "26,739건", "97.8%", "80,217원")
+                        ))
+                        .build()
+        );
     }
 
     private List<ReportCardResponse> buildCostCards() {
@@ -272,6 +296,18 @@ public class ReportServiceImpl implements ReportService {
                                 ReportChartDatasetResponse.builder()
                                         .label("최대 비용")
                                         .data(List.<Number>of(11200000, 12450000, 14900000, 16950000, 20700000, 24200000))
+                                        .build()
+                        ))
+                        .build(),
+                ReportChartResponse.builder()
+                        .chartId("costSavings")
+                        .title("절감액 추이")
+                        .type("line")
+                        .labels(List.of("1월", "2월", "3월", "4월", "5월", "6월"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("절감액")
+                                        .data(List.<Number>of(1400000, 1850000, 2800000, 3150000, 4500000, 5500000))
                                         .build()
                         ))
                         .build()
@@ -325,7 +361,18 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private List<ReportTableResponse> buildCustomerTables() {
-        return List.of();
+        return List.of(
+                ReportTableResponse.builder()
+                        .tableId("customerConsent")
+                        .title("채널별 동의 현황")
+                        .columns(List.of("채널", "동의", "미동의", "동의율"))
+                        .rows(List.of(
+                                List.of("메시지", "197,709명", "108,818명", "64.5%"),
+                                List.of("카카오톡", "240,317명", "66,210명", "78.4%"),
+                                List.of("이메일", "203,840명", "102,687명", "66.5%")
+                        ))
+                        .build()
+        );
     }
 
     private List<ReportCardResponse> buildPerformanceCards() {
@@ -368,6 +415,30 @@ public class ReportServiceImpl implements ReportService {
                                 ReportChartDatasetResponse.builder()
                                         .label("전환율")
                                         .data(List.<Number>of(5.1, 5.3, 5.8, 6.1, 5.6, 5.9, 6.0))
+                                        .build()
+                        ))
+                        .build(),
+                ReportChartResponse.builder()
+                        .chartId("weekdayClick")
+                        .title("요일별 클릭률")
+                        .type("bar")
+                        .labels(List.of("월", "화", "수", "목", "금", "토", "일"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("클릭률")
+                                        .data(List.<Number>of(12.1, 16.8, 18.2, 17.3, 15.9, 11.4, 10.1))
+                                        .build()
+                        ))
+                        .build(),
+                ReportChartResponse.builder()
+                        .chartId("hourlyClick")
+                        .title("시간별 클릭률")
+                        .type("line")
+                        .labels(List.of("00시", "01시", "02시", "03시", "04시", "05시", "06시", "07시", "08시", "09시", "10시", "11시", "12시", "13시", "14시", "15시", "16시", "17시", "18시", "19시", "20시", "21시", "22시", "23시"))
+                        .datasets(List.of(
+                                ReportChartDatasetResponse.builder()
+                                        .label("클릭률")
+                                        .data(List.<Number>of(2.1, 1.4, 0.9, 0.7, 0.8, 1.2, 2.6, 5.3, 8.4, 13.8, 18.7, 16.9, 14.2, 15.6, 17.9, 19.4, 21.3, 18.1, 13.6, 10.2, 8.7, 6.1, 4.3, 3.0))
                                         .build()
                         ))
                         .build()
