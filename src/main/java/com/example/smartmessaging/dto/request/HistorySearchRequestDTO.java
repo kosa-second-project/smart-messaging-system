@@ -41,7 +41,7 @@ public class HistorySearchRequestDTO {
                 .filter(java.util.Objects::nonNull)
                 .distinct()
                 .toList();
-        sort = ALLOWED_SORTS.contains(sort) ? sort : "latest";
+        sort = sort != null && ALLOWED_SORTS.contains(sort) ? sort : "latest";
         page = page == null || page < 1 ? 1 : page;
     }
 
@@ -64,6 +64,17 @@ public class HistorySearchRequestDTO {
 
     public int getTagCount() {
         return tagIds.size();
+    }
+
+    public String getKeywordLikePattern() {
+        if (keyword == null) {
+            return null;
+        }
+        String escapedKeyword = keyword
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+        return "%" + escapedKeyword + "%";
     }
 
     private String trimToNull(String value) {

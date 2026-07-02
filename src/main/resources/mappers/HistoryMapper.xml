@@ -7,15 +7,15 @@
         WHERE NVL(sh.is_deleted, 0) = 0
         <if test="keyword != null">
             AND (
-                LOWER(sh.title) LIKE '%' || LOWER(#{keyword}) || '%'
-                OR LOWER(sh.content) LIKE '%' || LOWER(#{keyword}) || '%'
+                LOWER(sh.title) LIKE LOWER(#{keywordLikePattern}) ESCAPE '!'
+                OR LOWER(sh.content) LIKE LOWER(#{keywordLikePattern}) ESCAPE '!'
                 OR EXISTS (
                     SELECT 1
                     FROM send_target_tag stt
                     JOIN tag t ON t.id = stt.tag_id AND NVL(t.is_deleted, 0) = 0
                     WHERE stt.send_history_id = sh.id
                       AND NVL(stt.is_deleted, 0) = 0
-                      AND LOWER(t.name) LIKE '%' || LOWER(#{keyword}) || '%'
+                      AND LOWER(t.name) LIKE LOWER(#{keywordLikePattern}) ESCAPE '!'
                 )
             )
         </if>
