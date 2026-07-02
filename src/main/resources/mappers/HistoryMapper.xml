@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.HistoryMapper">
+
+    <sql id="historyFilters">
+        WHERE NVL(sh.is_deleted, 0) = 0
+        <if test="keyword != null">
+            AND (
+                LOWER(sh.title) LIKE '%' || LOWER(#{keyword}) || '%'
+                OR LOWER(sh.content) LIKE '%' || LOWER(#{keyword}) || '%'
+                OR EXISTS (
+                    SELECT 1
+                    FROM send_target_tag stt
+                    JOIN tag t ON t.id = stt.tag_id AND NVL(t.is_deleted, 0) = 0
+                    WHERE stt.send_history_id = sh.id
+                      AND NVL(stt.is_deleted, 0) = 0
+                      AND LOWER(t.name) LIKE '%' || LOWER(#{keyword}) || '%'
+                )
+            )
+        </if>
+        <if test="channelId != null">
+            AND EXISTS (
+                SELECT 1
+                FROM send_history_routing shr
+                WHERE shr.send_history_id = sh.id
+                  AND shr.channel_id = #{channelId}
+                  AND NVL(shr.is_deleted, 0) = 0
+            )
+        </if>
+        <if test="status != null">
+            AND sh.status = #{status}
+        </if>
+        <if test="purpose != null">
+            AND sh.purpose = #{purpose}
+        </if>
+        <if test="tagIds != null and !tagIds.isEmpty()">
+            AND (
+                SELECT COUNT(DISTINCT stt.tag_id)
+                FROM send_target_tag stt
+                WHERE stt.send_history_id = sh.id
+                  AND NVL(stt.is_deleted, 0) = 0
+                  AND stt.tag_id IN
+                <foreach collection="tagIds" item="tagId" open="(" separator="," close=")">
+                    #{tagId}
+                </foreach>
+            ) = #{tagCount}
+        </if>
+        <if test="startAt != null">
+            AND sh.scheduled_at <![CDATA[>=]]> #{startAt}
+        </if>
+        <if test="endAtExclusive != null">
+            AND sh.scheduled_at <![CDATA[<]]> #{endAtExclusive}
+        </if>
+    </sql>
+
+    <select id="countHistories"
+            parameterType="com.example.smartmessaging.dto.request.HistorySearchRequestDTO"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM send_history sh
+        <include refid="historyFilters"/>
+    </select>
+
+    <select id="findHistories"
+            parameterType="com.example.smartmessaging.dto.request.HistorySearchRequestDTO"
+            resultType="com.example.smartmessaging.dto.response.HistoryListResponseDTO">
+        SELECT
+            sh.id,
+            sh.scheduled_at,
+            sh.title,
+            sh.purpose,
+            NVL(sh.total_target_count, 0) AS total_target_count,
+            NVL(sh.success_count, 0) AS success_count,
+            NVL(sh.fail_count, 0) AS fail_count,
+            CASE
+                WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
+                ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
+            END AS success_rate,
+            sh.estimated_saving,
+            sh.status
+        FROM send_history sh
+        <include refid="historyFilters"/>
+        ORDER BY
+        <choose>
+            <when test="sort == 'oldest'">
+                sh.scheduled_at ASC NULLS LAST, sh.id ASC
+            </when>
+            <when test="sort == 'mostSent'">
+                NVL(sh.total_target_count, 0) DESC, sh.scheduled_at DESC NULLS LAST, sh.id DESC
+            </when>
+            <when test="sort == 'highestSuccessRate'">
+                CASE
+                    WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
+                    ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
+                END DESC,
+                sh.scheduled_at DESC NULLS LAST,
+                sh.id DESC
+            </when>
+            <otherwise>
+                sh.scheduled_at DESC NULLS LAST, sh.id DESC
+            </otherwise>
+        </choose>
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="findChannelsByHistoryIds"
+            resultType="com.example.smartmessaging.dto.response.HistoryChannelResponseDTO">
+        SELECT DISTINCT
+            shr.send_history_id,
+            c.channel_type AS channel_name
+        FROM send_history_routing shr
+        JOIN channel c ON c.id = shr.channel_id AND NVL(c.is_deleted, 0) = 0
+        WHERE NVL(shr.is_deleted, 0) = 0
+          AND shr.send_history_id IN
+        <foreach collection="historyIds" item="historyId" open="(" separator="," close=")">
+            #{historyId}
+        </foreach>
+        ORDER BY shr.send_history_id, channel_name
+    </select>
+
+    <select id="findTagsByHistoryIds"
+            resultType="com.example.smartmessaging.dto.response.HistoryTagResponseDTO">
+        SELECT DISTINCT
+            stt.send_history_id,
+            t.name AS tag_name
+        FROM send_target_tag stt
+        JOIN tag t ON t.id = stt.tag_id AND NVL(t.is_deleted, 0) = 0
+        WHERE NVL(stt.is_deleted, 0) = 0
+          AND stt.send_history_id IN
+        <foreach collection="historyIds" item="historyId" open="(" separator="," close=")">
+            #{historyId}
+        </foreach>
+        ORDER BY stt.send_history_id, tag_name
+    </select>
+
+    <select id="findChannelOptions"
+            resultType="com.example.smartmessaging.dto.response.HistoryFilterOptionDTO">
+        SELECT id, channel_type AS label
+        FROM channel
+        WHERE NVL(is_deleted, 0) = 0
+          AND is_active = 1
+        ORDER BY channel_type
+    </select>
+
+    <select id="findTagOptions"
+            resultType="com.example.smartmessaging.dto.response.HistoryFilterOptionDTO">
+        SELECT id, name AS label
+        FROM tag
+        WHERE NVL(is_deleted, 0) = 0
+        ORDER BY name, id
+    </select>
+
+    <select id="findStatusOptions" resultType="string">
+        SELECT DISTINCT status
+        FROM send_history
+        WHERE NVL(is_deleted, 0) = 0
+          AND status IS NOT NULL
+        ORDER BY status
+    </select>
+
+    <select id="findPurposeOptions" resultType="string">
+        SELECT DISTINCT purpose
+        FROM send_history
+        WHERE NVL(is_deleted, 0) = 0
+          AND purpose IS NOT NULL
+        ORDER BY purpose
+    </select>
+</mapper>
