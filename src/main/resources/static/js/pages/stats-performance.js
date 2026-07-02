@@ -4,7 +4,7 @@ $(function() {
             start: "2026-06-01",
             end: "2026-06-30"
         },
-        channel: "카카오톡"
+        channel: "KAKAO"
     };
 
     bindPerformanceEvents(state);
