@@ -54,6 +54,8 @@ public class TemplateServiceImpl implements TemplateService {
         response.setChannels(templateMapper.selectAllChannels());
         response.setCategories(templateMapper.selectCategoryOptions(userId));
         response.setPurposes(templateMapper.selectPurposeOptions(userId));
+        // 템플릿 작성 시 참고할 타겟 태그 목록은 DB 기준으로 노출한다.
+        response.setTags(templateMapper.selectTagOptions());
         return response;
     }
 

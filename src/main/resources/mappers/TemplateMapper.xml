@@ -139,6 +139,15 @@
         ORDER BY purpose ASC
     </select>
 
+    <select id="selectTagOptions" resultType="TemplateFilterOptionResponse">
+        SELECT
+            TO_CHAR(id) AS value,
+            name AS label
+        FROM tag
+        WHERE NVL(is_deleted, 0) = 0
+        ORDER BY id ASC
+    </select>
+
     <select id="selectTemplateStats" resultType="TemplateStatResponse">
         SELECT
             COUNT(*) AS total_count,

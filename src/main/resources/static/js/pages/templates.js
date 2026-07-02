@@ -4,7 +4,8 @@ let templatePreviewMode = "message";
 let templateOptions = {
     channels: [],
     categories: [],
-    purposes: []
+    purposes: [],
+    tags: []
 };
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -69,6 +70,7 @@ function fetchTemplateOptions() {
             renderTemplateFilters();
             renderQuickFilters();
             renderTemplateChannelCheckboxes();
+            renderTemplateTagOptions();
         })
         .catch(err => console.error("Template options load fail:", err));
 }
@@ -148,6 +150,21 @@ function renderTemplateChannelCheckboxes() {
         `;
         wrapper.appendChild(label);
     });
+}
+
+function renderTemplateTagOptions() {
+    const wrapper = document.getElementById("templateTagList");
+    const tags = templateOptions.tags || [];
+
+    if (!tags.length) {
+        wrapper.innerHTML = `<span class="text-muted">등록된 태그가 없습니다.</span>`;
+        return;
+    }
+
+    // 템플릿-태그 매핑 테이블이 확인되면 저장 로직을 별도로 연결한다.
+    wrapper.innerHTML = tags
+        .map(tag => `<span class="ds-badge" data-tag-id="${escapeHtml(tag.value)}">${escapeHtml(tag.label)}</span>`)
+        .join("");
 }
 
 function fetchTemplates() {
