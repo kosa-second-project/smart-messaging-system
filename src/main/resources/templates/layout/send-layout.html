@@ -28,8 +28,9 @@
             <div th:replace="~{fragments/send/action-bar :: actionBarFragment(${activeStep})}"></div>
         </div>
 
-        <!-- 발송 화면 전용 JS 추가 (스프링 자동 캐시 버스팅 활성화) -->
-        <script th:src="@{/js/pages/send.js}"></script>
+        <!-- 발송 화면 전용 JS 추가 (매 기동시 캐시 버스팅) -->
+        <script th:src="@{/js/pages/send-api.js(v=${#dates.createNow().getTime()})}"></script>
+        <script th:src="@{/js/pages/send.js(v=${#dates.createNow().getTime()})}"></script>
     </div>
 </body>
 

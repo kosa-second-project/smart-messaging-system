@@ -1,20 +1,22 @@
-/* static/js/pages/send.js */
+// ==========================================
+// 0. HTML 이스케이프 유틸리티 (XSS 방지)
+// ==========================================
+function escapeHtml(str) {
+    if (str == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
 
 // ==========================================
-// 1. 가상 테스트 데이터 정의 (고객 10명)
+// 1. DB 태그 ID 매핑 맵 정의
 // ==========================================
-const MOCK_CUSTOMERS = [
-    { id: "C001", name: "김민준3", phone: "010-****-1592", type: "일반", tags: ["일반", "sms 동의", "이메일 동의", "남자", "30대"], sms: true, kakao: false, email: true },
-    { id: "C002", name: "정도윤3", phone: "010-****-1740", type: "휴면", tags: ["휴면", "이메일 동의", "남자", "40대"], sms: false, kakao: false, email: true },
-    { id: "C003", name: "한예준3", phone: "010-****-1814", type: "일반", tags: ["일반", "sms 동의", "카카오 동의", "이메일 동의", "생일 대상자", "남자", "20대"], sms: true, kakao: true, email: true },
-    { id: "C004", name: "박지호4", phone: "010-****-1962", type: "신규", tags: ["신규", "sms 동의", "카카오 동의", "이메일 동의", "남자", "10대"], sms: true, kakao: true, email: true },
-    { id: "C005", name: "이서연9", phone: "010-****-3405", type: "일반", tags: ["일반", "카카오 동의", "이메일 동의", "여자", "30대"], sms: false, kakao: true, email: true },
-    { id: "C006", name: "윤지아9", phone: "010-****-3553", type: "일반", tags: ["일반", "sms 동의", "카카오 동의", "이메일 동의", "여자", "20대"], sms: true, kakao: true, email: true },
-    { id: "C007", name: "오서윤9", phone: "010-****-3627", type: "신규", tags: ["신규", "sms 동의", "카카오 동의", "이메일 동의", "생일 대상자", "여자", "40대"], sms: true, kakao: true, email: true },
-    { id: "C008", name: "최수아10", phone: "010-****-3775", type: "휴면", tags: ["휴면", "카카오 동의", "이메일 동의", "여자", "50대"], sms: false, kakao: true, email: true },
-    { id: "C009", name: "강지원11", phone: "010-****-4819", type: "일반", tags: ["일반", "sms 동의", "카카오 동의", "이메일 동의", "여자", "60대"], sms: true, kakao: true, email: true },
-    { id: "C010", name: "조예은12", phone: "010-****-5930", type: "일반", tags: ["일반", "sms 동의", "여자", "70대"], sms: true, kakao: false, email: false }
-];
+const TAG_MAP = {
+    "일반": 23, "신규": 24, "휴면": 25, "생일 대상자": 26,
+    "카카오 동의": 27, "sms 동의": 28, "이메일 동의": 29,
+    "남자": 30, "여자": 31,
+    "10대": 32, "20대": 33, "30대": 34, "40대": 35, "50대": 36, "60대": 37, "70대": 38
+};
 
 // ==========================================
 // 2. 발송 화면 전역 상태 관리 객체
@@ -23,28 +25,37 @@ const SendPage = {
     // 현재 전역 데이터 상태
     state: {
         currentStep: 1,
-        selectedTags: JSON.parse(localStorage.getItem("selectedTags") || "[]"),        // 선택된 태그 목록 (String 배열)
-        conditionMode: localStorage.getItem("conditionMode") || 'OR',     // 'OR' (하나라도) 또는 'AND' (모두)
-        selectedUserIds: new Set(JSON.parse(localStorage.getItem("selectedUserIds") || "[]")), // 직접 체크박스로 선택한 고객 ID (Set)
-        searchQuery: '',         // 우측 고객 검색어
-        tagSearchQuery: '',      // 좌측 태그 검색어
+        selectedTags: [],            // 항상 빈 태그 상태로 시작
+        conditionMode: 'OR',         // 기본 OR 모드
+        draftId: null,               // Redis에 저장된 수신자 목록의 식별자 (draftId)
+        draftTotalCount: 0,          // Redis에 저장된 수신자 총 인원 수
+        searchQuery: '',             // 우측 고객 검색어
         currentPage: 1,
-        pageSize: 5,             // 한 페이지에 5명씩 렌더링
-        activeTab: 'filtered'    // 'filtered'(태그후보), 'displayed'(현재표시), 'selected'(직접선택)
+        pageSize: 20,                // 한 페이지에 20명씩 렌더링 (기본값)
+        activeTab: 'filtered',       // 'filtered'(태그후보), 'selected'(직접선택)
+        renderSeq: 0                 // AJAX 요청 순번: 이전 응답 덮어쓰기(Race Condition) 방지
     },
 
     // 초기화
-    init: function() {
-        console.log("Send Page Manager Initialized.");
+    init: function () {
+
 
         // 현재 URL 경로를 통해 currentStep 파싱
         const path = window.location.pathname;
         if (path.includes("/send/recipients")) {
             this.state.currentStep = 1;
+            // 1단계 진입 시에도 이전 단계에서 이동해 온 경우를 위해 로컬스토리지에서 복원
+            this.state.draftId = localStorage.getItem("draftId") || null;
+            this.state.draftTotalCount = parseInt(localStorage.getItem("draftTotalCount") || "0");
         } else if (path.includes("/send/message")) {
             this.state.currentStep = 2;
+            // 2단계 진입: 1단계에서 저장해 둔 draftId 복원
+            this.state.draftId = localStorage.getItem("draftId") || null;
+            this.state.draftTotalCount = parseInt(localStorage.getItem("draftTotalCount") || "0");
         } else if (path.includes("/send/review")) {
             this.state.currentStep = 3;
+            this.state.draftId = localStorage.getItem("draftId") || null;
+            this.state.draftTotalCount = parseInt(localStorage.getItem("draftTotalCount") || "0");
         } else {
             this.state.currentStep = 1;
         }
@@ -60,7 +71,7 @@ const SendPage = {
     },
 
     // 전역 이벤트 바인딩 (이전/다음 화면 전환 등)
-    bindGlobalEvents: function() {
+    bindGlobalEvents: function () {
         // [다음] 또는 [발송하기] 버튼 클릭
         $(document).on("click", "[data-action='next-step']", (e) => {
             e.preventDefault();
@@ -75,37 +86,43 @@ const SendPage = {
     },
 
     // 다음 단계 이동 처리
-    handleNextStep: function() {
+    handleNextStep: function () {
         const current = this.state.currentStep;
         if (current === 1) {
-            // 1단계 ➡️ 2단계 진입 시 수신자 유효성 검사 (0명이면 차단)
-            const finalRecipients = RecipientSelector.getFinalRecipients();
-            if (finalRecipients.length === 0) {
-                alert("⚠️ 발송 대상 수신자가 0명입니다.\n태그를 선택하거나 테이블에서 수신 대상자를 선택해 주세요.");
+            // draftId가 없거나 선택된 수신자가 0명이면 차단
+            if (!this.state.draftId || this.state.draftTotalCount === 0) {
+                alert("⚠️ 발송 대상 수신자가 0명입니다.\n테이블에서 수신 대상자를 선택해 주세요.");
                 return;
             }
 
-            // MPA 상태 유지를 위해 선택된 필터 정보 로컬스토리지에 저장
-            localStorage.setItem("selectedUserIds", JSON.stringify(Array.from(this.state.selectedUserIds)));
-            localStorage.setItem("selectedTags", JSON.stringify(this.state.selectedTags));
-            localStorage.setItem("conditionMode", this.state.conditionMode);
+            // MPA 상태 유지를 위해 draftId를 로컬스토리지에 저장하고 다음 단계로 이동
+            localStorage.setItem("draftId", this.state.draftId || '');
+            localStorage.setItem("draftTotalCount", String(this.state.draftTotalCount));
 
             window.location.href = "/send/message";
         } else if (current === 2) {
             window.location.href = "/send/review";
         } else if (current === 3) {
             alert("🎉 스마트 메시징 발송 요청이 최종 완료되었습니다! (시연용 Mock)");
-            
-            // 데이터 클리어 후 대시보드로 복귀
-            localStorage.removeItem("selectedUserIds");
-            localStorage.removeItem("selectedTags");
-            localStorage.removeItem("conditionMode");
-            window.location.href = "/dashboard";
+
+            // 발송 완료 시 Redis Draft 정리 + 로컬스토리지 초기화
+            const draftId = this.state.draftId;
+            if (draftId) {
+                DraftApi.delete(draftId).always(function () {
+                    localStorage.removeItem("draftId");
+                    localStorage.removeItem("draftTotalCount");
+                    window.location.href = "/dashboard";
+                });
+            } else {
+                localStorage.removeItem("draftId");
+                localStorage.removeItem("draftTotalCount");
+                window.location.href = "/dashboard";
+            }
         }
     },
 
     // 이전 단계 이동 처리
-    handlePrevStep: function() {
+    handlePrevStep: function () {
         const current = this.state.currentStep;
         if (current === 2) {
             window.location.href = "/send/recipients";
@@ -115,13 +132,13 @@ const SendPage = {
     },
 
     // 상단 진행바 UI 갱신 (activeStep 파라미터 기반 흉내)
-    updateStepBarUI: function(step) {
+    updateStepBarUI: function (step) {
         const $stepWrapper = $("#sendStepsWrapper");
-        
+
         // Thymeleaf가 렌더링한 구조를 JS로 동적 갱신
         $stepWrapper.find(".step-item").removeClass("active completed");
-        
-        $stepWrapper.find(".step-item").each(function() {
+
+        $stepWrapper.find(".step-item").each(function () {
             const currentStepNum = parseInt($(this).data("step"));
             if (currentStepNum === step) {
                 $(this).addClass("active");
@@ -136,32 +153,69 @@ const SendPage = {
 // 3. 1단계: 수신자 선택 기능 제어 객체
 // ==========================================
 const RecipientSelector = {
-    init: function() {
+    init: function () {
         this.bindEvents();
         this.renderAll();
     },
 
+    // API 요청용 파라미터 빌드
+    getQueryParams: function (includePage = true) {
+        // 선택한 태그 명칭 -> DB 태그 ID
+        const tagIds = SendPage.state.selectedTags.map(tag => TAG_MAP[tag]).filter(Boolean);
+
+        const params = {
+            keyword: SendPage.state.searchQuery || '',
+            matchType: SendPage.state.conditionMode
+        };
+
+        if (tagIds.length > 0) {
+            params.tagIds = tagIds; // jQuery ajax는 배열을 자동으로 tagIds=1&tagIds=2 형태로 직렬화함
+        }
+
+        params.activeTab = SendPage.state.activeTab;
+
+        if (SendPage.state.draftId) {
+            params.draftId = SendPage.state.draftId;
+        }
+
+        // 'selected' 탭 활성화 시
+        if (SendPage.state.activeTab === 'selected') {
+            if (!SendPage.state.draftId) {
+                // draftId가 없으면 결과 없음 처리
+                params.customerIds = "-1";
+            }
+        }
+
+        if (includePage) {
+            params.page = SendPage.state.currentPage;
+            params.size = SendPage.state.pageSize;
+        }
+
+
+        return params;
+    },
+
     // 이벤트 바인딩
-    bindEvents: function() {
+    bindEvents: function () {
         const self = this;
 
         // 1. 좌측 태그 버튼 클릭 시 토글 (실시간 반영 복원)
-        $(document).on("click", ".tag-item-btn", function() {
+        $(document).on("click", ".tag-item-btn", function () {
             const tag = $(this).data("tag");
             const index = SendPage.state.selectedTags.indexOf(tag);
-            
+
             if (index > -1) {
                 SendPage.state.selectedTags.splice(index, 1);
             } else {
                 SendPage.state.selectedTags.push(tag);
             }
-            
+
             SendPage.state.currentPage = 1; // 페이지 초기화
             self.renderAll();
         });
 
         // 2. 조건 버튼 (AND/OR) 토글 클릭 (실시간 반영 복원)
-        $(document).on("click", "#btnConditionOr", function() {
+        $(document).on("click", "#btnConditionOr", function () {
             $(this).addClass("active");
             $("#btnConditionAnd").removeClass("active");
             SendPage.state.conditionMode = 'OR';
@@ -169,7 +223,7 @@ const RecipientSelector = {
             self.renderAll();
         });
 
-        $(document).on("click", "#btnConditionAnd", function() {
+        $(document).on("click", "#btnConditionAnd", function () {
             $(this).addClass("active");
             $("#btnConditionOr").removeClass("active");
             SendPage.state.conditionMode = 'AND';
@@ -177,187 +231,329 @@ const RecipientSelector = {
             self.renderAll();
         });
 
-        // 4. 태그 초기화 버튼 클릭
-        $(document).on("click", "#btnResetTags", function() {
+        // 3. 태그 초기화 버튼 클릭
+        $(document).on("click", "#btnResetTags", function () {
             SendPage.state.selectedTags = [];
             SendPage.state.currentPage = 1;
-            localStorage.setItem("selectedTags", "[]");
             self.renderAll();
         });
 
-        // 5. 좌측 태그 검색창 실시간 검색
-        $("#tagSearchInput").on("input", function() {
-            SendPage.state.tagSearchQuery = $(this).val().trim().toLowerCase();
-            self.filterTagCloud();
-        });
-
-        // 5. 우측 회원 검색창 실시간 검색
-        $("#customerSearchInput").on("input", function() {
+        // 4. 우측 회원 검색창 실시간 검색 (Debounce 300ms)
+        let searchTimer;
+        $("#customerSearchInput").on("input", function () {
             SendPage.state.searchQuery = $(this).val().trim().toLowerCase();
-            SendPage.state.currentPage = 1;
-            self.renderAll();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () {
+                SendPage.state.currentPage = 1;
+                self.renderAll();
+            }, 300);
         });
 
-        // 6. 테이블 개별 체크박스 토글 (직접 선택 추가/해제)
-        $(document).on("change", ".customer-checkbox", function() {
-            const userId = $(this).data("id");
-            if (this.checked) {
-                SendPage.state.selectedUserIds.add(userId);
-            } else {
-                SendPage.state.selectedUserIds.delete(userId);
-            }
-            self.updateSummaryCounts();
-        });
+        // 5. 테이블 개별 체크박스 토글 → Redis Draft와 즉시 동기화
+        $(document).on("change", ".customer-checkbox", function () {
+            const $chk = $(this);
+            const userId = Number($chk.data("id"));
+            const action = this.checked ? "ADD" : "REMOVE";
 
-        // 7. 테이블 전체 선택/해제 체크박스 (현재 페이지 목록만 일괄 체크/해제하도록 제약하여 자연스러운 UX 유도)
-        $("#thCheckAll").on("change", function() {
-            const isChecked = this.checked;
-            const filteredList = self.getFilteredList();
-            
-            // 현재 활성화된 페이지 범위의 고객만 추출
-            const startIndex = (SendPage.state.currentPage - 1) * SendPage.state.pageSize;
-            const endIndex = Math.min(startIndex + SendPage.state.pageSize, filteredList.length);
-            const pagedCustomers = filteredList.slice(startIndex, endIndex);
-            
-            pagedCustomers.forEach(customer => {
-                if (isChecked) {
-                    SendPage.state.selectedUserIds.add(customer.id);
-                } else {
-                    SendPage.state.selectedUserIds.delete(customer.id);
-                }
+            self.ensureDraft(function (draftId) {
+                DraftApi.patchRecipients(draftId, [{ customerId: userId, action: action }])
+                    .done(function (res) {
+                        if (res && res.totalCount !== undefined) {
+                            SendPage.state.draftTotalCount = res.totalCount;
+                        }
+                        self.updateSelectedCount();
+                    })
+                    .fail(function () {
+                        alert("선택 상태 동기화에 실패했습니다. 다시 시도해주세요.");
+                        $chk.prop("checked", !$chk.prop("checked"));
+                    });
+            }, function () {
+                alert("수신자 저장소 초기화 중 오류가 발생했습니다.");
+                $chk.prop("checked", !$chk.prop("checked"));
             });
-            self.renderTableOnly();
-            self.updateSummaryCounts();
         });
 
-        // 8. 페이지 크기 셀렉터 이벤트 바인딩
-        $(document).on("change", "#pageSizeSelect", function() {
+        // 6. 테이블 전체 선택/해제 체크박스 (현재 페이지 기준)
+        $("#thCheckAll").on("change", function () {
+            const isChecked = this.checked;
+            const items = [];
+
+            $(".customer-checkbox").each(function () {
+                const userId = Number($(this).data("id"));
+                $(this).prop("checked", isChecked);
+                items.push({ customerId: userId, action: isChecked ? "ADD" : "REMOVE" });
+            });
+
+            if (items.length === 0) return;
+
+            self.ensureDraft(function (draftId) {
+                DraftApi.patchRecipients(draftId, items)
+                    .done(function (res) {
+                        if (res && res.totalCount !== undefined) {
+                            SendPage.state.draftTotalCount = res.totalCount;
+                        }
+                        self.updateSelectedCount();
+                    })
+                    .fail(function () {
+                        alert("전체 선택 동기화에 실패했습니다. 다시 시도해주세요.");
+                        $(".customer-checkbox").each(function () {
+                            $(this).prop("checked", !isChecked);
+                        });
+                        $("#thCheckAll").prop("checked", !isChecked);
+                    });
+            });
+        });
+
+        // 7. 페이지 크기 셀렉터 이벤트 바인딩
+        $(document).on("change", "#pageSizeSelect", function () {
             SendPage.state.pageSize = parseInt($(this).val(), 10);
             SendPage.state.currentPage = 1;
             self.renderAll();
         });
 
-        // 10. 요약 정보 탭 클릭 제어
-        $(".summary-tab").on("click", function() {
-            $(".summary-tab").removeClass("active");
-            $(this).addClass("active");
-            SendPage.state.activeTab = $(this).data("tab-type");
+        // 8. 토글 스위치 변경 제어
+        $("#toggleShowSelected").on("change", function () {
+            SendPage.state.activeTab = this.checked ? "selected" : "filtered";
             SendPage.state.currentPage = 1;
             self.renderAll();
         });
 
-        // 11. 페이징 버튼 클릭 처리
-        $(document).on("click", ".page-link-btn", function() {
+        // 9. 페이징 버튼 클릭 처리
+        $(document).on("click", ".page-link-btn", function () {
             const page = $(this).data("page");
             if (page) {
                 SendPage.state.currentPage = page;
                 self.renderTableOnly();
             }
         });
-    },
 
-    // 태그 클라우드 검색어 실시간 필터링
-    filterTagCloud: function() {
-        const query = SendPage.state.tagSearchQuery;
-        $(".tag-item-btn").each(function() {
-            const tagVal = $(this).data("tag").toLowerCase();
-            if (tagVal.includes(query)) {
-                $(this).show();
-            } else {
-                $(this).hide();
+        // 10. "현재 회원 모두 추가" 버튼 클릭 → POST /api/campaigns/draft 로 Redis에 저장
+        $(document).on("click", "#btnAddAllFiltered", function () {
+            const params = self.getQueryParams(false);
+
+            DraftApi.addAllFiltered(params)
+                .done(function (res) {
+                    if (!res || !res.draftId) {
+                        alert("현재 필터 조건에 해당하는 회원이 없습니다.");
+                        return;
+                    }
+                    // 삭제하지 않음. 백엔드에서 동일한 draftId에 이어서(Append) 담아줌.
+                    SendPage.state.draftId = res.draftId;
+                    SendPage.state.draftTotalCount = res.totalCount || 0;
+                    self.renderAll();
+                    alert(`총 ${res.totalCount || '?'}명의 회원이 선택 목록에 추가되었습니다.`);
+                })
+                .fail(function () {
+                    alert("수신자 목록 저장에 실패했습니다.");
+                });
+        });
+
+        // 11. "선택 회원 모두 제거" 버튼 클릭 → Redis Draft 삭제
+        $(document).on("click", "#btnRemoveAllSelected", function () {
+            if (!SendPage.state.draftId) {
+                alert("현재 선택된 회원이 없습니다.");
+                return;
+            }
+            if (confirm("선택된 회원 전체를 목록에서 제거하시겠습니까?")) {
+                const draftId = SendPage.state.draftId;
+                DraftApi.delete(draftId)
+                    .done(function () {
+                        SendPage.state.draftId = null;
+                        SendPage.state.draftTotalCount = 0;
+                        self.renderAll();
+                    })
+                    .fail(function () {
+                        alert("선택된 회원 제거 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                    });
             }
         });
     },
 
     // 모든 렌더링 파이프라인 수행 (태그 칩, 버튼 활성화 상태, 테이블, 페이징 일괄 갱신)
-    renderAll: function() {
+    renderAll: function () {
         this.renderTagListUI();
-        this.renderTableOnly();
-        this.updateSummaryCounts();
+
+        // 토글 스위치 상태 동기화 및 버튼 노출 분기 처리
+        const isSelectedView = SendPage.state.activeTab === 'selected';
+        $("#toggleShowSelected").prop("checked", isSelectedView);
+
+        if (isSelectedView) {
+            $("#btnAddAllFiltered").hide();
+            $("#btnRemoveAllSelected").show();
+        } else {
+            $("#btnAddAllFiltered").show();
+            $("#btnRemoveAllSelected").hide();
+        }
+
+        this.renderTableOnly();      // 테이블 + 후보 카운트(filtered 탭 한정) 갱신
+        this.updateSelectedCount();  // 선택 카운트만 즉시 갱신 (API 호출 없음)
+
+        // selected 탭일 때만 별도 API로 후보 카운트 조회
+        if (isSelectedView) {
+            this.updateCandidateCount();
+        }
     },
 
     // 1. 태그 클라우드 내 버튼 활성화/비활성화 상태 동기화
-    renderTagListUI: function() {
+    renderTagListUI: function () {
         $(".tag-item-btn").removeClass("selected");
         SendPage.state.selectedTags.forEach(tag => {
             $(`.tag-item-btn[data-tag='${tag}']`).addClass("selected");
         });
     },
 
-    // 3. 필터링된 고객 목록 테이블 + 페이징 UI 렌더링
-    renderTableOnly: function() {
-        const $tbody = $("#customerTableBody");
-        $tbody.empty();
+    // 진행 중인 빈 Draft 생성 요청 (동시 호출 방지용)
+    pendingDraftPromise: null,
 
-        const filteredList = this.getFilteredList(); // 현재 선택 탭에 맞는 최종 필터 리스트
-        const totalCount = filteredList.length;
-
-        // 페이징 계산
-        const startIndex = (SendPage.state.currentPage - 1) * SendPage.state.pageSize;
-        const endIndex = Math.min(startIndex + SendPage.state.pageSize, totalCount);
-        const pagedList = filteredList.slice(startIndex, endIndex);
-
-        // 테이블 행 렌더링
-        if (pagedList.length === 0) {
-            $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">검색 및 필터 조건에 부합하는 수신자가 없습니다.</td></tr>');
-            this.updatePaginationInfo(0, 0, 0);
-            this.renderPaginationControls(0);
+    // Draft ID 보장 헬퍼: draftId가 없으면 빈 Draft 생성 후 콜백 실행
+    ensureDraft: function (callback, onFail) {
+        if (SendPage.state.draftId) {
+            callback(SendPage.state.draftId);
             return;
         }
 
-        pagedList.forEach(customer => {
-            const isChecked = SendPage.state.selectedUserIds.has(customer.id);
-            const gender = customer.tags.find(t => t === '남자' || t === '여자') || '-';
-            const age = customer.tags.find(t => t.endsWith('대')) || '-';
-            const isBirthday = customer.tags.includes('생일 대상자') ? '<span class="ds-badge ds-badge--primary" style="background-color: var(--accent); color: var(--primary); font-weight: var(--font-weight-bold);">대상</span>' : '-';
+        if (this.pendingDraftPromise) {
+            this.pendingDraftPromise
+                .done(function (res) {
+                    if (res && res.draftId) callback(res.draftId);
+                    else if (onFail) onFail();
+                })
+                .fail(function () {
+                    if (onFail) onFail();
+                });
+            return;
+        }
 
-            const row = `
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="ds-checkbox customer-checkbox" data-id="${customer.id}" ${isChecked ? 'checked' : ''}>
-                    </td>
-                    <td style="text-align: left;"><strong>${customer.name}</strong></td>
-                    <td style="text-align: left;">${customer.phone}</td>
-                    <td style="text-align: center;" class="hide-on-tablet">${customer.type}</td>
-                    <td style="text-align: center;" class="hide-on-mobile">${gender}</td>
-                    <td style="text-align: center;" class="hide-on-mobile">${age}</td>
-                    <td style="text-align: center;" class="hide-on-mobile">${isBirthday}</td>
-                    <!-- 수신 거부(X)인 셀에 .is-rejected 및 deny-badge 적용하여 시각적 경고 강조 -->
-                    <td style="text-align: center;" class="${!customer.sms ? 'is-rejected' : ''}">
-                        ${customer.sms ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
-                    </td>
-                    <td style="text-align: center;" class="${!customer.kakao ? 'is-rejected' : ''}">
-                        ${customer.kakao ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
-                    </td>
-                    <td style="text-align: center;" class="${!customer.email ? 'is-rejected' : ''}">
-                        ${customer.email ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
-                    </td>
-                </tr>
-            `;
-            $tbody.append(row);
-        });
+        const self = this;
+        this.pendingDraftPromise = DraftApi.createEmpty()
+            .done(function (res) {
+                if (res && res.draftId) {
+                    SendPage.state.draftId = res.draftId;
+                    SendPage.state.draftTotalCount = res.totalCount || 0;
+                    callback(res.draftId);
+                } else if (onFail) {
+                    onFail();
+                }
+            })
+            .fail(function () {
+                if (onFail) onFail();
+            })
+            .always(function () {
+                self.pendingDraftPromise = null;
+            });
+    },
 
-        // 전체 선택 체크박스 상태 동기화
-        const allChecked = pagedList.every(c => SendPage.state.selectedUserIds.has(c.id));
-        $("#thCheckAll").prop("checked", allChecked);
+    // 3. 필터링된 고객 목록 테이블 + 페이징 UI 렌더링 (서버 API 비동기 연동)
+    renderTableOnly: function () {
+        const self = this;
+        const $tbody = $("#customerTableBody");
+        $tbody.empty();
 
-        // 페이징 인포 및 콘트롤 그리기
-        this.updatePaginationInfo(startIndex + 1, endIndex, totalCount);
-        this.renderPaginationControls(totalCount);
+        // Race Condition 방지: 요청 순번을 매겨 이전 응답이 늦게 도착해도 무시하도록 처리
+        const mySeq = ++SendPage.state.renderSeq;
 
-        // 페이지 크기 셀렉터 상태 동기화
-        $("#pageSizeSelect").val(SendPage.state.pageSize);
+        const params = this.getQueryParams(true);
+
+        CustomerApi.search(params)
+            .done(function (response) {
+                // 이 응답이 오는 사이에 새 요청이 발생했으면 (순번이 바뀌었으면) 무시
+                if (mySeq !== SendPage.state.renderSeq) return;
+
+                const pagedList = response.content || [];
+                // totalCount는 항상 서버 응답값 사용
+                // - selected 탭: 백엔드가 Redis의 전체 인원 수를 반환함
+                // - filtered 탭: 백엔드가 Oracle 전체 카운트를 반환함
+                const totalCount = response.totalCount || 0;
+
+                // 테이블 행 렌더링
+                if (pagedList.length === 0) {
+                    $tbody.empty();
+                    $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">검색 및 필터 조건에 부합하는 수신자가 없습니다.</td></tr>');
+                    self.updatePaginationInfo(0, 0, 0);
+                    self.renderPaginationControls(0);
+                    $("#thCheckAll").prop("checked", false);
+                    return;
+                }
+
+                pagedList.forEach(customer => {
+                    // selected 탭: 항상 체크된 상태
+                    // filtered 탭: Redis 내 존재 여부(customer.isInDraft)에 따라 체크
+                    const isChecked = SendPage.state.activeTab === 'selected' || customer.isInDraft;
+                    const gender = customer.tags.find(t => t === '남자' || t === '여자') || '-';
+                    const age = customer.tags.find(t => t.endsWith('대')) || '-';
+                    const type = customer.tags.find(t => t === '일반' || t === '신규') || '-';
+                    const isBirthday = customer.tags.includes('생일 대상자') ? '<span class="ds-badge ds-badge--primary" style="background-color: var(--accent); color: var(--primary); font-weight: var(--font-weight-bold);">대상</span>' : '-';
+
+                    const hasSms = customer.tags.includes('sms 동의');
+                    const hasKakao = customer.tags.includes('카카오 동의');
+                    const hasEmail = customer.tags.includes('이메일 동의');
+
+                    // XSS 방지를 위해 사용자 데이터 이스케이프 처리
+                    const safeName = escapeHtml(customer.name);
+                    const safePhone = escapeHtml(customer.phone);
+
+                    const row = `
+                        <tr>
+                            <td style="text-align: center;">
+                                <input type="checkbox" class="ds-checkbox customer-checkbox" data-id="${customer.id}" ${isChecked ? 'checked' : ''}>
+                            </td>
+                            <td style="text-align: left;"><strong>${safeName}</strong></td>
+                            <td style="text-align: left;">${safePhone}</td>
+                            <td style="text-align: center;" class="hide-on-tablet">${type}</td>
+                            <td style="text-align: center;" class="hide-on-mobile">${gender}</td>
+                            <td style="text-align: center;" class="hide-on-mobile">${age}</td>
+                            <td style="text-align: center;" class="hide-on-mobile">${isBirthday}</td>
+                            <td style="text-align: center;" class="${!hasSms ? 'is-rejected' : ''}">
+                                ${hasSms ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
+                            </td>
+                            <td style="text-align: center;" class="${!hasKakao ? 'is-rejected' : ''}">
+                                ${hasKakao ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
+                            </td>
+                            <td style="text-align: center;" class="${!hasEmail ? 'is-rejected' : ''}">
+                                ${hasEmail ? '<span class="allow-badge">✓</span>' : '<span class="deny-badge">X</span>'}
+                            </td>
+                        </tr>
+                    `;
+                    $tbody.append(row);
+                });
+
+                // 전체 선택 체크박스 상태 동기화
+                // selected 탭: 모두 체크된 상태
+                // filtered 탭: 현재 페이지의 모든 회원이 draft에 포함되어 있는 경우 체크
+                const allChecked = SendPage.state.activeTab === 'selected' ||
+                    (pagedList.length > 0 && pagedList.every(c => c.isInDraft));
+                $("#thCheckAll").prop("checked", allChecked);
+
+                // 페이징 정보 계산
+                const startIndex = (SendPage.state.currentPage - 1) * SendPage.state.pageSize;
+                const endIndex = Math.min(startIndex + SendPage.state.pageSize, totalCount);
+
+                self.updatePaginationInfo(totalCount > 0 ? startIndex + 1 : 0, endIndex, totalCount);
+                self.renderPaginationControls(totalCount);
+
+                // 페이지 크기 셀렉터 상태 동기화
+                $("#pageSizeSelect").val(SendPage.state.pageSize);
+
+                // filtered 탭: 검색 응답의 totalCount를 후보 카운트로 직접 사용 (별도 API 호출 절약)
+                if (SendPage.state.activeTab === 'filtered') {
+                    $("#lblCandidateCount").text(totalCount);
+                }
+            })
+            .fail(function () {
+                if (mySeq !== SendPage.state.renderSeq) return;
+                $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>');
+            });
     },
 
     // 페이징 인포 갱신
-    updatePaginationInfo: function(start, end, total) {
+    updatePaginationInfo: function (start, end, total) {
         $("#lblStartIdx").text(start);
         $("#lblEndIdx").text(end);
         $("#lblTotalIdx").text(total);
     },
 
     // 페이징 컨트롤 버튼 생성
-    renderPaginationControls: function(totalCount) {
+    renderPaginationControls: function (totalCount) {
         const $controls = $("#paginationControls");
         $controls.empty();
 
@@ -367,8 +563,17 @@ const RecipientSelector = {
         const prevDisabled = SendPage.state.currentPage === 1 ? 'disabled' : '';
         $controls.append(`<button type="button" class="page-link-btn" data-page="${SendPage.state.currentPage - 1}" ${prevDisabled}>이전</button>`);
 
-        // 페이지 번호 버튼들
-        for (let i = 1; i <= totalPages; i++) {
+        // 페이지 노출 계산 (최대 5개만 출력)
+        let startPage = Math.max(1, SendPage.state.currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+
+        // 만약 마지막 페이지 근처라서 5개가 다 안 채워지면 시작 페이지를 앞으로 당겨서 5개 유지
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        // 페이지 번호 버튼들 생성
+        for (let i = startPage; i <= endPage; i++) {
             const activeClass = SendPage.state.currentPage === i ? 'active' : '';
             $controls.append(`<button type="button" class="page-link-btn ${activeClass}" data-page="${i}">${i}</button>`);
         }
@@ -378,79 +583,30 @@ const RecipientSelector = {
         $controls.append(`<button type="button" class="page-link-btn" data-page="${SendPage.state.currentPage + 1}" ${nextDisabled}>다음</button>`);
     },
 
-    // 4. 요약 카드 카운터 정보 실시간 업데이트
-    updateSummaryCounts: function() {
-        const candidateCount = this.getFilteredListByTagsOnly().length;
-        const selectedCount = SendPage.state.selectedUserIds.size;
-
-        $("#lblCandidateCount").text(candidateCount);
-        $("#lblSelectedCount").text(selectedCount);
+    // 4. 선택 카운트만 갱신 (API 호출 없음)
+    updateSelectedCount: function () {
+        $("#lblSelectedCount").text(SendPage.state.draftTotalCount || 0);
     },
 
-    // ==========================================
-    // 데이터 필터링 헬퍼 메소드 (API 통신부 추상화 완료)
-    // ==========================================
+    // 5. 후보 카운트 갱신 (selected 탭에서만 별도 API 호출)
+    updateCandidateCount: function () {
+        const params = this.getQueryParams(false);
+        delete params.customerIds;
 
-    // A. 태그 조건으로만 필터링한 리스트 반환 (태그 후보 카운트용)
-    getFilteredListByTagsOnly: function() {
-        const selectedTags = SendPage.state.selectedTags;
-        const mode = SendPage.state.conditionMode;
-
-        // 선택된 태그가 없으면 전체 리스트 반환
-        if (selectedTags.length === 0) {
-            return MOCK_CUSTOMERS;
-        }
-
-        return MOCK_CUSTOMERS.filter(customer => {
-            if (mode === 'OR') {
-                // 하나라도 포함 (OR)
-                return selectedTags.some(tag => customer.tags.includes(tag));
-            } else {
-                // 모두 포함 (AND)
-                return selectedTags.every(tag => customer.tags.includes(tag));
-            }
-        });
-    },
-
-    // B. 태그 필터 + 우측 검색어 필터가 모두 결합된 현재 최종 목록 반환 (API 호출부 대응 가능)
-    getFilteredList: function() {
-        const activeTab = SendPage.state.activeTab;
-
-        // 1단계: 탭 조건에 맞춤
-        let baseList = [];
-        if (activeTab === 'selected') {
-            // 직접 선택한 고객만 보기
-            baseList = MOCK_CUSTOMERS.filter(c => SendPage.state.selectedUserIds.has(c.id));
-        } else {
-            // 태그 조건 적용
-            baseList = this.getFilteredListByTagsOnly();
-        }
-
-        // 2단계: 우측 검색창 입력값 필터링
-        const query = SendPage.state.searchQuery;
-        if (!query) return baseList;
-
-        return baseList.filter(customer => {
-            return customer.name.toLowerCase().includes(query) ||
-                   customer.phone.includes(query) ||
-                   customer.type.toLowerCase().includes(query) ||
-                   customer.tags.some(t => t.toLowerCase().includes(query));
-        });
-    },
-
-    // 최종 발송용 수신 대상자 목록 가져오기 (Validation 방어 코드용)
-    getFinalRecipients: function() {
-        // 직접 체크박스를 선택한 사용자가 있다면 최우선, 없으면 현재 태그 필터링된 모든 사용자를 대상자로 수집
-        if (SendPage.state.selectedUserIds.size > 0) {
-            return MOCK_CUSTOMERS.filter(c => SendPage.state.selectedUserIds.has(c.id));
-        }
-        return this.getFilteredListByTagsOnly();
+        CustomerApi.getIds(params)
+            .done(function (ids) {
+                $("#lblCandidateCount").text(ids ? ids.length : 0);
+            })
+            .fail(function () {
+                $("#lblCandidateCount").text("0");
+            });
     }
 };
 
 // ==========================================
 // 4. 로드 시 초기화 트리거
 // ==========================================
-$(function() {
+$(function () {
     SendPage.init();
 });
+
