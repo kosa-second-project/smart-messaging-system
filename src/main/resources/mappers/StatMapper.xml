@@ -65,6 +65,7 @@
     <sql id="clickStatColumns">
         id,
         stat_date,
+        channel_id,
         hour_00,
         hour_01,
         hour_02,
@@ -215,15 +216,52 @@
 
     <select id="selectPerformanceClickStats" parameterType="StatSearchRequest" resultType="ClickStatVO">
         SELECT
-            <include refid="clickStatColumns"/>
-        FROM click_stat
-        WHERE is_deleted = 0
+            cs.id,
+            cs.stat_date,
+            cs.channel_id,
+            cs.hour_00,
+            cs.hour_01,
+            cs.hour_02,
+            cs.hour_03,
+            cs.hour_04,
+            cs.hour_05,
+            cs.hour_06,
+            cs.hour_07,
+            cs.hour_08,
+            cs.hour_09,
+            cs.hour_10,
+            cs.hour_11,
+            cs.hour_12,
+            cs.hour_13,
+            cs.hour_14,
+            cs.hour_15,
+            cs.hour_16,
+            cs.hour_17,
+            cs.hour_18,
+            cs.hour_19,
+            cs.hour_20,
+            cs.hour_21,
+            cs.hour_22,
+            cs.hour_23,
+            cs.created_at,
+            cs.updated_at,
+            cs.created_by,
+            cs.updated_by,
+            cs.is_deleted
+        FROM click_stat cs
+        INNER JOIN channel c
+                ON c.id = cs.channel_id
+               AND c.is_deleted = 0
+        WHERE cs.is_deleted = 0
         <if test="from != null">
-          AND stat_date &gt;= #{from}
+          AND cs.stat_date &gt;= #{from}
         </if>
         <if test="to != null">
-          AND stat_date &lt;= #{to}
+          AND cs.stat_date &lt;= #{to}
         </if>
-        ORDER BY stat_date
+        <if test="channel != null and channel != ''">
+          AND c.channel_type = #{channel}
+        </if>
+        ORDER BY cs.stat_date, cs.channel_id
     </select>
 </mapper>

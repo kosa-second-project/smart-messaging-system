@@ -16,6 +16,7 @@ import java.time.LocalDate;
 public class ClickStatVO extends BaseVO {
     private Long id;
     private LocalDate statDate;
+    private Long channelId;
     private Integer hour00;
     private Integer hour01;
     private Integer hour02;
