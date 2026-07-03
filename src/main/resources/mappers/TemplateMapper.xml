@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.TemplateMapper">
+
+    <sql id="templateWhere">
+        NVL(t.is_deleted, 0) = 0
+        AND t.user_id = #{userId}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                t.title LIKE '%' || #{keyword} || '%'
+                OR t.content LIKE '%' || #{keyword} || '%'
+                OR t.purpose LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+        <if test="category != null">
+            AND t.category = #{category}
+        </if>
+        <if test="purpose != null and purpose != ''">
+            AND t.purpose = #{purpose}
+        </if>
+        <if test="channelType != null and channelType != ''">
+            AND EXISTS (
+                SELECT 1
+                FROM template_channel tc
+                JOIN channel c ON c.id = tc.channel_id
+                WHERE tc.template_id = t.id
+                  AND NVL(tc.is_deleted, 0) = 0
+                  AND NVL(c.is_deleted, 0) = 0
+                  AND c.channel_type = #{channelType}
+            )
+        </if>
+    </sql>
+
+    <select id="selectTemplateList" parameterType="TemplateSearchRequest" resultType="TemplateResponse">
+        SELECT
+            t.id,
+            t.title,
+            t.content,
+            t.kakao_template_code,
+            t.kakao_template_status,
+            t.is_ai_generated,
+            t.category,
+            t.cnt,
+            t.purpose,
+            TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
+            TO_CHAR(t.updated_at, 'YYYY-MM-DD HH24:MI') AS updated_at
+        FROM template t
+        <where>
+            <include refid="templateWhere"/>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sortOrder == 'title'">
+                t.title ASC, t.id DESC
+            </when>
+            <when test="sortOrder == 'useCount'">
+                NVL(t.cnt, 0) DESC, t.id DESC
+            </when>
+            <otherwise>
+                t.updated_at DESC, t.id DESC
+            </otherwise>
+        </choose>
+        OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    </select>
+
+    <select id="selectTemplateCount" parameterType="TemplateSearchRequest" resultType="int">
+        SELECT COUNT(*)
+        FROM template t
+        <where>
+            <include refid="templateWhere"/>
+        </where>
+    </select>
+
+    <select id="selectTemplateDetail" resultType="TemplateResponse">
+        SELECT
+            t.id,
+            t.title,
+            t.content,
+            t.kakao_template_code,
+            t.kakao_template_status,
+            t.is_ai_generated,
+            t.category,
+            t.cnt,
+            t.purpose,
+            TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
+            TO_CHAR(t.updated_at, 'YYYY-MM-DD HH24:MI') AS updated_at
+        FROM template t
+        WHERE t.id = #{templateId}
+          AND t.user_id = #{userId}
+          AND NVL(t.is_deleted, 0) = 0
+    </select>
+
+    <select id="selectChannelsByTemplateIds" resultType="TemplateChannelResponse">
+        SELECT
+            tc.template_id,
+            c.id AS channel_id,
+            c.channel_type
+        FROM template_channel tc
+        JOIN channel c ON c.id = tc.channel_id
+        WHERE tc.template_id IN
+        <foreach item="templateId" collection="templateIds" open="(" separator="," close=")">
+            #{templateId}
+        </foreach>
+          AND NVL(tc.is_deleted, 0) = 0
+          AND NVL(c.is_deleted, 0) = 0
+        ORDER BY c.channel_type ASC
+    </select>
+
+    <select id="selectAllChannels" resultType="TemplateChannelResponse">
+        SELECT
+            id AS channel_id,
+            channel_type
+        FROM channel
+        WHERE NVL(is_deleted, 0) = 0
+          AND NVL(is_active, 1) = 1
+        ORDER BY channel_type ASC
+    </select>
+
+    <select id="selectCategoryOptions" resultType="TemplateFilterOptionResponse">
+        SELECT DISTINCT
+            category AS value,
+            CASE 
+                WHEN category = 'BENEFIT' THEN '혜택'
+                WHEN category = 'EVENT' THEN '이벤트'
+                WHEN category = 'NOTICE' THEN '공지'
+                WHEN category = 'CRM' THEN '고객관리'
+                ELSE category 
+            END AS label
+        FROM template
+        WHERE NVL(is_deleted, 0) = 0
+          AND user_id = #{userId}
+          AND category IN ('BENEFIT', 'EVENT', 'NOTICE', 'CRM')
+        ORDER BY value ASC
+    </select>
+
+    <select id="selectPurposeOptions" resultType="TemplateFilterOptionResponse">
+        SELECT DISTINCT
+            purpose AS value,
+            purpose AS label
+        FROM template
+        WHERE NVL(is_deleted, 0) = 0
+          AND user_id = #{userId}
+          AND purpose IS NOT NULL
+        ORDER BY purpose ASC
+    </select>
+
+    <select id="selectTemplateStats" resultType="TemplateStatResponse">
+        SELECT
+            COUNT(*) AS total_count,
+            NVL(SUM(CASE WHEN NVL(is_ai_generated, 0) = 1 THEN 1 ELSE 0 END), 0) AS ai_generated_count,
+            NVL(SUM(CASE WHEN kakao_template_status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS kakao_approved_count,
+            NVL(SUM(cnt), 0) AS total_use_count
+        FROM template
+        WHERE NVL(is_deleted, 0) = 0
+          AND user_id = #{userId}
+    </select>
+
+    <insert id="insertTemplate" parameterType="TemplateVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO template (
+            title,
+            content,
+            is_ai_generated,
+            category,
+            purpose,
+            user_id,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{title},
+            #{content},
+            #{isAiGenerated},
+            #{category},
+            #{purpose},
+            #{userId},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <insert id="insertTemplateChannel" parameterType="TemplateChannelVO">
+        INSERT INTO template_channel (
+            template_id,
+            channel_id,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{templateId},
+            #{channelId},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+</mapper>

@@ -1,7 +1,9 @@
 package com.example.smartmessaging.mapper;
 
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
+import com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryChannelResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
@@ -14,6 +16,8 @@ import java.util.List;
 public interface HistoryMapper {
     long countHistories(HistorySearchRequestDTO condition);
     List<HistoryListResponseDTO> findHistories(HistorySearchRequestDTO condition);
+    HistoryDetailResponseDTO findHistoryDetailById(@Param("sendHistoryId") Long sendHistoryId);
+    List<HistoryAttemptFlowResponseDTO> findAttemptFlowsByHistoryId(@Param("sendHistoryId") Long sendHistoryId);
     List<HistoryChannelResponseDTO> findChannelsByHistoryIds(@Param("historyIds") List<Long> historyIds);
     List<HistoryTagResponseDTO> findTagsByHistoryIds(@Param("historyIds") List<Long> historyIds);
     List<HistoryFilterOptionDTO> findChannelOptions();

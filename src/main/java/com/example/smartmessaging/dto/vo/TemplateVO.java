@@ -18,7 +18,7 @@ public class TemplateVO extends BaseVO {
     private String kakaoTemplateCode;
     private String kakaoTemplateStatus;
     private Boolean isAiGenerated;
-    private String category;
+    private TemplateCategory category;
     private Integer cnt;
     private String purpose;
     private Long userId;

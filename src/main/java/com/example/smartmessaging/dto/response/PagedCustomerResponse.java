@@ -13,10 +13,12 @@ import java.util.List;
 public class PagedCustomerResponse {
 
     private List<CustomerSummaryResponse> content;
-    private int totalCount;
-    private int page;
+    private int totalCount; // 여전히 화면에 띄워줄 용도로 유지할 수 있음
+    private int page; // 프론트엔드가 page 숫자를 유지하고 싶다면
     private int size;
     private int totalPages;
+    private Long nextCursorId;
+    private boolean hasNext;
 
     /**
      * Redis에서 가져온 실제 totalCount로 재조정된 응답 생성
@@ -31,6 +33,8 @@ public class PagedCustomerResponse {
                 .page(this.page)
                 .size(this.size)
                 .totalPages(pages)
+                .nextCursorId(this.nextCursorId)
+                .hasNext(this.hasNext)
                 .build();
     }
 }

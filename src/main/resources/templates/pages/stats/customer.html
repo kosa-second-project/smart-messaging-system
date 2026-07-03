@@ -8,7 +8,8 @@
 </head>
 <main layout:fragment="content" class="page stats-overview-page">
     <div class="stats-overview">
-        <section class="stats-top stats-top--end">
+        <section class="stats-top">
+            <span class="stats-period-control__badge">데이터 업데이트: 오늘 00:00</span>
             <div class="stats-actions">
                 <button type="button" class="stats-button stats-button--outline" disabled title="PDF 다운로드">
                     <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -42,11 +43,11 @@
                             </svg>
                             <span>기간</span>
                         </div>
-                        <input id="statsStartDate" class="stats-period-control__input" type="date" value="2026-06-01">
+                        <input id="statsStartDate" class="stats-period-control__input" type="date">
                         <span class="stats-period-control__separator">~</span>
-                        <input id="statsEndDate" class="stats-period-control__input" type="date" value="2026-06-30">
+                        <input id="statsEndDate" class="stats-period-control__input" type="date">
                         <span class="stats-period-control__badge">집계 기준</span>
-                        <span id="statsPeriodLabel" class="stats-period-control__summary">2026-06-01 ~ 2026-06-30 (30일)</span>
+                        <span id="statsPeriodLabel" class="stats-period-control__summary"></span>
                     </form>
                 </div>
                 <div class="stats-canvas-wrap">

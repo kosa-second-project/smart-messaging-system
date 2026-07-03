@@ -211,6 +211,16 @@
   font-weight: var(--font-weight-bold);
 }
 
+.app-header__avatar--unlinked {
+  background-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+.app-header__avatar--linked {
+  background-color: #FEE500;
+  color: #000000;
+}
+
 .app-mobile-backdrop {
   position: fixed;
   inset: 0;
@@ -331,4 +341,17 @@
   .content-grid--4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* 인라인 스타일 추출 */
+.no-underline-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+.sidebar-link-inner {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    width: 100%;
 }

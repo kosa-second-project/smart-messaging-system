@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.smartmessaging.security.CustomUserDetails;
+import com.example.smartmessaging.dto.request.UpdateRecipientsRequest;
+import com.example.smartmessaging.dto.request.RecipientItem;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -16,9 +19,9 @@ import java.util.Map;
 /**
  * 발송 대상자 Draft(임시 저장) API 컨트롤러
  *
- * POST   /api/campaigns/draft                        - 조건 기반 전체 ID → Redis 저장 → draftId 반환
- * PATCH  /api/campaigns/draft/{draftId}/recipients   - 개별 추가/제거 배치 동기화
- * DELETE /api/campaigns/draft/{draftId}              - 발송 완료/취소 시 정리
+ * POST /api/campaigns/draft - 조건 기반 전체 ID → Redis 저장 → draftId 반환
+ * PATCH /api/campaigns/draft/{draftId}/recipients - 개별 추가/제거 배치 동기화
+ * DELETE /api/campaigns/draft/{draftId} - 발송 완료/취소 시 정리
  */
 @Slf4j
 @RestController
@@ -34,7 +37,8 @@ public class CampaignDraftApiController {
      * POST /api/campaigns/draft/empty
      */
     @PostMapping("/draft/empty")
-    public ResponseEntity<Map<String, Object>> createEmptyDraft(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> createEmptyDraft(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         String draftId = draftService.createEmptyDraft(userDetails.getUserId());
         return ResponseEntity.ok(Map.of("draftId", draftId, "totalCount", 0));
     }
@@ -72,35 +76,27 @@ public class CampaignDraftApiController {
     /**
      * 개별 체크박스 추가/제거 배치 동기화 (낙관적 업데이트와 함께 사용)
      * PATCH /api/campaigns/draft/{draftId}/recipients
-     * Body: { "items": [{"customerId": 5, "action": "REMOVE"}, {"customerId": 12, "action": "ADD"}] }
+     * Body: { "items": [{"customerId": 5, "action": "REMOVE"}, {"customerId": 12,
+     * "action": "ADD"}] }
      */
     @PatchMapping("/draft/{draftId}/recipients")
     public ResponseEntity<Map<String, Object>> updateRecipients(
             @PathVariable String draftId,
-            @RequestBody Map<String, List<Map<String, Object>>> body,
+            @Valid @RequestBody UpdateRecipientsRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        List<Map<String, Object>> items = body.get("items");
-        if (items == null || items.isEmpty()) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
             return ResponseEntity.ok(Map.of());
         }
 
-        for (Map<String, Object> item : items) {
-            Object rawId = item.get("customerId");
-            Object rawAction = item.get("action");
-            if (rawId == null || rawAction == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "customerId and action are required"));
-            }
-            try {
-                Long customerId = Long.parseLong(rawId.toString());
-                String action = rawAction.toString();
-                if ("REMOVE".equals(action)) {
-                    draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
-                } else if ("ADD".equals(action)) {
-                    draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
-                }
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest().body(Map.of("error", "invalid customerId: " + rawId));
+        for (RecipientItem item : request.getItems()) {
+            Long customerId = item.getCustomerId();
+            String action = item.getAction();
+            
+            if ("REMOVE".equals(action)) {
+                draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
+            } else if ("ADD".equals(action)) {
+                draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
             }
         }
 
@@ -114,6 +110,17 @@ public class CampaignDraftApiController {
      */
     @DeleteMapping("/draft/{draftId}")
     public ResponseEntity<Map<String, Object>> deleteDraft(
+            @PathVariable String draftId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        draftService.deleteDraft(userDetails.getUserId(), draftId);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
+     * sendBeacon 호환용 POST 삭제 엔드포인트
+     */
+    @PostMapping("/draft/{draftId}/cleanup")
+    public ResponseEntity<Map<String, Object>> cleanupDraft(
             @PathVariable String draftId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         draftService.deleteDraft(userDetails.getUserId(), draftId);
