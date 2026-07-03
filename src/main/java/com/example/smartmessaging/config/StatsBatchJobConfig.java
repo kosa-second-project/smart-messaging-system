@@ -27,10 +27,12 @@ public class StatsBatchJobConfig {
     @Bean
     public Job statsDailyAggregationJob(
             JobRepository jobRepository,
-            Step messageStatStep
+            Step messageStatStep,
+            Step messageStatByDegreeStep
     ) {
         return new JobBuilder("statsDailyAggregationJob", jobRepository)
                 .start(messageStatStep)
+                .next(messageStatByDegreeStep)
                 .build();
     }
 
@@ -58,6 +60,36 @@ public class StatsBatchJobConfig {
                     log.info("[StatsBatch] messageStatStep started - statDate: {}", statDate);
                     statsBatchService.aggregateMessageStat(statDate);
                     log.info("[StatsBatch] messageStatStep finished - statDate: {}", statDate);
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * message_stat_by_degree 집계 Step.
+     *
+     * JobParameter의 statDate를 읽어서 해당 날짜의 차수/채널별 발송 통계를 집계한다.
+     */
+    @Bean
+    public Step messageStatByDegreeStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            StatsBatchService statsBatchService
+    ) {
+        return new StepBuilder("messageStatByDegreeStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    String statDateParameter = chunkContext
+                            .getStepContext()
+                            .getJobParameters()
+                            .get("statDate")
+                            .toString();
+
+                    LocalDate statDate = LocalDate.parse(statDateParameter);
+
+                    log.info("[StatsBatch] messageStatByDegreeStep started - statDate: {}", statDate);
+                    statsBatchService.aggregateMessageStatByDegree(statDate);
+                    log.info("[StatsBatch] messageStatByDegreeStep finished - statDate: {}", statDate);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)

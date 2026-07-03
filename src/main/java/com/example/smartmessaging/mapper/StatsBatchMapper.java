@@ -32,4 +32,20 @@ public interface StatsBatchMapper {
             @Param("statDate") LocalDate statDate,
             @Param("systemUserId") Long systemUserId
     );
+
+    /**
+     * 특정 통계일자의 기존 message_stat_by_degree 활성 row를 soft-delete 처리한다.
+     */
+    int softDeleteMessageStatByDegree(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
+
+    /**
+     * send_attempt 데이터를 기준으로 특정 날짜의 차수/채널별 message_stat_by_degree row를 insert 한다.
+     */
+    int insertMessageStatByDegree(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
 }

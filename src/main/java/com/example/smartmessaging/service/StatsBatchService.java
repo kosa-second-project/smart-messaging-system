@@ -44,4 +44,22 @@ public class StatsBatchService {
                 insertedCount
         );
     }
+
+    /**
+     * message_stat_by_degree 하루치 통계를 집계한다.
+     *
+     * send_attempt를 기준으로 attempt_order와 channel_id별 발송 수, 성공 수, 비용을 집계한다.
+     */
+    @Transactional
+    public void aggregateMessageStatByDegree(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteMessageStatByDegree(statDate, systemUserId);
+        int insertedCount = statsBatchMapper.insertMessageStatByDegree(statDate, systemUserId);
+
+        log.info(
+                "[StatsBatch] message_stat_by_degree aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
+    }
 }
