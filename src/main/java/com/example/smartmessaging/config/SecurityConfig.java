@@ -25,6 +25,9 @@ public class SecurityConfig {
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                 // 로그인 페이지 및 로그인 처리 주소도 누구나 접근 가능 허용
                 .requestMatchers("/auth/login", "/auth/login-proc").permitAll()
+                
+                .requestMatchers("/api/stats/batch/**").permitAll()
+
                 // 그 외의 모든 메뉴/요청은 인증(로그인)을 성공한 사용자만 접근 가능
                 .anyRequest().authenticated()
             )
