@@ -479,20 +479,10 @@ function getCategoryLabel(category) {
 
     const key = String(category).trim().toUpperCase();
     const labels = {
-        GENERAL: "일반",
-        DEFAULT: "일반",
-        INFO: "안내",
-        INFORMATION: "안내",
-        NOTICE: "공지",
-        NOTIFICATION: "알림",
-        PROMOTION: "프로모션",
-        PROMOTIONAL: "프로모션",
-        EVENT: "이벤트",
         BENEFIT: "혜택",
-        COUPON: "쿠폰",
-        BIRTHDAY: "생일",
-        WELCOME: "환영",
-        REMINDER: "리마인드"
+        EVENT: "이벤트",
+        NOTICE: "공지",
+        CRM: "고객관리"
     };
 
     return labels[key] || category;
