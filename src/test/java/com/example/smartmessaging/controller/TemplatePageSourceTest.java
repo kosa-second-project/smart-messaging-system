@@ -50,7 +50,7 @@ class TemplatePageSourceTest {
     }
 
     @Test
-    void 새_템플릿_모달은_태그를_다중선택하고_카카오값을_전송하지_않는다() throws Exception {
+    void 새_템플릿_모달은_태그와_카카오값을_전송하지_않는다() throws Exception {
         String script = Files.readString(
                 Path.of("src/main/resources/static/js/pages/templates.js"),
                 StandardCharsets.UTF_8
@@ -64,13 +64,9 @@ class TemplatePageSourceTest {
                 script.indexOf("function renderFormPreview")
         );
 
-        assertThat(template).doesNotContain("카카오 상태", "templateKakaoStatus", "kakaoTemplateCode");
-        assertThat(script)
-                .contains("name=\"templateTag\"",
-                        "type=\"checkbox\"",
-                        "tagIds: Array.from(document.querySelectorAll(\"input[name='templateTag']:checked\"))",
-                        "getCategoryLabel");
-        assertThat(saveFunction).doesNotContain("kakaoTemplateStatus", "kakaoTemplateCode");
+        assertThat(template).doesNotContain("태그", "templateTagList", "카카오 상태", "templateKakaoStatus", "kakaoTemplateCode");
+        assertThat(script).contains("getCategoryLabel");
+        assertThat(saveFunction).doesNotContain("tagIds", "templateTag", "kakaoTemplateStatus", "kakaoTemplateCode");
     }
 
     @Test

@@ -4,8 +4,7 @@ let templatePreviewMode = "message";
 let templateOptions = {
     channels: [],
     categories: [],
-    purposes: [],
-    tags: []
+    purposes: []
 };
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -68,7 +67,6 @@ function fetchTemplateOptions() {
             templateOptions = data || templateOptions;
             renderTemplateFilters();
             renderTemplateChannelCheckboxes();
-            renderTemplateTagOptions();
         })
         .catch(err => console.error("Template options load fail:", err));
 }
@@ -121,29 +119,9 @@ function renderTemplateChannelCheckboxes() {
     });
 }
 
-function renderTemplateTagOptions() {
-    const wrapper = document.getElementById("templateTagList");
-    const tags = templateOptions.tags || [];
-
-    if (!tags.length) {
-        wrapper.innerHTML = `<span class="text-muted">등록된 태그가 없습니다.</span>`;
-        return;
-    }
-
-    // DB 태그 목록을 다중 선택 칩으로 노출한다.
-    wrapper.innerHTML = tags
-        .map(tag => `
-            <label class="template-tag-option">
-                <input type="checkbox" name="templateTag" value="${escapeHtml(tag.value)}">
-                <span>${escapeHtml(tag.label)}</span>
-            </label>
-        `)
-        .join("");
-}
-
 function fetchTemplates() {
     const tbody = document.getElementById("templateTableBody");
-    tbody.innerHTML = `<tr><td colspan="7" class="template-empty-cell">데이터를 불러오는 중입니다...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">데이터를 불러오는 중입니다...</td></tr>`;
     document.getElementById("templateMobileList").innerHTML = `<div class="template-empty-cell">데이터를 불러오는 중입니다...</div>`;
 
     const params = new URLSearchParams({
@@ -166,7 +144,7 @@ function fetchTemplates() {
         })
         .catch(err => {
             console.error("Template list load fail:", err);
-            tbody.innerHTML = `<tr><td colspan="7" class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</td></tr>`;
             document.getElementById("templateMobileList").innerHTML = `<div class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</div>`;
         });
 }
@@ -182,7 +160,7 @@ function renderTemplateTable(list) {
     tbody.innerHTML = "";
 
     if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="template-empty-cell">조건에 맞는 템플릿이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">조건에 맞는 템플릿이 없습니다.</td></tr>`;
         return;
     }
 
@@ -198,7 +176,6 @@ function renderTemplateTable(list) {
             </td>
             <td class="template-col-lg">${renderBadge(getCategoryLabel(item.category), "default")}</td>
             <td>${renderPurposeBadge(item.purpose)}</td>
-            <td class="template-col-xl">${renderTagList(item)}</td>
             <td>${renderChannelChips(item.channels || [])}</td>
             <td class="template-col-lg"><span class="template-title">${(item.cnt || 0).toLocaleString()}회</span></td>
             <td><span class="text-muted">${item.updatedAt || "-"}</span></td>
@@ -227,7 +204,6 @@ function renderTemplateMobileList(list) {
             <div class="template-mobile-card__chips">
                 ${renderChannelChips(item.channels || [])}
                 ${renderBadge(getCategoryLabel(item.category), "default")}
-                ${renderTagList(item, 2)}
             </div>
             <div class="template-mobile-card__footer">
                 <span>${(item.cnt || 0).toLocaleString()}회 사용</span>
@@ -235,23 +211,6 @@ function renderTemplateMobileList(list) {
             </div>
         </button>
     `).join("");
-}
-
-function renderTagList(item, limit = 3) {
-    const tags = buildTemplateTags(item).slice(0, limit);
-    if (!tags.length) {
-        return renderBadge("없음", "default");
-    }
-    return `<div class="template-tag-list">${tags.map(tag => `<span class="ds-badge">${escapeHtml(tag)}</span>`).join("")}</div>`;
-}
-
-function buildTemplateTags(item) {
-    const tags = [];
-    if (item.category) tags.push(getCategoryLabel(item.category));
-    if (item.purpose) tags.push(getPurposeLabel(item.purpose));
-    (item.channels || []).forEach(channel => tags.push(channel.channelType));
-    if (item.isAiGenerated) tags.push("AI");
-    return [...new Set(tags.filter(Boolean))];
 }
 
 function renderChannelChips(channels) {
@@ -358,10 +317,6 @@ function renderTemplateDetail(item) {
                             <span class="template-detail__label">광고여부</span>
                             ${renderPurposeBadge(item.purpose)}
                         </div>
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">태그</span>
-                            ${renderTagList(item, 8)}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -432,7 +387,6 @@ function resetTemplateForm() {
     });
     document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
-    document.querySelectorAll("input[name='templateTag']").forEach(input => input.checked = false);
 }
 
 function saveTemplate() {
@@ -442,8 +396,6 @@ function saveTemplate() {
         category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
-            .map(input => Number(input.value)),
-        tagIds: Array.from(document.querySelectorAll("input[name='templateTag']:checked"))
             .map(input => Number(input.value))
     };
 

@@ -2,7 +2,6 @@ package com.example.smartmessaging.service.impl;
 
 import com.example.smartmessaging.dto.request.TemplateSaveRequest;
 import com.example.smartmessaging.dto.response.TemplateChannelResponse;
-import com.example.smartmessaging.dto.response.TemplateFilterOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateResponse;
 import com.example.smartmessaging.dto.vo.TemplateVO;
@@ -30,23 +29,16 @@ class TemplateServiceImplTest {
     private TemplateServiceImpl templateService;
 
     @Test
-    void 옵션_조회시_DB_태그_목록을_응답에_포함한다() {
-        TemplateFilterOptionResponse tag = new TemplateFilterOptionResponse();
-        tag.setValue("1");
-        tag.setLabel("신규");
-
+    void 옵션_조회시_채널_카테고리_광고여부만_응답에_포함한다() {
         when(templateMapper.selectAllChannels()).thenReturn(List.of());
         when(templateMapper.selectCategoryOptions(10L)).thenReturn(List.of());
         when(templateMapper.selectPurposeOptions(10L)).thenReturn(List.of());
-        when(templateMapper.selectTagOptions()).thenReturn(List.of(tag));
 
         TemplateOptionResponse response = templateService.getTemplateOptions(10L);
 
-        assertThat(response.getTags())
-                .hasSize(1)
-                .first()
-                .extracting(TemplateFilterOptionResponse::getValue, TemplateFilterOptionResponse::getLabel)
-                .containsExactly("1", "신규");
+        assertThat(response.getChannels()).isEmpty();
+        assertThat(response.getCategories()).isEmpty();
+        assertThat(response.getPurposes()).isEmpty();
     }
 
     @Test
@@ -82,7 +74,6 @@ class TemplateServiceImplTest {
         request.setContent("메시지 내용");
         request.setCategory("NOTICE");
         request.setPurpose("informational");
-        request.setTagIds(List.of(1L, 2L));
 
         templateService.createTemplate(10L, request);
 
@@ -93,6 +84,5 @@ class TemplateServiceImplTest {
         assertThat(template.getKakaoTemplateCode()).isNull();
         assertThat(template.getKakaoTemplateStatus()).isNull();
         assertThat(template.getPurpose()).isEqualTo("INFO");
-        assertThat(request.getTagIds()).containsExactly(1L, 2L);
     }
 }

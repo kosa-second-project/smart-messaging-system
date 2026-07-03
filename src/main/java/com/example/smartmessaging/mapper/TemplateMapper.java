@@ -29,8 +29,6 @@ public interface TemplateMapper {
 
     List<TemplateFilterOptionResponse> selectPurposeOptions(@Param("userId") Long userId);
 
-    List<TemplateFilterOptionResponse> selectTagOptions();
-
     TemplateStatResponse selectTemplateStats(@Param("userId") Long userId);
 
     int insertTemplate(TemplateVO template);
