@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -20,6 +19,5 @@ public class ChannelStatVO extends BaseVO {
     private Integer conversionCount;
     private Integer consentTargetCount;
     private Integer consentCount;
-    private LocalDate date;
     private Long channelId;
 }

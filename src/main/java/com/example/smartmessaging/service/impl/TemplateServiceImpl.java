@@ -11,11 +11,14 @@ import com.example.smartmessaging.dto.vo.TemplateChannelVO;
 import com.example.smartmessaging.dto.vo.TemplateVO;
 import com.example.smartmessaging.mapper.TemplateMapper;
 import com.example.smartmessaging.service.TemplateService;
+import com.example.smartmessaging.dto.response.TemplateFilterOptionResponse;
+import com.example.smartmessaging.dto.vo.TemplateCategory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -52,7 +55,13 @@ public class TemplateServiceImpl implements TemplateService {
     public TemplateOptionResponse getTemplateOptions(Long userId) {
         TemplateOptionResponse response = new TemplateOptionResponse();
         response.setChannels(templateMapper.selectAllChannels());
-        response.setCategories(templateMapper.selectCategoryOptions(userId));
+        
+        // TemplateCategory Enum 값들을 기반으로 정적 카테고리 필터 옵션 목록 생성
+        List<TemplateFilterOptionResponse> categoryOptions = Arrays.stream(TemplateCategory.values())
+                .map(cat -> new TemplateFilterOptionResponse(cat.name(), cat.getDisplayName()))
+                .collect(Collectors.toList());
+        response.setCategories(categoryOptions);
+        
         response.setPurposes(templateMapper.selectPurposeOptions(userId));
         return response;
     }

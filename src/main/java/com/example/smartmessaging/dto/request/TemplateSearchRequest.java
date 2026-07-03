@@ -1,12 +1,13 @@
 package com.example.smartmessaging.dto.request;
 
+import com.example.smartmessaging.dto.vo.TemplateCategory;
 import lombok.Data;
 
 @Data
 public class TemplateSearchRequest {
 
     private String keyword;
-    private String category;
+    private TemplateCategory category;
     private String purpose;
     private String channelType;
     private String sortOrder = "latest";

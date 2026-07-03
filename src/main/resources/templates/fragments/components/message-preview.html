@@ -1,49 +1,67 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<div th:fragment="preview(mode, title, content, sender)"
-     th:with="previewMode=${mode ?: 'sms'},
-              previewTitle=${title ?: '메시지 제목'},
-              previewContent=${content ?: '메시지 내용을 입력하세요.'},
-              previewSender=${sender ?: '010-0000-0000'}"
-     th:class="|message-preview message-preview--${previewMode}|">
-    <div class="message-preview__screen">
-        <span class="message-preview__sensor" aria-hidden="true"></span>
-        <div class="message-preview__status">
-            <span>9:41</span>
-            <span aria-hidden="true">▰</span>
+<div th:fragment="preview" class="message-preview mode-sms" id="phonePreviewBox">
+    <!-- 상태바 (노치 등)는 공통이되 테마별로 배경색이 다름 -->
+    <div class="preview-status-bar">
+        <span class="time">9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+            <span class="icon-signal">📶</span>
+            <span class="icon-battery">🔋</span>
         </div>
-        <div class="message-preview__title"
-             th:text="${previewMode == 'kakao' ? '카카오 알림톡' : (previewMode == 'email' ? 'Email' : '메시지')}">메시지</div>
-
-        <div class="message-preview__body">
-            <th:block th:if="${previewMode == 'email'}">
-                <div class="message-preview__mail-header">
-                    <span class="message-preview__mail-logo">M</span>
-                    <strong>현대홈쇼핑</strong>
-                </div>
-                <div class="message-preview__mail-title" th:text="${previewTitle}">메일 제목</div>
-                <div class="message-preview__mail-meta">
-                    <span class="message-preview__mail-avatar">현</span>
-                    <span>
-                        <strong th:text="${previewSender}">현대홈쇼핑</strong>
-                        <small>to me · 오전 9:41</small>
-                    </span>
-                </div>
-                <div class="message-preview__bubble" th:text="${previewContent}">메일 내용</div>
-            </th:block>
-
-            <th:block th:unless="${previewMode == 'email'}">
-                <div class="message-preview__sender" th:text="${previewSender}">010-0000-0000</div>
-                <div class="message-preview__bubble-group">
-                    <div class="message-preview__bubble">
-                        <div class="message-preview__bubble-title" th:text="${previewTitle}">메시지 제목</div>
-                        <span class="message-preview__bubble-text" th:text="${previewContent}">메시지 내용</span>
-                    </div>
-                    <div th:if="${previewMode == 'kakao'}" class="message-preview__kakao-action">자세히 보기</div>
-                </div>
-            </th:block>
-        </div>
-        <span class="message-preview__home" aria-hidden="true"></span>
+        <div class="app-title title-kakao">카카오톡</div>
+        <div class="app-title title-email">Mail</div>
     </div>
+
+    <!-- 1. SMS 뷰 -->
+    <div class="preview-body view-sms">
+        <div class="preview-sender">010-0000-0000</div>
+        <div class="bubble-wrap">
+            <div class="bubble sms-bubble">
+                <div class="bubble-title" id="previewSmsTitle">메시지 제목</div>
+                <div class="bubble-text" id="previewSmsContent">전송할 메시지 내용을 입력해주세요.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 카카오 알림톡 뷰 -->
+    <div class="preview-body view-kakao">
+        <div class="preview-sender">현대퓨처넷</div>
+        <div class="bubble-wrap">
+            <div class="bubble kakao-bubble">
+                <div class="bubble-title" id="previewKakaoTitle">메시지 제목</div>
+                <div class="bubble-text" id="previewKakaoContent">전송할 메시지 내용을 입력해주세요.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 이메일 뷰 -->
+    <div class="preview-body view-email">
+        <div class="email-app-header">
+            <span class="email-logo-icon">M</span>
+            <strong>Gmail</strong>
+        </div>
+        <div class="email-content-wrapper">
+            <h3 class="email-subject" id="previewEmailTitle">메시지 제목</h3>
+            <div class="email-sender-info">
+                <div class="sender-avatar">현</div>
+                <div class="sender-details">
+                    <div class="sender-name">현대퓨처넷</div>
+                    <div class="sender-meta">to me <span class="time">오전 9:41</span></div>
+                </div>
+            </div>
+            <div class="email-body-box">
+                <div class="email-text" id="previewEmailContent">전송할 메시지 내용을 입력해주세요.</div>
+            </div>
+            <div class="email-action-btns">
+                <button class="email-btn">답장</button>
+                <button class="email-btn">전달</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 아이폰 홈바 -->
+    <div class="preview-home-bar"></div>
 </div>
+
 </html>

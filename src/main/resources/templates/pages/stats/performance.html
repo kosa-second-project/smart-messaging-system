@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default-layout}">
+<head>
+    <title>성과 분석</title>
+    <link rel="stylesheet" th:href="@{/css/pages/stats/analysis.css}">
+</head>
+<main layout:fragment="content" class="page stats-overview-page">
+    <div class="stats-overview">
+        <section class="stats-top">
+            <div class="stats-performance-filters">
+                <select id="performanceChannelSelect" class="stats-performance-select" aria-label="성과 분석 채널 선택">
+                    <option value="KAKAO">카카오톡</option>
+                    <option value="SMS">SMS</option>
+                    <option value="LMS">LMS</option>
+                    <option value="EMAIL">이메일</option>
+                </select>
+                <span class="stats-period-control__badge">데이터 업데이트: 오늘 00:00</span>
+            </div>
+
+            <div class="stats-actions">
+                <button type="button" class="stats-button stats-button--outline" disabled title="PDF 다운로드">
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path d="M7 10l5 5 5-5"></path>
+                        <path d="M12 15V3"></path>
+                    </svg>
+                    PDF 다운로드
+                </button>
+                <button type="button" class="stats-button stats-button--outline" disabled title="Excel 다운로드">
+                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path d="M7 10l5 5 5-5"></path>
+                        <path d="M12 15V3"></path>
+                    </svg>
+                    Excel 다운로드
+                </button>
+            </div>
+        </section>
+
+        <section id="statsCards" class="stats-card-grid stats-card-grid--4" aria-label="성과 분석 주요 지표"></section>
+
+        <section class="stats-analysis-toolbar" aria-label="성과 분석 차트 조회 조건">
+            <form id="statsPeriodForm" class="stats-period-control" aria-label="성과 분석 조회 기간">
+                <div class="stats-period-control__label">
+                    <svg class="stats-icon stats-icon--primary" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path>
+                    </svg>
+                    <span>기간</span>
+                </div>
+                <input id="statsStartDate" class="stats-period-control__input" type="date">
+                <span class="stats-period-control__separator">~</span>
+                <input id="statsEndDate" class="stats-period-control__input" type="date">
+                <span class="stats-period-control__badge">집계 기준</span>
+                <span id="statsPeriodLabel" class="stats-period-control__summary"></span>
+            </form>
+        </section>
+
+        <section class="stats-card stats-analysis-card stats-analysis-card--primary stats-analysis-card--wide">
+            <div class="stats-analysis-card__head">
+                <h3 class="stats-card-title">클릭수 추이</h3>
+            </div>
+            <div class="stats-canvas-wrap">
+                <canvas id="performanceTrendChart" height="280"></canvas>
+            </div>
+        </section>
+
+        <section class="stats-analysis-grid">
+            <article class="stats-card stats-analysis-card stats-analysis-card--primary">
+                <div class="stats-analysis-card__head">
+                    <h3 class="stats-card-title">요일별 클릭수</h3>
+                </div>
+                <div class="stats-canvas-wrap">
+                    <canvas id="weekdayClickChart" height="260"></canvas>
+                </div>
+            </article>
+
+            <article class="stats-card stats-analysis-card stats-analysis-card--primary">
+                <div class="stats-analysis-card__head">
+                    <h3 class="stats-card-title">시간별 클릭수</h3>
+                </div>
+                <div class="stats-canvas-wrap">
+                    <canvas id="hourlyClickChart" height="260"></canvas>
+                </div>
+            </article>
+        </section>
+    </div>
+
+    <script th:src="@{/js/pages/stats/performance.js}"></script>
+</main>
+</html>
