@@ -20,15 +20,9 @@ public interface CustomerMapper {
 
     int selectCustomerCount(CustomerSearchDTO searchDTO);
 
-    List<CustomerVO> findBySearch(CustomerSearchRequest request);
-
     CustomerStatResponseDTO selectCustomerStats();
 
-    int countBySearch(CustomerSearchRequest request);
-
     List<String> selectCustomerTags(@Param("customerId") Long customerId);
-
-    List<Long> findIdsBySearch(CustomerSearchRequest request);
 
     List<CustomerReceiveHistoryResponseDTO> selectCustomerReceiveHistory(@Param("customerId") Long customerId);
 

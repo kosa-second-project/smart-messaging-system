@@ -25,9 +25,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-
-@Service
-@RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerMapper customerMapper;
@@ -70,11 +67,9 @@ public class CustomerServiceImpl implements CustomerService {
     // ==========================================
 
     @Override
-    public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
-        log.debug("[CustomerService] 메시지 발송용 고객 목록 조회 요청 - ActiveTab: {}", request.getActiveTab());
-    @Override
     @Transactional(readOnly = true)
     public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
+        log.debug("[CustomerService] 메시지 발송용 고객 목록 조회 요청 - ActiveTab: {}", request.getActiveTab());
 
         // 1. 고객 목록 조회
         List<CustomerVO> customers = customerMapper.findBySearch(request);
@@ -145,23 +140,14 @@ public class CustomerServiceImpl implements CustomerService {
                 .page(request.getPage())
                 .size(request.getSize())
                 .totalPages(totalPages)
+                .nextCursorId(nextCursorId)
+                .hasNext(hasNext)
                 .build();
-    }
-
-    @Override
-    public List<Long> getCustomerIds(CustomerSearchRequest request) {
-        log.debug("[CustomerService] 필터 조건 고객 ID 전체 조회 요청");
-        return customerMapper.findIdsBySearch(request);
     }
 
     // ==========================================
     // 3. 내부 유틸리티 메서드
     // ==========================================
-
-                .nextCursorId(nextCursorId)
-                .hasNext(hasNext)
-                .build();
-    }
 
     private String maskPhoneNumber(String phone) {
         if (phone == null || phone.isBlank()) {

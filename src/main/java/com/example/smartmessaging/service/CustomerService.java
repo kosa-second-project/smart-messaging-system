@@ -14,8 +14,6 @@ import java.util.List;
 public interface CustomerService {
     PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO);
 
-    PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request);
-
     CustomerStatResponseDTO getCustomerStats();
 
     List<CustomerReceiveHistoryResponseDTO> getCustomerReceiveHistory(Long customerId);
