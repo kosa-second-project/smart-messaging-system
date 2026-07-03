@@ -45,7 +45,8 @@ class TemplatePageSourceTest {
 
         assertThat(resetFunction)
                 .contains("templatePreviewMode = \"message\"",
-                        "button.dataset.previewMode === \"message\"");
+                        "button.dataset.previewMode === \"message\"",
+                        "document.getElementById(\"templatePurpose\").value = \"AD\"");
     }
 
     @Test

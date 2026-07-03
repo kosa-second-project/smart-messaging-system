@@ -98,9 +98,17 @@ public class TemplateServiceImpl implements TemplateService {
                 .kakaoTemplateStatus(request.getKakaoTemplateStatus() == null ? "PENDING" : request.getKakaoTemplateStatus())
                 .isAiGenerated(Boolean.TRUE.equals(request.getIsAiGenerated()))
                 .category(request.getCategory())
-                .purpose(request.getPurpose())
+                .purpose(resolvePurpose(request.getPurpose()))
                 .userId(userId)
                 .build();
+    }
+
+    private String resolvePurpose(String purpose) {
+        String value = purpose == null ? "" : purpose.trim().toLowerCase();
+        if (value.equals("advertising") || value.equals("ad") || value.contains("광고")) {
+            return "AD";
+        }
+        return "INFO";
     }
 
     private String resolveKakaoTemplateCode(Long userId, TemplateSaveRequest request) {

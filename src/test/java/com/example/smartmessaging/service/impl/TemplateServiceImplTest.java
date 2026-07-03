@@ -92,6 +92,7 @@ class TemplateServiceImplTest {
         TemplateVO template = captor.getValue();
         assertThat(template.getKakaoTemplateCode()).startsWith("TPL10");
         assertThat(template.getKakaoTemplateStatus()).isEqualTo("PENDING");
+        assertThat(template.getPurpose()).isEqualTo("INFO");
         assertThat(request.getTagIds()).containsExactly(1L, 2L);
     }
 }

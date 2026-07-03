@@ -299,7 +299,7 @@ function renderChannelChips(channels) {
 
 function renderPurposeBadge(purpose) {
     const normalized = normalizePurpose(purpose);
-    if (normalized === "advertising") {
+    if (normalized === "AD") {
         return renderBadge("광고", "amber");
     }
     return renderBadge("정보성", "green");
@@ -457,9 +457,9 @@ function closeTemplateDetailOnBackdrop(event) {
 
 function resetTemplateForm() {
     document.getElementById("templateForm").reset();
-    document.getElementById("templatePurpose").value = "advertising";
+    document.getElementById("templatePurpose").value = "AD";
     document.querySelectorAll("[data-purpose-value]").forEach(button => {
-        button.classList.toggle("is-active", button.dataset.purposeValue === "advertising");
+        button.classList.toggle("is-active", button.dataset.purposeValue === "AD");
     });
     // 새 템플릿 작성 시 미리보기는 항상 메시지 탭에서 시작한다.
     templatePreviewMode = "message";
@@ -585,8 +585,8 @@ function getCategoryLabel(category) {
 
 function buildPurposeOptions(options) {
     const defaults = [
-        { value: "advertising", label: "광고" },
-        { value: "informational", label: "정보성" }
+        { value: "AD", label: "광고" },
+        { value: "INFO", label: "정보성" }
     ];
     const rows = options.map(option => ({
         value: option.value,
@@ -598,12 +598,12 @@ function buildPurposeOptions(options) {
 
 function normalizePurpose(purpose) {
     const value = (purpose || "").toLowerCase();
-    if (value === "advertising" || value === "ad" || value.includes("광고")) return "advertising";
-    return "informational";
+    if (value === "advertising" || value === "ad" || value.includes("광고")) return "AD";
+    return "INFO";
 }
 
 function getPurposeLabel(purpose) {
-    return normalizePurpose(purpose) === "advertising" ? "광고" : "정보성";
+    return normalizePurpose(purpose) === "AD" ? "광고" : "정보성";
 }
 
 function getKakaoStatusLabel(status) {
