@@ -74,7 +74,7 @@ class TemplatePageSourceTest {
     }
 
     @Test
-    void 채널_선택은_한_열_그리드로_표시한다() throws Exception {
+    void 채널_선택은_한_행으로_표시한다() throws Exception {
         String style = Files.readString(
                 Path.of("src/main/resources/static/css/pages/templates.css"),
                 StandardCharsets.UTF_8
@@ -84,6 +84,8 @@ class TemplatePageSourceTest {
                 style.indexOf(".template-channel-option")
         );
 
-        assertThat(channelGridStyle).contains("grid-template-columns: minmax(0, 1fr)");
+        assertThat(channelGridStyle)
+                .contains("display: flex",
+                        "flex-wrap: wrap");
     }
 }
