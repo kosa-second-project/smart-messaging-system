@@ -27,7 +27,6 @@ public class RuleValidationService {
 
     private static final String MISSING_AD_PREFIX = "MISSING_AD_PREFIX";
     private static final String MISSING_OPT_OUT = "MISSING_OPT_OUT";
-    private static final String AD_SUSPECTED = "AD_SUSPECTED";
     private static final String INVALID_VARIABLE_FORMAT = "INVALID_VARIABLE_FORMAT";
     private static final String UNSUPPORTED_VARIABLE = "UNSUPPORTED_VARIABLE";
     private static final String PERSONAL_PHONE_NUMBER = "PERSONAL_PHONE_NUMBER";
@@ -38,17 +37,20 @@ public class RuleValidationService {
             "#{고객명}", "#{주문번호}", "#{쿠폰명}"
     );
 
-    // 정보성 메세지에 포함될 경우 광고성 문구로 의심해야 하는 키워드
-    private static final List<String> AD_KEYWORDS = List.of(
-            "쿠폰", "할인", "특가", "이벤트", "혜택", "적립", "포인트", "무료배송", "구매",
-            "세일", "프로모션", "사은품", "경품", "한정", "오늘만", "마감", "응모", "쇼핑지원금", "앱 전용"
-    );
-
     private static final Pattern VALID_VARIABLE_PATTERN = Pattern.compile("#\\{[가-힣A-Za-z0-9_]+}");
+    private static final Pattern VARIABLE_START_PATTERN = Pattern.compile("#\\{");
 
-    // 지정된 변수 형식(ex. #{고객명}) 외에 잘못된 변수 표기를 찾는다
-    private static final Pattern INVALID_VARIABLE_PATTERN = Pattern.compile(
-            "\\$\\{[^}]+}|(?<![$#])\\{[^}]+}|#[가-힣A-Za-z0-9_]+|\\[[가-힣A-Za-z0-9_]+]"
+    // #{고객명} #{주문번호} #{쿠폰명} 문구를 검증
+    // 정해진 변수명의 대체 표기만 검사해 일반 문구의 오탐을 방지하도록 하였음
+    private static final String KNOWN_VARIABLE_NAME_PATTERN = "(?:고객명|주문번호|쿠폰명)";
+    private static final Pattern ALTERNATE_VARIABLE_PATTERN = Pattern.compile(
+            "\\$\\{" + KNOWN_VARIABLE_NAME_PATTERN + "}"
+                    + "|(?<![$#])\\{" + KNOWN_VARIABLE_NAME_PATTERN + "}"
+                    + "|#" + KNOWN_VARIABLE_NAME_PATTERN + "(?![가-힣A-Za-z0-9_])"
+                    + "|\\[" + KNOWN_VARIABLE_NAME_PATTERN + "]"
+    );
+    private static final Pattern OPT_OUT_PHONE_PATTERN = Pattern.compile(
+            "(?<!\\d)080-\\d{3,4}-\\d{4}(?!\\d)"
     );
 
     // 본문에 직접 입력된 개인정보 형태의 패턴을 찾는다.
@@ -107,7 +109,6 @@ public class RuleValidationService {
         // 지정된 검사 실행
         checkAdPrefix(request.getMessageType(), content, issues);
         checkOptOut(request.getMessageType(), content, issues);
-        checkAdKeywords(request.getMessageType(), content, issues);
         checkVariableFormat(content, issues);
         checkSupportedVariables(content, request.getAvailableVariables(), issues);
         checkPersonalInformation(content, issues);
@@ -128,11 +129,15 @@ public class RuleValidationService {
         }
     }
 
-    // 광고성 메세지인 경우 수신거부 문구가 있는지 검사
+    // 광고성 메시지는 수신거부 문구와 실제 080 번호가 모두 있어야 한다.
     private void checkOptOut(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType == MessageType.AD
-                && !content.contains("무료수신거부")
-                && !content.contains("수신거부")) {
+        if (messageType != MessageType.AD) {
+            return;
+        }
+
+        boolean hasOptOutText = content.contains("무료수신거부") || content.contains("수신거부");
+        boolean hasOptOutPhone = OPT_OUT_PHONE_PATTERN.matcher(content).find();
+        if (!hasOptOutText || !hasOptOutPhone) {
             issues.add(new ValidationIssue(
                     MISSING_OPT_OUT,
                     IssueSeverity.HIGH,
@@ -143,36 +148,38 @@ public class RuleValidationService {
         }
     }
 
-    // 정보성 메세지인 경우 광고성 키워드를 담고 있지 않은지 검사
-    private void checkAdKeywords(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType != MessageType.INFO) {
-            return;
-        }
-
-        AD_KEYWORDS.stream()
-                .filter(content::contains)
-                .findFirst()
-                .ifPresent(keyword -> issues.add(new ValidationIssue(
-                        AD_SUSPECTED,
-                        IssueSeverity.MEDIUM,
-                        "정보성 메시지로 선택되었지만 광고성 표현이 포함되어 있습니다.",
-                        keyword,
-                        "쿠폰/할인/혜택 안내라면 광고성 메시지로 변경하고 필수 표기를 추가하세요."
-                )));
-    }
-
     // 변수 형식 검사
     private void checkVariableFormat(String content, List<ValidationIssue> issues) {
-        Matcher matcher = INVALID_VARIABLE_PATTERN.matcher(content);
-        if (matcher.find()) {
+        String invalidVariable = findInvalidVariable(content);
+        if (invalidVariable != null) {
             issues.add(new ValidationIssue(
                     INVALID_VARIABLE_FORMAT,
                     IssueSeverity.HIGH,
                     "템플릿 변수는 '#{변수명}' 형식으로 작성해야 합니다.",
-                    matcher.group(),
+                    invalidVariable,
                     "프로젝트 표준 변수 형식인 '#{고객명}' 형태로 수정하세요."
             ));
         }
+    }
+
+    private String findInvalidVariable(String content) {
+        Matcher startMatcher = VARIABLE_START_PATTERN.matcher(content);
+        while (startMatcher.find()) {
+            int start = startMatcher.start();
+            int closingBrace = content.indexOf('}', startMatcher.end());
+            if (closingBrace < 0) {
+                int lineEnd = content.indexOf('\n', start);
+                return content.substring(start, lineEnd < 0 ? content.length() : lineEnd);
+            }
+
+            String candidate = content.substring(start, closingBrace + 1);
+            if (!VALID_VARIABLE_PATTERN.matcher(candidate).matches()) {
+                return candidate;
+            }
+        }
+
+        Matcher alternateMatcher = ALTERNATE_VARIABLE_PATTERN.matcher(content);
+        return alternateMatcher.find() ? alternateMatcher.group() : null;
     }
 
     // 허용 변수 검사
