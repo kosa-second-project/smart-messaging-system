@@ -49,7 +49,7 @@ class TemplatePageSourceTest {
     }
 
     @Test
-    void 새_템플릿_모달은_태그를_다중선택하고_카카오상태를_전송하지_않는다() throws Exception {
+    void 새_템플릿_모달은_태그를_다중선택하고_카카오상태를_전송한다() throws Exception {
         String script = Files.readString(
                 Path.of("src/main/resources/static/js/pages/templates.js"),
                 StandardCharsets.UTF_8
@@ -63,13 +63,14 @@ class TemplatePageSourceTest {
                 script.indexOf("function renderFormPreview")
         );
 
-        assertThat(template).doesNotContain("카카오 상태", "templateKakaoStatus");
+        assertThat(template).contains("카카오 상태", "templateKakaoStatus");
         assertThat(script)
                 .contains("name=\"templateTag\"",
                         "type=\"checkbox\"",
                         "tagIds: Array.from(document.querySelectorAll(\"input[name='templateTag']:checked\"))",
-                        "getCategoryLabel");
-        assertThat(saveFunction).doesNotContain("templateKakaoStatus");
+                        "getCategoryLabel",
+                        "getKakaoStatusLabel");
+        assertThat(saveFunction).contains("kakaoTemplateStatus: document.getElementById(\"templateKakaoStatus\").value");
     }
 
     @Test
