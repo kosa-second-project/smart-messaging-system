@@ -105,7 +105,11 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="history : ${historyPage.content}">
+                <tr class="history-table__row"
+                    th:each="history : ${historyPage.content}"
+                    th:attr="data-history-id=${history.id},aria-label=${history.title ?: '전송 기록 상세 보기'}"
+                    role="button"
+                    tabindex="0">
                     <td class="history-table__date"
                         th:text="${history.scheduledAt == null ? '-' : #temporals.format(history.scheduledAt, 'yyyy.MM.dd HH:mm')}">-</td>
                     <td class="history-table__title" th:text="${history.title ?: '-'}">-</td>
@@ -164,6 +168,76 @@
             </div>
         </nav>
     </section>
+
+    <div id="historyDetailModal" class="history-modal" hidden>
+        <div class="history-modal__backdrop" data-modal-close></div>
+        <section class="history-modal__dialog" role="dialog" aria-modal="true"
+                 aria-labelledby="historyModalHeading" tabindex="-1">
+            <header class="history-modal__header">
+                <h2 id="historyModalHeading">전송 기록 상세</h2>
+                <button class="history-modal__close" type="button" data-modal-close aria-label="닫기">&times;</button>
+            </header>
+
+            <div class="history-modal__body">
+                <div id="historyDetailLoading" class="history-modal__state" role="status">상세 정보를 불러오는 중입니다.</div>
+                <div id="historyDetailError" class="history-modal__state history-modal__state--error" role="alert" hidden></div>
+
+                <div id="historyDetailContent" hidden>
+                    <section class="history-detail__hero">
+                        <div class="history-detail__heading">
+                            <h3 id="historyDetailTitle">-</h3>
+                            <time id="historyDetailScheduledAt">-</time>
+                        </div>
+                        <div id="historyDetailBadges" class="history-detail__badges"></div>
+                        <div class="history-detail__tags-line">
+                            <span class="history-detail__label">태그</span>
+                            <div id="historyDetailTags" class="history-detail__tags">-</div>
+                        </div>
+                    </section>
+
+                    <section class="history-detail__summary" aria-label="전송 요약">
+                        <article class="history-summary-card">
+                            <span>총발송</span><strong id="historyDetailTotalCount">0건</strong>
+                        </article>
+                        <article class="history-summary-card history-summary-card--success">
+                            <span>성공</span><strong id="historyDetailSuccessCount">0건</strong>
+                        </article>
+                        <article class="history-summary-card history-summary-card--fail">
+                            <span>실패</span><strong id="historyDetailFailCount">0건</strong>
+                        </article>
+                        <article class="history-summary-card">
+                            <span>총소요비용</span><strong id="historyDetailActualCost">0원</strong>
+                        </article>
+                        <article class="history-summary-card">
+                            <span>절감액</span><strong id="historyDetailSaving">0원</strong>
+                        </article>
+                        <article class="history-summary-card">
+                            <span>최종도달률</span><strong id="historyDetailSuccessRate">0.0%</strong>
+                        </article>
+                    </section>
+
+                    <div class="history-detail__actions">
+                        <button id="historyRetryButton" class="ds-button ds-button--ghost history-retry-button" type="button">
+                            <svg class="history-retry-button__icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path>
+                            </svg>
+                            실패 대상자에게 재발송
+                        </button>
+                    </div>
+
+                    <section class="history-detail__section">
+                        <h3>메시지 정보</h3>
+                        <div id="historyDetailMessage" class="history-detail__message">-</div>
+                    </section>
+
+                    <section class="history-detail__section">
+                        <h3>대체 발송 흐름</h3>
+                        <div id="historyAttemptFlows" class="history-attempt-flows"></div>
+                    </section>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script th:src="@{/js/pages/history.js}"></script>
 </main>
