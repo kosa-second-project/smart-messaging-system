@@ -62,4 +62,23 @@ public class StatsBatchService {
                 insertedCount
         );
     }
+
+    /**
+     * customer_stat 하루치 고객 통계를 집계한다.
+     *
+     * 고객 통계는 발송 이력이 아니라 customer, customer_channel_consent, channel의 현재 상태를
+     * statDate 기준 스냅샷으로 저장한다.
+     */
+    @Transactional
+    public void aggregateCustomerStat(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteCustomerStat(statDate, systemUserId);
+        int insertedCount = statsBatchMapper.insertCustomerStat(statDate, systemUserId);
+
+        log.info(
+                "[StatsBatch] customer_stat aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
+    }
 }

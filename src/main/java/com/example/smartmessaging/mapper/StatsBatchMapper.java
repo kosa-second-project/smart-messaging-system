@@ -48,4 +48,20 @@ public interface StatsBatchMapper {
             @Param("statDate") LocalDate statDate,
             @Param("systemUserId") Long systemUserId
     );
+
+    /**
+     * 특정 통계일자의 기존 customer_stat 활성 row를 soft-delete 처리한다.
+     */
+    int softDeleteCustomerStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
+
+    /**
+     * customer, customer_channel_consent, channel 데이터를 기준으로 특정 날짜의 customer_stat row를 insert 한다.
+     */
+    int insertCustomerStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
 }

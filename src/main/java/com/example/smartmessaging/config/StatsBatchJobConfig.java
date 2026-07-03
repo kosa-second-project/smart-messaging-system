@@ -28,11 +28,13 @@ public class StatsBatchJobConfig {
     public Job statsDailyAggregationJob(
             JobRepository jobRepository,
             Step messageStatStep,
-            Step messageStatByDegreeStep
+            Step messageStatByDegreeStep,
+            Step customerStatStep
     ) {
         return new JobBuilder("statsDailyAggregationJob", jobRepository)
                 .start(messageStatStep)
                 .next(messageStatByDegreeStep)
+                .next(customerStatStep)
                 .build();
     }
 
@@ -90,6 +92,36 @@ public class StatsBatchJobConfig {
                     log.info("[StatsBatch] messageStatByDegreeStep started - statDate: {}", statDate);
                     statsBatchService.aggregateMessageStatByDegree(statDate);
                     log.info("[StatsBatch] messageStatByDegreeStep finished - statDate: {}", statDate);
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * customer_stat 집계 Step.
+     *
+     * JobParameter의 statDate를 읽어서 해당 날짜 기준의 고객 스냅샷 통계를 만든다.
+     */
+    @Bean
+    public Step customerStatStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            StatsBatchService statsBatchService
+    ) {
+        return new StepBuilder("customerStatStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    String statDateParameter = chunkContext
+                            .getStepContext()
+                            .getJobParameters()
+                            .get("statDate")
+                            .toString();
+
+                    LocalDate statDate = LocalDate.parse(statDateParameter);
+
+                    log.info("[StatsBatch] customerStatStep started - statDate: {}", statDate);
+                    statsBatchService.aggregateCustomerStat(statDate);
+                    log.info("[StatsBatch] customerStatStep finished - statDate: {}", statDate);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
