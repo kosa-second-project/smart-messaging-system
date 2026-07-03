@@ -163,8 +163,6 @@
         INSERT INTO template (
             title,
             content,
-            kakao_template_code,
-            kakao_template_status,
             is_ai_generated,
             category,
             purpose,
@@ -173,8 +171,6 @@
         ) VALUES (
             #{title},
             #{content},
-            #{kakaoTemplateCode},
-            #{kakaoTemplateStatus},
             #{isAiGenerated},
             #{category},
             #{purpose},

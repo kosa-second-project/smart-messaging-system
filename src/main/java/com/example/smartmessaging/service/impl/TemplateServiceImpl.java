@@ -94,8 +94,6 @@ public class TemplateServiceImpl implements TemplateService {
                 .id(templateId)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .kakaoTemplateCode(resolveKakaoTemplateCode(userId, request))
-                .kakaoTemplateStatus(request.getKakaoTemplateStatus() == null ? "PENDING" : request.getKakaoTemplateStatus())
                 .isAiGenerated(Boolean.TRUE.equals(request.getIsAiGenerated()))
                 .category(request.getCategory())
                 .purpose(resolvePurpose(request.getPurpose()))
@@ -109,15 +107,6 @@ public class TemplateServiceImpl implements TemplateService {
             return "AD";
         }
         return "INFO";
-    }
-
-    private String resolveKakaoTemplateCode(Long userId, TemplateSaveRequest request) {
-        if (request.getKakaoTemplateCode() != null && !request.getKakaoTemplateCode().isBlank()) {
-            return request.getKakaoTemplateCode();
-        }
-
-        // 입력란은 숨겼지만 DB 컬럼은 필수라서 내부 식별 코드를 생성한다.
-        return "TPL" + userId + System.currentTimeMillis();
     }
 
     private void saveTemplateChannels(Long templateId, List<Long> channelIds) {

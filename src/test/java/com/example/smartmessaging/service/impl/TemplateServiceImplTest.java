@@ -76,7 +76,7 @@ class TemplateServiceImplTest {
     }
 
     @Test
-    void 생성시_카카오_입력값이_없으면_DB저장용_기본값을_채운다() {
+    void 생성시_카카오_값은_무시하고_DB저장용_목적값만_정규화한다() {
         TemplateSaveRequest request = new TemplateSaveRequest();
         request.setTitle("신규 템플릿");
         request.setContent("메시지 내용");
@@ -90,8 +90,8 @@ class TemplateServiceImplTest {
         verify(templateMapper).insertTemplate(captor.capture());
 
         TemplateVO template = captor.getValue();
-        assertThat(template.getKakaoTemplateCode()).startsWith("TPL10");
-        assertThat(template.getKakaoTemplateStatus()).isEqualTo("PENDING");
+        assertThat(template.getKakaoTemplateCode()).isNull();
+        assertThat(template.getKakaoTemplateStatus()).isNull();
         assertThat(template.getPurpose()).isEqualTo("INFO");
         assertThat(request.getTagIds()).containsExactly(1L, 2L);
     }

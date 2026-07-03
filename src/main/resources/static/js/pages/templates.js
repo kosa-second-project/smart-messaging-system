@@ -407,7 +407,6 @@ function renderTemplateDetail(item) {
                 ${renderMetric("생성일", item.createdAt || "-")}
                 ${renderMetric("최근 수정", item.updatedAt || "-")}
                 ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
-                ${renderMetric("카카오 상태", getKakaoStatusLabel(item.kakaoTemplateStatus))}
             </div>
 
             <div class="template-detail__content template-detail__content--single">
@@ -477,7 +476,6 @@ function saveTemplate() {
         content: document.getElementById("templateContent").value.trim(),
         category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
-        kakaoTemplateStatus: document.getElementById("templateKakaoStatus").value,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
             .map(input => Number(input.value)),
         tagIds: Array.from(document.querySelectorAll("input[name='templateTag']:checked"))
@@ -604,12 +602,6 @@ function normalizePurpose(purpose) {
 
 function getPurposeLabel(purpose) {
     return normalizePurpose(purpose) === "AD" ? "광고" : "정보성";
-}
-
-function getKakaoStatusLabel(status) {
-    if (status === "APPROVED") return "승인";
-    if (status === "REJECTED") return "반려";
-    return "대기";
 }
 
 function flattenText(text) {
