@@ -39,8 +39,6 @@ import java.util.stream.Collectors;
 public class StatServiceImpl implements StatService {
 
     private static final DateTimeFormatter DATE_LABEL_FORMATTER = DateTimeFormatter.ofPattern("M/d");
-    private static final DecimalFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
-    private static final DecimalFormat RATE_FORMATTER = new DecimalFormat("0.0");
 
     private final StatMapper statMapper;
 
@@ -625,7 +623,7 @@ public class StatServiceImpl implements StatService {
     }
 
     private String formatNumber(long value) {
-        return NUMBER_FORMATTER.format(value);
+        return new DecimalFormat("#,###").format(value);
     }
 
     private String formatWon(BigDecimal value) {
@@ -633,7 +631,7 @@ public class StatServiceImpl implements StatService {
     }
 
     private String formatRate(double value) {
-        return RATE_FORMATTER.format(value);
+        return new DecimalFormat("0.0").format(value);
     }
 
     private double rate(long numerator, long denominator) {
