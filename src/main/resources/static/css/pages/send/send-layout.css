@@ -3,15 +3,18 @@
 .send-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   gap: 1.5rem;
   max-width: 100%;
-  overflow-x: hidden; /* 페이지 전체 단위 가로 스크롤 발생을 차단 */
+  overflow-x: hidden;
 }
 
 .step-content-wrapper {
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .step-section {
@@ -27,6 +30,7 @@
    [1. 상단 3단계 스텝바 디자인 - steps.css 통합]
    ========================================== */
 .send-steps {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -113,6 +117,7 @@
    [2. 하단 단계 전환 액션바 조각 스타일]
    ========================================== */
 .action-bar-row {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   border-top: 1px solid var(--border);

@@ -34,8 +34,16 @@ class HistoryMapperXmlTest {
                 "com.example.smartmessaging.mapper.HistoryMapper.countHistories"
         )).isTrue();
         assertThat(configuration.hasStatement(
+                "com.example.smartmessaging.mapper.HistoryMapper.findHistoryDetailById"
+        )).isTrue();
+        assertThat(configuration.hasStatement(
+                "com.example.smartmessaging.mapper.HistoryMapper.findAttemptFlowsByHistoryId"
+        )).isTrue();
+        assertThat(configuration.hasStatement(
                 "com.example.smartmessaging.mapper.HistoryMapper.findStatusOptions"
         )).isFalse();
+        assertThat(configuration.getSqlFragments())
+                .containsKey("com.example.smartmessaging.mapper.HistoryMapper.successRateExpression");
     }
 
     @Test
@@ -66,5 +74,34 @@ class HistoryMapperXmlTest {
         assertThat(mapperXml)
                 .contains("ORDER BY id ASC",
                         "ORDER BY tag_rows.send_history_id, tag_rows.tag_id ASC");
+    }
+
+    @Test
+    void 상세조회는_라우팅순서에_채널별_시도집계를_결합한다() throws Exception {
+        String resource = "mappers/HistoryMapper.xml";
+        String mapperXml;
+
+        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+            mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        assertThat(mapperXml)
+                .contains("NVL(sh.is_deleted, 0) = 0",
+                        "shr.priority_order AS attempt_order",
+                        "c.channel_type AS channel_name",
+                        "LEFT JOIN (",
+                        "COUNT(sa.id) AS request_count",
+                        "NVL(st.is_deleted, 0) = 0",
+                        "NVL(sa.is_deleted, 0) = 0",
+                        "NVL(c.is_deleted, 0) = 0",
+                        "NVL(shr.is_deleted, 0) = 0",
+                        "COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END)",
+                        "COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END)",
+                        "GROUP BY st.send_history_id, sa.channel_id",
+                        "attempt_counts.send_history_id = shr.send_history_id",
+                        "attempt_counts.channel_id = shr.channel_id",
+                        "ORDER BY shr.priority_order ASC")
+                .doesNotContain("GROUP BY sa.attempt_order")
+                .doesNotContain("fail_reason");
     }
 }

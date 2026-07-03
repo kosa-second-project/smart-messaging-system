@@ -11,8 +11,8 @@
     <div layout:fragment="content" class="page page--fill">
         <!-- 발송 화면 전용 스타일 일괄 병렬 로딩 (중첩 레이아웃 헤더 누락 방지) -->
         <link rel="stylesheet" th:href="@{/css/pages/send/send-layout.css}">
-        <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css}">
-
+        <link rel="stylesheet" th:href="@{/css/pages/send/recipients.css(v=${#dates.createNow().getTime()})}">
+        <link rel="stylesheet" th:href="@{/css/pages/send/message.css(v=${#dates.createNow().getTime()})}">
 
 
         <div class="send-container">

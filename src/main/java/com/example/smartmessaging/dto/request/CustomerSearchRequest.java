@@ -31,7 +31,7 @@ public class CustomerSearchRequest {
     /** "ANY"(기본) = OR 조건, "ALL" = AND 조건 */
     private String matchType = "ANY";
 
-
+    private Long cursorId;
 
     private int page = 1;
     private int size = 20;
