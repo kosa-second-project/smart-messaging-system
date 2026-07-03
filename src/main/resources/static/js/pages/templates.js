@@ -25,7 +25,6 @@ function bindTemplateEvents() {
         document.getElementById(id).addEventListener("change", function() {
             templateCurrentPage = 1;
             fetchTemplates();
-            renderQuickFilters();
         });
     });
 
@@ -68,7 +67,6 @@ function fetchTemplateOptions() {
         .then(data => {
             templateOptions = data || templateOptions;
             renderTemplateFilters();
-            renderQuickFilters();
             renderTemplateChannelCheckboxes();
             renderTemplateTagOptions();
         })
@@ -106,39 +104,6 @@ function renderSelectOptions(selectId, options, firstLabel) {
     });
 
     select.value = currentValue;
-}
-
-function renderQuickFilters() {
-    const wrapper = document.getElementById("templateQuickFilters");
-    const chips = [
-        ...(templateOptions.categories || []).slice(0, 6).map(option => ({ type: "category", value: option.value, label: getCategoryLabel(option.value || option.label) })),
-        ...buildPurposeOptions(templateOptions.purposes || []).slice(0, 4).map(option => ({ type: "purpose", value: option.value, label: option.label })),
-        ...(templateOptions.channels || []).slice(0, 6).map(channel => ({ type: "channel", value: channel.channelType, label: channel.channelType }))
-    ];
-
-    wrapper.innerHTML = chips.map(chip => {
-        const active = isQuickFilterActive(chip);
-        return `<button type="button" class="template-chip ${active ? "is-active" : ""}" data-chip-type="${chip.type}" data-chip-value="${escapeHtml(chip.value)}">${escapeHtml(chip.label)}</button>`;
-    }).join("");
-
-    wrapper.querySelectorAll(".template-chip").forEach(button => {
-        button.addEventListener("click", function() {
-            const type = button.dataset.chipType;
-            const value = button.dataset.chipValue;
-            const selectId = type === "category" ? "templateCategoryFilter" : type === "purpose" ? "templatePurposeFilter" : "templateChannelFilter";
-            const select = document.getElementById(selectId);
-            select.value = select.value === value ? "" : value;
-            templateCurrentPage = 1;
-            fetchTemplates();
-            renderQuickFilters();
-        });
-    });
-}
-
-function isQuickFilterActive(chip) {
-    if (chip.type === "category") return document.getElementById("templateCategoryFilter").value === chip.value;
-    if (chip.type === "purpose") return document.getElementById("templatePurposeFilter").value === chip.value;
-    return document.getElementById("templateChannelFilter").value === chip.value;
 }
 
 function renderTemplateChannelCheckboxes() {

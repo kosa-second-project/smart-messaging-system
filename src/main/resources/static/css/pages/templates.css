@@ -91,33 +91,6 @@
     height: 0.875rem;
 }
 
-.template-chip-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    overflow-x: auto;
-    padding-bottom: var(--space-1);
-}
-
-.template-chip {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
-    background: var(--card);
-    color: var(--muted-foreground);
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: var(--font-weight-bold);
-    white-space: nowrap;
-    transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
-}
-
-.template-chip:hover,
-.template-chip.is-active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: var(--primary-foreground);
-}
-
 .template-table-panel {
     flex: 1;
     min-height: 0;
