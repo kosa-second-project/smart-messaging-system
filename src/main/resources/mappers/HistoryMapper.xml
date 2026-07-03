@@ -3,6 +3,13 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.smartmessaging.mapper.HistoryMapper">
 
+    <sql id="successRateExpression">
+        CASE
+            WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
+            ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
+        END
+    </sql>
+
     <sql id="historyFilters">
         WHERE NVL(sh.is_deleted, 0) = 0
         <if test="keyword != null">
@@ -73,10 +80,7 @@
             NVL(sh.total_target_count, 0) AS total_target_count,
             NVL(sh.success_count, 0) AS success_count,
             NVL(sh.fail_count, 0) AS fail_count,
-            CASE
-                WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
-                ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
-            END AS success_rate,
+            <include refid="successRateExpression"/> AS success_rate,
             sh.estimated_saving,
             sh.status
         FROM send_history sh
@@ -90,10 +94,7 @@
                 NVL(sh.total_target_count, 0) DESC, sh.scheduled_at DESC NULLS LAST, sh.id DESC
             </when>
             <when test="sort == 'highestSuccessRate'">
-                CASE
-                    WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
-                    ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
-                END DESC,
+                <include refid="successRateExpression"/> DESC,
                 sh.scheduled_at DESC NULLS LAST,
                 sh.id DESC
             </when>
@@ -119,10 +120,7 @@
             NVL(sh.fail_count, 0) AS fail_count,
             NVL(sh.actual_cost, 0) AS actual_cost,
             NVL(sh.estimated_saving, 0) AS estimated_saving,
-            CASE
-                WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
-                ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
-                END AS success_rate
+            <include refid="successRateExpression"/> AS success_rate
         FROM send_history sh
         WHERE sh.id = #{sendHistoryId}
           AND NVL(sh.is_deleted, 0) = 0
@@ -131,22 +129,35 @@
     <select id="findAttemptFlowsByHistoryId"
             resultType="com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO">
         SELECT
-            sa.attempt_order,
+            shr.priority_order AS attempt_order,
             c.channel_type AS channel_name,
-            COUNT(*) AS request_count,
-            COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END) AS success_count,
-            COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END) AS fail_count
-        FROM send_target st
-                 JOIN send_attempt sa
-                      ON sa.send_target_id = st.id
-                          AND NVL(sa.is_deleted, 0) = 0
-                 JOIN channel c
-                      ON c.id = sa.channel_id
-                          AND NVL(c.is_deleted, 0) = 0
-        WHERE st.send_history_id = #{sendHistoryId}
-          AND NVL(st.is_deleted, 0) = 0
-        GROUP BY sa.attempt_order, c.channel_type
-        ORDER BY sa.attempt_order ASC, c.channel_type ASC
+            NVL(attempt_counts.request_count, 0) AS request_count,
+            NVL(attempt_counts.success_count, 0) AS success_count,
+            NVL(attempt_counts.fail_count, 0) AS fail_count
+        FROM send_history_routing shr
+        JOIN channel c
+          ON c.id = shr.channel_id
+         AND NVL(c.is_deleted, 0) = 0
+        LEFT JOIN (
+            SELECT
+                st.send_history_id,
+                sa.channel_id,
+                COUNT(sa.id) AS request_count,
+                COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END) AS success_count,
+                COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END) AS fail_count
+            FROM send_attempt sa
+            JOIN send_target st
+              ON st.id = sa.send_target_id
+             AND NVL(st.is_deleted, 0) = 0
+            WHERE st.send_history_id = #{sendHistoryId}
+              AND NVL(sa.is_deleted, 0) = 0
+            GROUP BY st.send_history_id, sa.channel_id
+        ) attempt_counts
+          ON attempt_counts.send_history_id = shr.send_history_id
+         AND attempt_counts.channel_id = shr.channel_id
+        WHERE shr.send_history_id = #{sendHistoryId}
+          AND NVL(shr.is_deleted, 0) = 0
+        ORDER BY shr.priority_order ASC
     </select>
 
     <select id="findChannelsByHistoryIds"

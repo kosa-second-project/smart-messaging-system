@@ -178,7 +178,9 @@ $(function() {
         setText("historyDetailSuccessCount", `${formatNumber(detail.successCount)}건`);
         setText("historyDetailFailCount", `${formatNumber(detail.failCount)}건`);
         setText("historyDetailActualCost", formatWon(detail.actualCost));
-        setText("historyDetailSaving", formatWon(detail.estimatedSaving));
+        const savingElement = document.getElementById("historyDetailSaving");
+        savingElement.textContent = formatWon(detail.estimatedSaving);
+        savingElement.classList.toggle("is-positive", Number(detail.estimatedSaving ?? 0) >= 1);
         setText("historyDetailSuccessRate", `${formatRate(detail.displaySuccessRate)}%`);
         setText("historyDetailMessage", detail.content || "-");
         renderBadges(detail);
