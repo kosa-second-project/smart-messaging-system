@@ -29,7 +29,7 @@ spring:
 
 stats:
   batch:
-    cron: "0 10 0 * * *"
+    cron: "0 0 3 * * *"
     zone: Asia/Seoul
     system-user-id: 0
 
