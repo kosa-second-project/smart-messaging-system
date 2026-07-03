@@ -81,8 +81,11 @@ public class CustomerServiceImpl implements CustomerService {
                 })
                 .collect(Collectors.toList());
 
+        // 다음 커서 ID 계산 (조회된 목록의 마지막 ID)
+        Long nextCursorId = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+        boolean hasNext = content.size() == request.getSize();
 
-        // 7. 페이징 메타 계산 후 반환
+        // 7. 페이징 메타 계산 후 반환 (totalCount/totalPages는 UI 편의상 유지 가능)
         int totalPages = request.getSize() > 0 ? (int) Math.ceil((double) totalCount / request.getSize()) : 0;
 
         return PagedCustomerResponse.builder()
@@ -91,6 +94,8 @@ public class CustomerServiceImpl implements CustomerService {
                 .page(request.getPage())
                 .size(request.getSize())
                 .totalPages(totalPages)
+                .nextCursorId(nextCursorId)
+                .hasNext(hasNext)
                 .build();
     }
 
