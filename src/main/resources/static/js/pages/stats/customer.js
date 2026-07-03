@@ -1,9 +1,6 @@
 $(function() {
     const state = {
-        period: {
-            start: "2026-06-01",
-            end: "2026-06-30"
-        }
+        period: StatsRenderer.defaultPeriod(7)
     };
 
     bindCustomerEvents(state);

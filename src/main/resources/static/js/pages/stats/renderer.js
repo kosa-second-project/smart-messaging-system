@@ -146,6 +146,14 @@ const StatsRenderer = (function() {
         });
     }
 
+    function defaultPeriod(days) {
+        const periodDays = Math.max(Number(days) || 1, 1);
+        const end = getSelectableMaxDate();
+        const start = formatDate(addDays(parseDate(end), -(periodDays - 1)));
+
+        return { start, end };
+    }
+
     function getPeriod(defaultPeriod) {
         const start = $("#statsStartDate").val() || defaultPeriod.start;
         const end = $("#statsEndDate").val() || defaultPeriod.end;
@@ -336,6 +344,7 @@ const StatsRenderer = (function() {
     }
 
     return {
+        defaultPeriod,
         findById,
         getPeriod,
         periodLabel,
