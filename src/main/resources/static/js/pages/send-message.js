@@ -4,6 +4,7 @@
 const MessageComposer = {
     channels: [],
     draggedItem: null,
+    smsMaxLength: 90, // DB 연동 전 기본값
 
     init: function () {
         this.loadChannels();
@@ -23,6 +24,7 @@ const MessageComposer = {
                 let lms = channels.find(c => c.channelType && c.channelType.toUpperCase() === 'LMS');
 
                 if (sms && lms) {
+                    self.smsMaxLength = sms.maxLength || 90; // DB의 SMS 최대 길이값 저장
                     sms.channelType = "문자메시지(sms/lms)";
                     const smsCost = sms.costPerMsg ? sms.costPerMsg.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : "0";
                     const lmsCost = lms.costPerMsg ? lms.costPerMsg.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : "0";
@@ -31,6 +33,7 @@ const MessageComposer = {
                     // LMS 삭제
                     channels = channels.filter(c => c.id !== lms.id);
                 } else if (sms) {
+                    self.smsMaxLength = sms.maxLength || 90;
                     sms.channelType = "문자메시지(sms/lms)";
                 }
 
@@ -177,7 +180,8 @@ const MessageComposer = {
             $("#currentBytes").text(byteCount);
 
             const $badge = $("#msgTypeBadge");
-            if (byteCount > 90) {
+            // 기존 하드코딩된 90 대신 DB에서 불러온 동적 최대 길이(smsMaxLength) 사용
+            if (byteCount > MessageComposer.smsMaxLength) {
                 $badge.text("LMS").removeClass("ds-badge--primary").addClass("ds-badge--secondary");
                 $badge.css({ "background-color": "#8E54E9", "color": "white" });
             } else {
