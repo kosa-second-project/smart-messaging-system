@@ -87,31 +87,45 @@ public class KakaoMessageService {
                 )
         );
 
+        boolean hasSuccess = false;
+
         try {
-            String uuidsJson = objectMapper.writeValueAsString(receiverUuids);
             String templateJson = objectMapper.writeValueAsString(templateObject);
 
-            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("receiver_uuids", uuidsJson);
-            params.add("template_object", templateJson);
+            for (String uuid : receiverUuids) {
+                try {
+                    // 단일 uuid를 포함하는 리스트로 JSON 생성
+                    String singleUuidJson = objectMapper.writeValueAsString(List.of(uuid));
 
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+                    MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+                    params.add("receiver_uuids", singleUuidJson);
+                    params.add("template_object", templateJson);
 
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    "https://kapi.kakao.com/v1/api/talk/friends/message/default/send",
-                    HttpMethod.POST,
-                    request,
-                    new ParameterizedTypeReference<Map<String, Object>>() {});
+                    HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
-            log.info("카카오톡 발송 결과: {}", response.getBody());
+                    ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                            "https://kapi.kakao.com/v1/api/talk/friends/message/default/send",
+                            HttpMethod.POST,
+                            request,
+                            new ParameterizedTypeReference<Map<String, Object>>() {});
+
+                    log.info("카카오톡 개별 발송 결과 (uuid: {}): {}", uuid, response.getBody());
+                    hasSuccess = true;
+                } catch (RestClientException e) {
+                    log.error("Kakao API send message error for uuid: {}", uuid, e);
+                    // 실패한 건이 있어도 다음 uuid 발송을 위해 계속 진행합니다.
+                }
+            }
+
+            if (!hasSuccess) {
+                throw new KakaoApiException("모든 대상에게 카카오 메시지 발송을 실패했습니다.");
+            }
+
             return true;
 
         } catch (JsonProcessingException e) {
             log.error("JSON parsing error", e);
             throw new KakaoApiException("메시지 포맷 변환에 실패했습니다.", e);
-        } catch (RestClientException e) {
-            log.error("Kakao API send message error", e);
-            throw new KakaoApiException("카카오 메시지 발송에 실패했습니다.", e);
         }
     }
 
