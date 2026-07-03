@@ -1,13 +1,10 @@
 package com.example.smartmessaging.service;
 
+import com.example.smartmessaging.mapper.StatsBatchMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -15,36 +12,36 @@ import java.time.LocalDate;
 @Service
 public class StatsBatchService {
 
-    // Spring Batch Job을 실제로 실행시키는 실행기
-    private final JobLauncher jobLauncher;
+    // 통계 배치 전용 SQL을 호출하는 Mapper.
+    private final StatsBatchMapper statsBatchMapper;
 
-    // StatsBatchJobConfig에서 등록한 통계 집계 Job
-    private final Job statsDailyAggregationJob;
+    // 배치에는 로그인 사용자가 없으므로 audit 컬럼에 넣을 시스템 사용자 ID를 설정에서 읽는다.
+    private final Long systemUserId;
 
     public StatsBatchService(
-            JobLauncher jobLauncher,
-
-            // Job 타입 Bean이 여러 개 생길 수 있으므로 이름으로 명확히 지정
-            @Qualifier("statsDailyAggregationJob") Job statsDailyAggregationJob
+            StatsBatchMapper statsBatchMapper,
+            @Value("${stats.batch.system-user-id}") Long systemUserId
     ) {
-        this.jobLauncher = jobLauncher;
-        this.statsDailyAggregationJob = statsDailyAggregationJob;
+        this.statsBatchMapper = statsBatchMapper;
+        this.systemUserId = systemUserId;
     }
 
-    // 지정한 날짜(statDate)를 기준으로 통계 배치 Job을 실행한다.
-    public JobExecution run(LocalDate statDate) throws Exception {
-        // JobParameters는 Batch Job 실행 시 전달하는 파라미터다.
-        // statDate: 실제 통계를 집계할 기준 날짜
-        // run.id: 같은 statDate로도 여러 번 재실행할 수 있도록 매번 다른 값 부여
-        JobParameters jobParameters = new JobParametersBuilder()
-                .addString("statDate", statDate.toString())
-                .addLong("run.id", System.currentTimeMillis())
-                .toJobParameters();
+    /**
+     * message_stat 하루치 통계를 집계한다.
+     *
+     * 처음 실행이면 soft-delete 대상이 없어서 0건 처리되고 새 row만 insert 된다.
+     * 재실행이면 기존 활성 row를 soft-delete 한 뒤 send_history 원천 데이터로 새 row를 insert 한다.
+     */
+    @Transactional
+    public void aggregateMessageStat(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteMessageStat(statDate, systemUserId);
+        int insertedCount = statsBatchMapper.insertMessageStat(statDate, systemUserId);
 
-        log.info("[StatsBatch] job launch requested - statDate: {}", statDate);
-
-        // JobLauncher가 등록된 Job을 JobParameters와 함께 실행한다.
-        // 실행 결과와 상태는 JobExecution에 담긴다.
-        return jobLauncher.run(statsDailyAggregationJob, jobParameters);
+        log.info(
+                "[StatsBatch] message_stat aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
     }
 }

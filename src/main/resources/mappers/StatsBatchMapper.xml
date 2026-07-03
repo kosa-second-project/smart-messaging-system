@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    namespace는 Java Mapper 인터페이스의 전체 경로와 같아야 한다.
+    그래야 StatsBatchMapper의 메서드 호출이 아래 SQL id와 연결된다.
+-->
+<mapper namespace="com.example.smartmessaging.mapper.StatsBatchMapper">
+
+    <!--
+        특정 날짜의 기존 message_stat 활성 row를 soft-delete 처리한다.
+
+        DB unique index는 is_deleted = 0인 stat_date에만 적용되므로,
+        기존 활성 row를 비활성화한 뒤 같은 날짜의 새 활성 row를 insert할 수 있다.
+    -->
+    <update id="softDeleteMessageStat">
+        UPDATE message_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        send_history에서 하루치 발송 통계를 집계해서 message_stat에 insert 한다.
+
+        message_stat.id는 Oracle identity 컬럼이므로 insert 컬럼 목록에서 제외한다.
+        softDeleteMessageStat 이후 실행되므로, 같은 날짜를 재실행해도 활성 통계 row는 최신 1건만 남는다.
+    -->
+    <insert id="insertMessageStat">
+        INSERT INTO message_stat (
+            total_send_count,
+            total_success_count,
+            billing_cost,
+            max_cost,
+            stat_date,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            NVL(SUM(sh.total_target_count), 0),
+            NVL(SUM(sh.success_count), 0),
+            NVL(SUM(sh.actual_cost), 0),
+            NVL(SUM(sh.estimated_cost), 0),
+            #{statDate},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM send_history sh
+        WHERE sh.status = 'SENT'
+          AND TRUNC(sh.completed_at) = #{statDate}
+          AND NVL(sh.is_deleted, 0) = 0
+    </insert>
+
+</mapper>

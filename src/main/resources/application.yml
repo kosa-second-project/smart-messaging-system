@@ -31,7 +31,7 @@ stats:
   batch:
     cron: "0 10 0 * * *"
     zone: Asia/Seoul
-    system-user-id: 1
+    system-user-id: 0
 
 # MyBatis 공통 설정
 mybatis:
