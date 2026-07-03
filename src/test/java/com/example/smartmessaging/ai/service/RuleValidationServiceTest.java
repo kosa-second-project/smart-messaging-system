@@ -10,6 +10,8 @@ import com.example.smartmessaging.ai.dto.type.ReviewStatus;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -35,19 +37,22 @@ class RuleValidationServiceTest {
         assertThat(response.isNeedsHumanReview()).isTrue();
     }
 
-    @Test
-    void 정보성_메시지에_광고_키워드가_있으면_WARNING이다() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "구매하신 상품이 출고되었습니다.",
+            "오늘만 할인 혜택을 확인하세요."
+    })
+    void 정보성_메시지의_광고성_문맥은_1차_서버_룰에서_판단하지_않는다(String content) {
         AiReviewRequest request = request(
                 MessageType.INFO,
-                "#{고객명}님, 20% 쿠폰 할인 혜택을 확인해보세요.",
-                List.of("#{고객명}")
+                content,
+                List.of()
         );
 
         AiReviewResponse response = ruleValidationService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.WARNING);
-        assertThat(ruleIds(response)).containsExactly("AD_SUSPECTED");
-        assertThat(response.getSummary()).isEqualTo("검사 결과 주의가 필요한 항목이 있습니다.");
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.getIssues()).isEmpty();
     }
 
     @Test
@@ -63,6 +68,98 @@ class RuleValidationServiceTest {
         assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
         assertThat(ruleIds(response)).containsExactly("INVALID_VARIABLE_FORMAT");
         assertThat(response.getIssues().get(0).getTargetText()).isEqualTo("{고객명}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{고객명}", "${고객명}", "#고객명", "[고객명]"})
+    void 알려진_변수명의_잘못된_대체_표기는_FAIL이다(String content) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.INFO, content, List.of("#{고객명}"))
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
+        assertThat(ruleIds(response)).containsExactly("INVALID_VARIABLE_FORMAT");
+        assertThat(response.getIssues().get(0).getTargetText()).isEqualTo(content);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"#{고객명", "#{}", "#{고객명 님}", "#{고객명!}"})
+    void 미완성되거나_내부_문자가_잘못된_표준_변수는_FAIL이다(String content) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.INFO, content, List.of("#{고객명}"))
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
+        assertThat(ruleIds(response)).containsExactly("INVALID_VARIABLE_FORMAT");
+        assertThat(response.getIssues().get(0).getTargetText()).isEqualTo(content);
+    }
+
+    @Test
+    void 일반_해시태그와_대괄호_문구는_변수_형식_오류가_아니다() {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.INFO, "#여름세일 [이벤트] 안내", List.of())
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.getIssues()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"#{이벤트}", "#{만료일}"})
+    void 형식은_정상이지만_프로젝트에_정의되지_않은_변수는_FAIL이다(String variable) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.INFO, variable, List.of(variable))
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
+        assertThat(ruleIds(response)).containsExactly("UNSUPPORTED_VARIABLE");
+        assertThat(response.getIssues().get(0).getTargetText()).isEqualTo(variable);
+    }
+
+    @Test
+    void 수신거부_문구만_있으면_MISSING_OPT_OUT이다() {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.AD, "(광고) 안내 무료수신거부", List.of())
+        );
+
+        assertThat(ruleIds(response)).containsExactly("MISSING_OPT_OUT");
+    }
+
+    @Test
+    void 수신거부_번호만_있으면_MISSING_OPT_OUT이다() {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.AD, "(광고) 안내 080-000-0000", List.of())
+        );
+
+        assertThat(ruleIds(response)).containsExactly("MISSING_OPT_OUT");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "(광고) 안내 무료수신거부 080-000-0000",
+            "(광고) 안내 수신거부 080-0000-0000"
+    })
+    void 수신거부_문구와_허용된_080_번호가_있으면_PASS이다(String content) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.AD, content, List.of())
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.getIssues()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "(광고) 안내 무료수신거부 080-00-0000",
+            "(광고) 안내 무료수신거부 080-00000-0000",
+            "(광고) 안내 무료수신거부 010-1234-5678"
+    })
+    void 수신거부_번호_형식이_잘못되면_MISSING_OPT_OUT이다(String content) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.AD, content, List.of())
+        );
+
+        assertThat(ruleIds(response)).contains("MISSING_OPT_OUT");
     }
 
     @Test
