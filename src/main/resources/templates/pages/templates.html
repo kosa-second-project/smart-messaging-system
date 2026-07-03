@@ -4,6 +4,162 @@
       layout:decorate="~{layout/default-layout}">
 <head>
     <title>템플릿 관리</title>
+    <link rel="stylesheet" th:href="@{/css/pages/templates.css}">
 </head>
-<main layout:fragment="content" class="page"></main>
+<main layout:fragment="content" class="page">
+    <link rel="stylesheet" th:href="@{/css/pages/templates.css}">
+
+    <div class="template-page">
+        <section class="template-toolbar" aria-label="템플릿 검색 및 필터">
+            <div class="template-toolbar__filters">
+                <div class="template-search">
+                    <svg class="template-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input id="templateKeywordInput" type="text" class="ds-input template-search__input" placeholder="템플릿명, 내용, 카테고리 검색...">
+                </div>
+
+                <select id="templateCategoryFilter" class="ds-select template-filter-select">
+                    <option value="">전체 카테고리</option>
+                </select>
+
+                <select id="templateChannelFilter" class="ds-select template-filter-select">
+                    <option value="">전체 채널</option>
+                </select>
+
+                <select id="templatePurposeFilter" class="ds-select template-filter-select">
+                    <option value="">전체 광고여부</option>
+                </select>
+
+                <select id="templateSortSelect" class="ds-select template-filter-select">
+                    <option value="latest">최신순</option>
+                    <option value="title">이름순</option>
+                    <option value="useCount">사용 많은순</option>
+                </select>
+            </div>
+
+            <button type="button" class="ds-button ds-button--primary" onclick="openAddTemplateModal()">
+                <svg class="template-button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+                템플릿 추가
+            </button>
+        </section>
+
+        <section class="table-panel template-table-panel">
+            <div id="templateMobileList" class="template-mobile-list"></div>
+
+            <div class="table-scroll template-desktop-table">
+                <table class="ds-table template-table">
+                    <thead>
+                    <tr>
+                        <th>템플릿명</th>
+                        <th class="template-col-lg">카테고리</th>
+                        <th>광고여부</th>
+                        <th>채널</th>
+                        <th class="template-col-lg">사용 횟수</th>
+                        <th>수정일</th>
+                    </tr>
+                    </thead>
+                    <tbody id="templateTableBody">
+                    <tr>
+                        <td colspan="6" class="template-empty-cell">데이터를 불러오는 중입니다...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ds-pagination">
+                <span id="templatePageInfo" class="ds-pagination__summary">불러오는 중...</span>
+                <div id="templatePaginationButtons" class="ds-pagination__pages"></div>
+            </div>
+        </section>
+
+        <div id="templateDetailModal" class="ds-modal" onclick="closeTemplateDetailOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel template-detail-modal">
+                <div class="ds-modal__header">
+                    <h3 class="ds-modal__title">템플릿 상세</h3>
+                    <button type="button" class="ds-icon-button" onclick="closeTemplateDetailModal()" aria-label="닫기">×</button>
+                </div>
+                <div id="templateDetailBody" class="ds-modal__body"></div>
+            </div>
+        </div>
+
+        <div id="templateAddModal" class="ds-modal" onclick="closeAddTemplateOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel template-add-modal">
+                <div class="ds-modal__header">
+                    <h3 class="ds-modal__title">새 템플릿 추가</h3>
+                    <button type="button" class="ds-icon-button" onclick="closeAddTemplateModal()" aria-label="닫기">×</button>
+                </div>
+
+                <form id="templateForm">
+                    <div class="ds-modal__body">
+                        <div class="template-form-layout">
+                            <div class="template-form-fields">
+                                <label class="ds-field">
+                                    <span class="ds-label">템플릿명</span>
+                                    <input id="templateTitle" type="text" class="ds-input" maxlength="120" required>
+                                </label>
+
+                                <div class="template-form-grid">
+                                    <div class="ds-field">
+                                        <span class="ds-label">채널</span>
+                                        <div id="templateChannelCheckboxes" class="template-channel-grid"></div>
+                                    </div>
+
+                                    <label class="ds-field">
+                                        <span class="ds-label">카테고리</span>
+                                        <select id="templateCategory" class="ds-select" required>
+                                            <option value="">카테고리 선택</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div class="template-form-grid">
+                                    <label class="ds-field">
+                                        <span class="ds-label">광고여부</span>
+                                        <input id="templatePurpose" type="hidden" value="AD">
+                                        <div class="template-purpose-grid" role="group" aria-label="광고여부">
+                                            <button type="button" class="template-purpose-option is-active" data-purpose-value="AD">광고</button>
+                                            <button type="button" class="template-purpose-option" data-purpose-value="INFO">정보성</button>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <label class="ds-field">
+                                    <span class="ds-label">메시지 내용</span>
+                                    <textarea id="templateContent" class="ds-textarea template-content-input" rows="8" maxlength="2000" required></textarea>
+                                    <span id="templateContentCount" class="ds-help">0자</span>
+                                </label>
+                            </div>
+
+                            <section class="template-form-preview">
+                                <div class="template-preview-header">
+                                    <span>미리보기</span>
+                                    <div class="ds-segment">
+                                        <button type="button" class="ds-segment__item is-active" data-preview-mode="message">메시지</button>
+                                        <button type="button" class="ds-segment__item" data-preview-mode="kakao">카카오톡</button>
+                                        <button type="button" class="ds-segment__item" data-preview-mode="email">이메일</button>
+                                    </div>
+                                </div>
+                                <div id="templateFormPreview"></div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="ds-modal__footer">
+                        <button type="button" class="ds-button ds-button--outline" onclick="closeAddTemplateModal()">취소</button>
+                        <button type="submit" class="ds-button ds-button--primary">저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/pages/templates.js}"></script>
+</main>
 </html>
