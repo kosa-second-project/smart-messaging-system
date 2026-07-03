@@ -299,4 +299,98 @@
         FROM dual
     </insert>
 
+    <!--
+        기존 channel_stat 활성 row를 전부 soft-delete 처리한다.
+
+        channel_stat에는 stat_date가 없기 때문에 특정 날짜 row만 지우는 것이 아니라
+        현재 활성 채널 성과 스냅샷 전체를 교체한다.
+    -->
+    <update id="softDeleteChannelStat">
+        UPDATE channel_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        채널별 성과 통계를 insert 한다.
+
+        수집 기준:
+        - click_target_count: short_url이 발급된 대상 수
+        - click_count: short_url을 실제 클릭한 수
+        - conversion_target_count: 전환 측정 대상 수. 현재는 short_url 발급 대상을 전환 대상과 동일하게 본다.
+        - conversion_count: short_url에서 전환 처리된 수
+        - consent_target_count: 해당 채널 수신 동의 설정 row가 있는 고객 수
+        - consent_count: 그중 수신 동의가 켜져 있는 고객 수
+
+        short_url은 send_target_id만 가지고 있으므로,
+        send_target.final_channel_id를 통해 어떤 채널의 성과인지 판단한다.
+    -->
+    <insert id="insertChannelStat">
+        INSERT INTO channel_stat (
+            click_target_count,
+            click_count,
+            conversion_target_count,
+            conversion_count,
+            consent_target_count,
+            consent_count,
+            channel_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            NVL(url_stat.click_target_count, 0),
+            NVL(url_stat.click_count, 0),
+            NVL(url_stat.conversion_target_count, 0),
+            NVL(url_stat.conversion_count, 0),
+            NVL(consent_stat.consent_target_count, 0),
+            NVL(consent_stat.consent_count, 0),
+            ch.id,
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM channel ch
+        LEFT JOIN (
+            SELECT
+                st.final_channel_id AS channel_id,
+                COUNT(su.id) AS click_target_count,
+                SUM(CASE WHEN su.is_clicked = 1 THEN 1 ELSE 0 END) AS click_count,
+                COUNT(su.id) AS conversion_target_count,
+                SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) AS conversion_count
+            FROM short_url su
+            INNER JOIN send_target st
+                    ON st.id = su.send_target_id
+                   AND NVL(st.is_deleted, 0) = 0
+            INNER JOIN send_history sh
+                    ON sh.id = st.send_history_id
+                   AND NVL(sh.is_deleted, 0) = 0
+            WHERE NVL(su.is_deleted, 0) = 0
+              AND sh.status = 'SENT'
+              AND st.final_channel_id IS NOT NULL
+            GROUP BY st.final_channel_id
+        ) url_stat
+               ON url_stat.channel_id = ch.id
+        LEFT JOIN (
+            SELECT
+                ccc.channel_id,
+                COUNT(DISTINCT ccc.customer_id) AS consent_target_count,
+                COUNT(DISTINCT CASE WHEN NVL(ccc.is_consented, 0) = 1 THEN ccc.customer_id END) AS consent_count
+            FROM customer_channel_consent ccc
+            INNER JOIN customer c
+                    ON c.id = ccc.customer_id
+                   AND NVL(c.is_deleted, 0) = 0
+            WHERE NVL(ccc.is_deleted, 0) = 0
+            GROUP BY ccc.channel_id
+        ) consent_stat
+               ON consent_stat.channel_id = ch.id
+        WHERE NVL(ch.is_deleted, 0) = 0
+    </insert>
+
 </mapper>

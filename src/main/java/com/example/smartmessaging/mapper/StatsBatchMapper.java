@@ -64,4 +64,18 @@ public interface StatsBatchMapper {
             @Param("statDate") LocalDate statDate,
             @Param("systemUserId") Long systemUserId
     );
+
+    /**
+     * 기존 channel_stat 활성 row를 전부 soft-delete 처리한다.
+     */
+    int softDeleteChannelStat(
+            @Param("systemUserId") Long systemUserId
+    );
+
+    /**
+     * 채널별 클릭, 전환, 수신 동의 누적 성과를 channel_stat에 insert 한다.
+     */
+    int insertChannelStat(
+            @Param("systemUserId") Long systemUserId
+    );
 }

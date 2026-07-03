@@ -81,4 +81,23 @@ public class StatsBatchService {
                 insertedCount
         );
     }
+
+    /**
+     * channel_stat 채널별 누적 성과 통계를 집계한다.
+     *
+     * channel_stat에는 stat_date 컬럼이 없기 때문에 특정 날짜 하루치가 아니라
+     * 현재 원천 데이터 기준의 채널별 전체 성과 스냅샷을 다시 만든다.
+     */
+    @Transactional
+    public void aggregateChannelStat(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteChannelStat(systemUserId);
+        int insertedCount = statsBatchMapper.insertChannelStat(systemUserId);
+
+        log.info(
+                "[StatsBatch] channel_stat aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
+    }
 }
