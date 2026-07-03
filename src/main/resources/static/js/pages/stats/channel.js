@@ -94,9 +94,11 @@ function renderChannelShareLegend(chart) {
     const colors = ["#F7E600", "#1843FA", "#10B981", "#0EA5E9"];
 
     $("#channelShareLegend").html((chart.labels || []).map(function(label, index) {
+        const color = colors[index % colors.length];
+
         return `
             <div class="stats-channel-share__legend-row">
-                <span class="stats-channel-share__swatch" style="background:${colors[index]}"></span>
+                <span class="stats-channel-share__swatch" style="background:${color}"></span>
                 <span>${escapeHtml(label)}</span>
                 <span class="stats-channel-share__value">${escapeHtml(values[index])}%</span>
             </div>
