@@ -254,32 +254,93 @@ const MessageComposer = {
                 return;
             }
 
-            if (!confirm("모든 카카오 친구에게 다이렉트로 메시지를 발송하시겠습니까?")) {
-                return;
-            }
-
-            const payload = {
-                title: title,
-                description: content
-            };
-
-            const $btn = $(this);
-            const originalText = $btn.html();
-            $btn.prop("disabled", true).text("전체 발송 중...");
-
+            // Fetch friends and render modal
             $.ajax({
-                url: '/api/send/kakao/all',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                success: function (res) {
-                    $btn.prop("disabled", false).html(originalText);
-                    alert(res.message || "모든 카카오 친구에게 발송을 성공했습니다!");
+                url: '/api/send/kakao/friends',
+                type: 'GET',
+                success: function (friends) {
+                    if (!friends || friends.length === 0) {
+                        alert("카카오톡 친구 목록이 없습니다. (메시지 수신 동의 필요)");
+                        return;
+                    }
+                    
+                    let modalHtml = `
+                        <div class="modal-overlay" id="kakaoFriendsOverlay"></div>
+                        <div class="kakao-friends-modal" id="kakaoFriendsModal">
+                            <div class="modal-header">
+                                <h3>카카오 친구 선택</h3>
+                                <button type="button" class="btn-close-modal" id="btnCloseKakaoModal">✕</button>
+                            </div>
+                            <div class="modal-body" style="max-height:300px; overflow-y:auto; padding:15px;">
+                                <ul style="list-style:none; padding:0; margin:0;">
+                    `;
+                    
+                    friends.forEach(f => {
+                        modalHtml += `
+                            <li style="padding:10px; border-bottom:1px solid #eee; display:flex; align-items:center;">
+                                <input type="radio" name="selectedKakaoFriend" value="${f.uuid}" id="kf_${f.uuid}" style="margin-right:10px;">
+                                <label for="kf_${f.uuid}" style="cursor:pointer;">${escapeHtml(f.profile_nickname) || '이름 없음'}</label>
+                            </li>
+                        `;
+                    });
+                    
+                    modalHtml += `
+                                </ul>
+                            </div>
+                            <div class="modal-footer" style="padding:15px; border-top:1px solid #eee; text-align:right;">
+                                <button type="button" class="ds-button ds-button--primary" id="btnSubmitKakaoFriend">선택 발송</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $("body").append(modalHtml);
+                    
+                    // Bind events for modal
+                    $("#btnCloseKakaoModal, #kakaoFriendsOverlay").on("click", function() {
+                        $("#kakaoFriendsOverlay, #kakaoFriendsModal").remove();
+                    });
+                    
+                    $("#btnSubmitKakaoFriend").on("click", function() {
+                        const selectedUuid = $("input[name='selectedKakaoFriend']:checked").val();
+                        if (!selectedUuid) {
+                            alert("발송할 친구를 선택해주세요.");
+                            return;
+                        }
+                        
+                        if (!confirm("선택한 친구에게 다이렉트로 메시지를 발송하시겠습니까?")) {
+                            return;
+                        }
+                        
+                        const payload = {
+                            title: title,
+                            description: content,
+                            targetUuids: [selectedUuid]
+                        };
+                        
+                        const $btnSubmit = $("#btnSubmitKakaoFriend");
+                        const originalText = $btnSubmit.html();
+                        $btnSubmit.prop("disabled", true).text("발송 중...");
+                        
+                        $.ajax({
+                            url: '/api/send/kakao',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(payload),
+                            success: function (res) {
+                                $btnSubmit.prop("disabled", false).html(originalText);
+                                alert(res.message || "카카오 친구에게 발송을 성공했습니다!");
+                                $("#kakaoFriendsOverlay, #kakaoFriendsModal").remove();
+                            },
+                            error: function (err) {
+                                $btnSubmit.prop("disabled", false).html(originalText);
+                                console.error("카카오 발송 실패:", err);
+                                alert(err.responseJSON && err.responseJSON.message ? err.responseJSON.message : "카카오톡 발송에 실패했습니다.");
+                            }
+                        });
+                    });
                 },
-                error: function (err) {
-                    $btn.prop("disabled", false).html(originalText);
-                    console.error("카카오 전체 발송 실패:", err);
-                    alert(err.responseJSON && err.responseJSON.message ? err.responseJSON.message : "카카오톡 전체 발송에 실패했습니다.");
+                error: function () {
+                    alert("카카오 친구 목록을 불러오는 데 실패했습니다.");
                 }
             });
         });

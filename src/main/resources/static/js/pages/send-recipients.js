@@ -134,14 +134,19 @@ const RecipientSelector = {
         $("#thCheckAll").on("change", function () {
             const isChecked = this.checked;
             const items = [];
+            const originalStates = [];
 
             $(".customer-checkbox").each(function () {
-                const userId = Number($(this).data("id"));
-                $(this).prop("checked", isChecked);
+                const $chk = $(this);
+                const userId = Number($chk.data("id"));
+                originalStates.push({ elem: this, checked: $chk.prop("checked") });
+                $chk.prop("checked", isChecked);
                 items.push({ customerId: userId, action: isChecked ? "ADD" : "REMOVE" });
             });
 
             if (items.length === 0) return;
+
+            const originalCheckAll = !isChecked;
 
             self.ensureDraft(function (draftId) {
                 DraftApi.patchRecipients(draftId, items)
@@ -153,10 +158,10 @@ const RecipientSelector = {
                     })
                     .fail(function () {
                         alert("전체 선택 동기화에 실패했습니다. 다시 시도해주세요.");
-                        $(".customer-checkbox").each(function () {
-                            $(this).prop("checked", !isChecked);
+                        originalStates.forEach(state => {
+                            $(state.elem).prop("checked", state.checked);
                         });
-                        $("#thCheckAll").prop("checked", !isChecked);
+                        $("#thCheckAll").prop("checked", originalCheckAll);
                     });
             });
         });

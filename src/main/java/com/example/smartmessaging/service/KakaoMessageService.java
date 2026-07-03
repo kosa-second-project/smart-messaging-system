@@ -20,12 +20,28 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import java.time.Duration;
+
+import org.springframework.beans.factory.annotation.Value;
+
 @Slf4j
 @Service
 public class KakaoMessageService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Value("${app.base-url:http://localhost:8080}")
+    private String appBaseUrl;
+
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+
+    public KakaoMessageService(RestTemplateBuilder restTemplateBuilder, ObjectMapper objectMapper) {
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(5))
+                .setReadTimeout(Duration.ofSeconds(5))
+                .build();
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * 카카오톡 친구 목록 API를 호출하여 친구들의 uuid 목록을 가져옵니다.
@@ -82,8 +98,8 @@ public class KakaoMessageService {
                 "object_type", "text",
                 "text", safeTitle + "\n\n" + safeDescription,
                 "link", Map.of(
-                        "web_url", "http://localhost:8080",
-                        "mobile_web_url", "http://localhost:8080"
+                        "web_url", appBaseUrl,
+                        "mobile_web_url", appBaseUrl
                 )
         );
 
@@ -111,7 +127,7 @@ public class KakaoMessageService {
 
                     log.info("카카오톡 개별 발송 결과 (uuid: {}): {}", uuid, response.getBody());
                     hasSuccess = true;
-                } catch (RestClientException e) {
+                } catch (Exception e) {
                     log.error("Kakao API send message error for uuid: {}", uuid, e);
                     // 실패한 건이 있어도 다음 uuid 발송을 위해 계속 진행합니다.
                 }
@@ -144,8 +160,8 @@ public class KakaoMessageService {
                 "object_type", "text",
                 "text", safeTitle + "\n\n" + safeDescription,
                 "link", Map.of(
-                        "web_url", "http://localhost:8080",
-                        "mobile_web_url", "http://localhost:8080"
+                        "web_url", appBaseUrl,
+                        "mobile_web_url", appBaseUrl
                 )
         );
 

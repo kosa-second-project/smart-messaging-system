@@ -102,14 +102,14 @@ const SendPage = {
             }
         });
 
-        // 페이지 언로드 시 (이탈이 확정된 시점) sessionStorage 파기
-        window.addEventListener("unload", function () {
-            if (self.state.draftId && !self.isNavigatingInternal) {
+        // 브라우저 이탈 또는 백그라운드 전환 시 (이탈이 확정된 시점) sessionStorage 파기 및 Redis 정리
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === 'hidden' && self.state.draftId && !self.isNavigatingInternal) {
                 sessionStorage.removeItem("draftId");
                 sessionStorage.removeItem("draftTotalCount");
-                // (선택사항) navigator.sendBeacon을 통해 Redis 즉시 삭제 가능
                 if (navigator.sendBeacon) {
-                    navigator.sendBeacon("/api/campaigns/draft/" + self.state.draftId);
+                    // beacon은 무조건 POST를 사용하므로 cleanup 전용 엔드포인트 호출
+                    navigator.sendBeacon("/api/campaigns/draft/" + self.state.draftId + "/cleanup");
                 }
             }
         });

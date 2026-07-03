@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.smartmessaging.security.CustomUserDetails;
+import com.example.smartmessaging.dto.request.UpdateRecipientsRequest;
+import com.example.smartmessaging.dto.request.RecipientItem;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -79,30 +82,21 @@ public class CampaignDraftApiController {
     @PatchMapping("/draft/{draftId}/recipients")
     public ResponseEntity<Map<String, Object>> updateRecipients(
             @PathVariable String draftId,
-            @RequestBody Map<String, List<Map<String, Object>>> body,
+            @Valid @RequestBody UpdateRecipientsRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        List<Map<String, Object>> items = body.get("items");
-        if (items == null || items.isEmpty()) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
             return ResponseEntity.ok(Map.of());
         }
 
-        for (Map<String, Object> item : items) {
-            Object rawId = item.get("customerId");
-            Object rawAction = item.get("action");
-            if (rawId == null || rawAction == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "customerId and action are required"));
-            }
-            try {
-                Long customerId = Long.parseLong(rawId.toString());
-                String action = rawAction.toString();
-                if ("REMOVE".equals(action)) {
-                    draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
-                } else if ("ADD".equals(action)) {
-                    draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
-                }
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest().body(Map.of("error", "invalid customerId: " + rawId));
+        for (RecipientItem item : request.getItems()) {
+            Long customerId = item.getCustomerId();
+            String action = item.getAction();
+            
+            if ("REMOVE".equals(action)) {
+                draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
+            } else if ("ADD".equals(action)) {
+                draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
             }
         }
 
@@ -116,6 +110,17 @@ public class CampaignDraftApiController {
      */
     @DeleteMapping("/draft/{draftId}")
     public ResponseEntity<Map<String, Object>> deleteDraft(
+            @PathVariable String draftId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        draftService.deleteDraft(userDetails.getUserId(), draftId);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
+     * sendBeacon 호환용 POST 삭제 엔드포인트
+     */
+    @PostMapping("/draft/{draftId}/cleanup")
+    public ResponseEntity<Map<String, Object>> cleanupDraft(
             @PathVariable String draftId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         draftService.deleteDraft(userDetails.getUserId(), draftId);

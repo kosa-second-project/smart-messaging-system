@@ -187,7 +187,7 @@ public class CampaignDraftService {
                         }
                         return null;
                     }
-                });
+                }, redisTemplate.getStringSerializer());
 
         Map<Long, Boolean> statusMap = new HashMap<>();
         for (int i = 0; i < customerIds.size(); i++) {

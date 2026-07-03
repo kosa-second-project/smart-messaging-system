@@ -19,13 +19,19 @@ public class SendApiController {
 
     private final KakaoMessageService kakaoMessageService;
 
+    private String getKakaoAccessToken(HttpSession session) {
+        String token = (String) session.getAttribute("kakaoAccessToken");
+        return (token != null && !token.isEmpty()) ? token : null;
+    }
+
+    private ResponseEntity<?> unauthorizedResponse() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "카카오 로그인이 필요합니다."));
+    }
+
     @GetMapping("/kakao/friends")
     public ResponseEntity<?> getKakaoFriends(HttpSession session) {
-        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
-        
-        if (kakaoAccessToken == null || kakaoAccessToken.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("message", "카카오 로그인이 필요합니다."));
-        }
+        String kakaoAccessToken = getKakaoAccessToken(session);
+        if (kakaoAccessToken == null) return unauthorizedResponse();
 
         List<com.example.smartmessaging.dto.response.KakaoFriendElement> friends = kakaoMessageService.getKakaoFriends(kakaoAccessToken);
         return ResponseEntity.ok(friends);
@@ -33,11 +39,8 @@ public class SendApiController {
 
     @PostMapping("/kakao")
     public ResponseEntity<?> sendKakaoMessage(@RequestBody KakaoFeedMessageRequest request, HttpSession session) {
-        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
-        
-        if (kakaoAccessToken == null || kakaoAccessToken.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("message", "카카오 로그인이 필요합니다."));
-        }
+        String kakaoAccessToken = getKakaoAccessToken(session);
+        if (kakaoAccessToken == null) return unauthorizedResponse();
 
         List<String> targetUuids = request.getTargetUuids();
         
@@ -57,12 +60,8 @@ public class SendApiController {
 
     @PostMapping("/kakao/me")
     public ResponseEntity<?> sendKakaoMessageToMe(@RequestBody KakaoFeedMessageRequest request, HttpSession session) {
-        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
-        
-        if (kakaoAccessToken == null || kakaoAccessToken.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Kakao access token not found. Please login again."));
-        }
+        String kakaoAccessToken = getKakaoAccessToken(session);
+        if (kakaoAccessToken == null) return unauthorizedResponse();
 
         boolean isSuccess = kakaoMessageService.sendMemoMessage(kakaoAccessToken, request.getTitle(), request.getDescription());
         
@@ -70,11 +69,8 @@ public class SendApiController {
     }
     @PostMapping("/kakao/all")
     public ResponseEntity<?> sendKakaoMessageToAll(@RequestBody KakaoFeedMessageRequest request, HttpSession session) {
-        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
-        
-        if (kakaoAccessToken == null || kakaoAccessToken.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("message", "카카오 로그인이 필요합니다."));
-        }
+        String kakaoAccessToken = getKakaoAccessToken(session);
+        if (kakaoAccessToken == null) return unauthorizedResponse();
 
         boolean isSuccess = kakaoMessageService.sendFeedMessageToAll(kakaoAccessToken, request.getTitle(), request.getDescription());
 

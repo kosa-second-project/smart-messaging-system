@@ -211,6 +211,16 @@
   font-weight: var(--font-weight-bold);
 }
 
+.app-header__avatar--unlinked {
+  background-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+.app-header__avatar--linked {
+  background-color: #FEE500;
+  color: #000000;
+}
+
 .app-mobile-backdrop {
   position: fixed;
   inset: 0;
