@@ -217,7 +217,7 @@ const StatsChart = (function() {
     function composedTrend(canvas, rows) {
         const labels = rows.map(function(row) { return row.label; });
         const rates = rows.map(function(row) {
-            return Number(((row.success / row.sends) * 100).toFixed(1));
+            return row.sends > 0 ? Number(((row.success / row.sends) * 100).toFixed(1)) : 0;
         });
 
         return render(canvas, {
@@ -273,8 +273,6 @@ const StatsChart = (function() {
                     },
                     rate: {
                         position: "right",
-                        min: 90,
-                        max: 100,
                         grid: { display: false },
                         ticks: {
                             color: labelColor,
