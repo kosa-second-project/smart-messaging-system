@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * DB 조회나 외부 AI 호출, RAG 검색 없이 확정 가능한 1차 서버 룰만 수행한다.
@@ -33,16 +34,25 @@ public class RuleValidationService {
     private static final String PERSONAL_EMAIL = "PERSONAL_EMAIL";
     private static final String PERSONAL_RRN = "PERSONAL_RRN";
 
-    private static final Set<String> SUPPORTED_VARIABLES = Set.of(
-            "#{고객명}", "#{주문번호}", "#{쿠폰명}"
+    private static final Set<String> SUPPORTED_VARIABLE_NAMES = Set.of(
+            "고객명", "주문번호", "쿠폰명"
     );
+    private static final Set<String> SUPPORTED_VARIABLES = SUPPORTED_VARIABLE_NAMES.stream()
+            .map(name -> "#{" + name + "}")
+            .collect(Collectors.toUnmodifiableSet());
 
-    private static final Pattern VALID_VARIABLE_PATTERN = Pattern.compile("#\\{[가-힣A-Za-z0-9_]+}");
+    private static final String KNOWN_VARIABLE_NAME_PATTERN = SUPPORTED_VARIABLE_NAMES.stream()
+            .sorted()
+            .map(Pattern::quote)
+            .collect(Collectors.joining("|", "(?:", ")"));
+
+    private static final Pattern VALID_VARIABLE_PATTERN = Pattern.compile(
+            "#\\{[가-힣A-Za-z0-9_]+}"
+    );
     private static final Pattern VARIABLE_START_PATTERN = Pattern.compile("#\\{");
 
     // #{고객명} #{주문번호} #{쿠폰명} 문구를 검증
     // 정해진 변수명의 대체 표기만 검사해 일반 문구의 오탐을 방지하도록 하였음
-    private static final String KNOWN_VARIABLE_NAME_PATTERN = "(?:고객명|주문번호|쿠폰명)";
     private static final Pattern ALTERNATE_VARIABLE_PATTERN = Pattern.compile(
             "\\$\\{" + KNOWN_VARIABLE_NAME_PATTERN + "}"
                     + "|(?<![$#])\\{" + KNOWN_VARIABLE_NAME_PATTERN + "}"

@@ -71,7 +71,7 @@ class RuleValidationServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{고객명}", "${고객명}", "#고객명", "[고객명]"})
+    @ValueSource(strings = {"{고객명}", "${주문번호}", "#쿠폰명", "[고객명]"})
     void 알려진_변수명의_잘못된_대체_표기는_FAIL이다(String content) {
         AiReviewResponse response = ruleValidationService.review(
                 request(MessageType.INFO, content, List.of("#{고객명}"))
@@ -80,6 +80,17 @@ class RuleValidationServiceTest {
         assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
         assertThat(ruleIds(response)).containsExactly("INVALID_VARIABLE_FORMAT");
         assertThat(response.getIssues().get(0).getTargetText()).isEqualTo(content);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"#{고객명}", "#{주문번호}", "#{쿠폰명}"})
+    void 프로젝트_표준_변수는_허용_목록에_있으면_PASS이다(String variable) {
+        AiReviewResponse response = ruleValidationService.review(
+                request(MessageType.INFO, variable, List.of(variable))
+        );
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.getIssues()).isEmpty();
     }
 
     @ParameterizedTest
