@@ -282,7 +282,11 @@ function createPageButton(label, disabled, onClick) {
     return button;
 }
 
+let currentDetailItem = null;
+let currentDetailPreviewMode = null;
+
 function openTemplateDetailModal(templateId) {
+    currentDetailPreviewMode = null; // 초기화
     const body = document.getElementById("templateDetailBody");
     body.innerHTML = `<div class="template-empty-cell">상세 정보를 불러오는 중입니다...</div>`;
     document.getElementById("templateDetailModal").classList.add("is-open");
@@ -290,6 +294,7 @@ function openTemplateDetailModal(templateId) {
     fetch(`/api/templates/${templateId}`)
         .then(res => res.json())
         .then(data => {
+            currentDetailItem = data;
             body.innerHTML = renderTemplateDetail(data);
         })
         .catch(err => {
@@ -299,6 +304,10 @@ function openTemplateDetailModal(templateId) {
 }
 
 function renderTemplateDetail(item) {
+    if (!currentDetailPreviewMode) {
+        currentDetailPreviewMode = inferPreviewMode(item);
+    }
+
     return `
         <div class="template-detail">
             <div class="template-detail__summary">
@@ -311,7 +320,7 @@ function renderTemplateDetail(item) {
                         </div>
                         <div class="template-detail__meta-item">
                             <span class="template-detail__label">카테고리</span>
-                            <span class="template-detail__value">${escapeHtml(getCategoryLabel(item.category))}</span>
+                            <span class="template-detail__value">${escapeHtml(item.categoryDisplayName || getCategoryLabel(item.category))}</span>
                         </div>
                         <div class="template-detail__meta-item">
                             <span class="template-detail__label">광고여부</span>
@@ -329,14 +338,52 @@ function renderTemplateDetail(item) {
                 ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
             </div>
 
-            <div class="template-detail__content template-detail__content--single">
+            <div class="template-detail__content">
+                <!-- 좌측: 메시지 내용 -->
                 <section>
                     <div class="template-detail__metric-label">메시지 내용</div>
-                    <div class="template-message-box">${escapeHtml(item.content || "")}</div>
+                    <div class="template-message-box" style="white-space: pre-wrap; word-break: break-all;">${escapeHtml(item.content || "")}</div>
+                </section>
+
+                <!-- 우측: 채널별 미리보기 -->
+                <section class="template-detail-preview">
+                    <div class="template-preview-header">
+                        <span>미리보기</span>
+                        <div class="ds-segment">
+                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'message' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('message')">메시지</button>
+                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'kakao' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('kakao')">카카오톡</button>
+                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'email' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('email')">이메일</button>
+                        </div>
+                    </div>
+                    <div id="templateDetailPreview">
+                        ${renderMessagePreview(item.title, item.content, currentDetailPreviewMode, true)}
+                    </div>
                 </section>
             </div>
         </div>
     `;
+}
+
+function switchDetailPreviewMode(mode) {
+    currentDetailPreviewMode = mode;
+    
+    // 세그먼트 버튼 활성화 클래스 토글
+    const buttons = document.querySelectorAll(".template-detail-preview .ds-segment__item");
+    buttons.forEach(btn => {
+        const btnMode = btn.getAttribute("onclick").match(/'([^']+)'/)[1];
+        btn.classList.toggle("is-active", btnMode === mode);
+    });
+
+    // 미리보기 화면 갱신
+    const previewDiv = document.getElementById("templateDetailPreview");
+    if (previewDiv && currentDetailItem) {
+        previewDiv.innerHTML = renderMessagePreview(
+            currentDetailItem.title, 
+            currentDetailItem.content, 
+            mode, 
+            true
+        );
+    }
 }
 
 function renderMetric(label, value) {
@@ -479,20 +526,10 @@ function getCategoryLabel(category) {
 
     const key = String(category).trim().toUpperCase();
     const labels = {
-        GENERAL: "일반",
-        DEFAULT: "일반",
-        INFO: "안내",
-        INFORMATION: "안내",
-        NOTICE: "공지",
-        NOTIFICATION: "알림",
-        PROMOTION: "프로모션",
-        PROMOTIONAL: "프로모션",
-        EVENT: "이벤트",
         BENEFIT: "혜택",
-        COUPON: "쿠폰",
-        BIRTHDAY: "생일",
-        WELCOME: "환영",
-        REMINDER: "리마인드"
+        EVENT: "이벤트",
+        NOTICE: "공지",
+        CRM: "고객관리"
     };
 
     return labels[key] || category;

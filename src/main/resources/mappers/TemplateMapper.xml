@@ -13,7 +13,7 @@
                 OR t.purpose LIKE '%' || #{keyword} || '%'
             )
         </if>
-        <if test="category != null and category != ''">
+        <if test="category != null">
             AND t.category = #{category}
         </if>
         <if test="purpose != null and purpose != ''">
@@ -120,12 +120,18 @@
     <select id="selectCategoryOptions" resultType="TemplateFilterOptionResponse">
         SELECT DISTINCT
             category AS value,
-            category AS label
+            CASE 
+                WHEN category = 'BENEFIT' THEN '혜택'
+                WHEN category = 'EVENT' THEN '이벤트'
+                WHEN category = 'NOTICE' THEN '공지'
+                WHEN category = 'CRM' THEN '고객관리'
+                ELSE category 
+            END AS label
         FROM template
         WHERE NVL(is_deleted, 0) = 0
           AND user_id = #{userId}
-          AND category IS NOT NULL
-        ORDER BY category ASC
+          AND category IN ('BENEFIT', 'EVENT', 'NOTICE', 'CRM')
+        ORDER BY value ASC
     </select>
 
     <select id="selectPurposeOptions" resultType="TemplateFilterOptionResponse">
