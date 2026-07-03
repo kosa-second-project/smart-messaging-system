@@ -393,4 +393,160 @@
         WHERE NVL(ch.is_deleted, 0) = 0
     </insert>
 
+    <!--
+        특정 날짜의 기존 click_stat 활성 row를 soft-delete 처리한다.
+
+        click_stat은 stat_date + channel_id 기준으로 하루치 시간대 클릭 분포를 저장한다.
+        같은 날짜를 재집계할 수 있도록 기존 활성 row를 비활성화한 뒤 새 row를 insert 한다.
+    -->
+    <update id="softDeleteClickStat">
+        UPDATE click_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        short_url 클릭 이력을 기준으로 채널별 시간대 클릭 통계를 insert 한다.
+
+        수집 기준:
+        - short_url.is_clicked = 1
+        - short_url.clicked_at의 날짜가 statDate인 클릭
+        - send_target.final_channel_id 기준 채널 분류
+        - hour_00 ~ hour_23은 clicked_at의 시(hour)를 펼친 값
+
+        클릭이 없는 채널도 0으로 채운 row를 만들기 위해 channel을 기준 테이블로 두고
+        클릭 집계 결과를 LEFT JOIN 한다.
+    -->
+    <insert id="insertClickStat">
+        INSERT INTO click_stat (
+            id,
+            stat_date,
+            channel_id,
+            hour_00,
+            hour_01,
+            hour_02,
+            hour_03,
+            hour_04,
+            hour_05,
+            hour_06,
+            hour_07,
+            hour_08,
+            hour_09,
+            hour_10,
+            hour_11,
+            hour_12,
+            hour_13,
+            hour_14,
+            hour_15,
+            hour_16,
+            hour_17,
+            hour_18,
+            hour_19,
+            hour_20,
+            hour_21,
+            hour_22,
+            hour_23,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            CLICK_STAT_SEQ.NEXTVAL,
+            aggregated.stat_date,
+            aggregated.channel_id,
+            aggregated.hour_00,
+            aggregated.hour_01,
+            aggregated.hour_02,
+            aggregated.hour_03,
+            aggregated.hour_04,
+            aggregated.hour_05,
+            aggregated.hour_06,
+            aggregated.hour_07,
+            aggregated.hour_08,
+            aggregated.hour_09,
+            aggregated.hour_10,
+            aggregated.hour_11,
+            aggregated.hour_12,
+            aggregated.hour_13,
+            aggregated.hour_14,
+            aggregated.hour_15,
+            aggregated.hour_16,
+            aggregated.hour_17,
+            aggregated.hour_18,
+            aggregated.hour_19,
+            aggregated.hour_20,
+            aggregated.hour_21,
+            aggregated.hour_22,
+            aggregated.hour_23,
+            aggregated.created_at,
+            aggregated.updated_at,
+            aggregated.created_by,
+            aggregated.updated_by,
+            aggregated.is_deleted
+        FROM (
+            SELECT
+                #{statDate} AS stat_date,
+                ch.id AS channel_id,
+                NVL(SUM(CASE WHEN click_hour = 0 THEN click_count ELSE 0 END), 0) AS hour_00,
+                NVL(SUM(CASE WHEN click_hour = 1 THEN click_count ELSE 0 END), 0) AS hour_01,
+                NVL(SUM(CASE WHEN click_hour = 2 THEN click_count ELSE 0 END), 0) AS hour_02,
+                NVL(SUM(CASE WHEN click_hour = 3 THEN click_count ELSE 0 END), 0) AS hour_03,
+                NVL(SUM(CASE WHEN click_hour = 4 THEN click_count ELSE 0 END), 0) AS hour_04,
+                NVL(SUM(CASE WHEN click_hour = 5 THEN click_count ELSE 0 END), 0) AS hour_05,
+                NVL(SUM(CASE WHEN click_hour = 6 THEN click_count ELSE 0 END), 0) AS hour_06,
+                NVL(SUM(CASE WHEN click_hour = 7 THEN click_count ELSE 0 END), 0) AS hour_07,
+                NVL(SUM(CASE WHEN click_hour = 8 THEN click_count ELSE 0 END), 0) AS hour_08,
+                NVL(SUM(CASE WHEN click_hour = 9 THEN click_count ELSE 0 END), 0) AS hour_09,
+                NVL(SUM(CASE WHEN click_hour = 10 THEN click_count ELSE 0 END), 0) AS hour_10,
+                NVL(SUM(CASE WHEN click_hour = 11 THEN click_count ELSE 0 END), 0) AS hour_11,
+                NVL(SUM(CASE WHEN click_hour = 12 THEN click_count ELSE 0 END), 0) AS hour_12,
+                NVL(SUM(CASE WHEN click_hour = 13 THEN click_count ELSE 0 END), 0) AS hour_13,
+                NVL(SUM(CASE WHEN click_hour = 14 THEN click_count ELSE 0 END), 0) AS hour_14,
+                NVL(SUM(CASE WHEN click_hour = 15 THEN click_count ELSE 0 END), 0) AS hour_15,
+                NVL(SUM(CASE WHEN click_hour = 16 THEN click_count ELSE 0 END), 0) AS hour_16,
+                NVL(SUM(CASE WHEN click_hour = 17 THEN click_count ELSE 0 END), 0) AS hour_17,
+                NVL(SUM(CASE WHEN click_hour = 18 THEN click_count ELSE 0 END), 0) AS hour_18,
+                NVL(SUM(CASE WHEN click_hour = 19 THEN click_count ELSE 0 END), 0) AS hour_19,
+                NVL(SUM(CASE WHEN click_hour = 20 THEN click_count ELSE 0 END), 0) AS hour_20,
+                NVL(SUM(CASE WHEN click_hour = 21 THEN click_count ELSE 0 END), 0) AS hour_21,
+                NVL(SUM(CASE WHEN click_hour = 22 THEN click_count ELSE 0 END), 0) AS hour_22,
+                NVL(SUM(CASE WHEN click_hour = 23 THEN click_count ELSE 0 END), 0) AS hour_23,
+                SYSTIMESTAMP AS created_at,
+                SYSTIMESTAMP AS updated_at,
+                #{systemUserId} AS created_by,
+                #{systemUserId} AS updated_by,
+                0 AS is_deleted
+            FROM channel ch
+            LEFT JOIN (
+                SELECT
+                    st.final_channel_id AS channel_id,
+                    EXTRACT(HOUR FROM su.clicked_at) AS click_hour,
+                    COUNT(*) AS click_count
+                FROM short_url su
+                INNER JOIN send_target st
+                        ON st.id = su.send_target_id
+                       AND NVL(st.is_deleted, 0) = 0
+                INNER JOIN send_history sh
+                        ON sh.id = st.send_history_id
+                       AND NVL(sh.is_deleted, 0) = 0
+                WHERE NVL(su.is_deleted, 0) = 0
+                  AND su.is_clicked = 1
+                  AND su.clicked_at IS NOT NULL
+                  AND TRUNC(su.clicked_at) = #{statDate}
+                  AND sh.status = 'SENT'
+                  AND st.final_channel_id IS NOT NULL
+                GROUP BY st.final_channel_id, EXTRACT(HOUR FROM su.clicked_at)
+            ) click_hour_stat
+                   ON click_hour_stat.channel_id = ch.id
+            WHERE NVL(ch.is_deleted, 0) = 0
+            GROUP BY ch.id
+        ) aggregated
+    </insert>
+
 </mapper>

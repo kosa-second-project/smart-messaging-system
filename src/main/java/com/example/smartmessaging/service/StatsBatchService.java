@@ -100,4 +100,23 @@ public class StatsBatchService {
                 insertedCount
         );
     }
+
+    /**
+     * click_stat 시간대별 클릭 통계를 집계한다.
+     *
+     * short_url.clicked_at을 기준으로 statDate 하루 동안 발생한 클릭을
+     * 채널별, 시간대별로 펼쳐서 저장한다.
+     */
+    @Transactional
+    public void aggregateClickStat(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteClickStat(statDate, systemUserId);
+        int insertedCount = statsBatchMapper.insertClickStat(statDate, systemUserId);
+
+        log.info(
+                "[StatsBatch] click_stat aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
+    }
 }

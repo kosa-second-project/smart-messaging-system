@@ -30,13 +30,15 @@ public class StatsBatchJobConfig {
             Step messageStatStep,
             Step messageStatByDegreeStep,
             Step customerStatStep,
-            Step channelStatStep
+            Step channelStatStep,
+            Step clickStatStep
     ) {
         return new JobBuilder("statsDailyAggregationJob", jobRepository)
                 .start(messageStatStep)
                 .next(messageStatByDegreeStep)
                 .next(customerStatStep)
                 .next(channelStatStep)
+                .next(clickStatStep)
                 .build();
     }
 
@@ -154,6 +156,36 @@ public class StatsBatchJobConfig {
                     log.info("[StatsBatch] channelStatStep started - statDate: {}", statDate);
                     statsBatchService.aggregateChannelStat(statDate);
                     log.info("[StatsBatch] channelStatStep finished - statDate: {}", statDate);
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * click_stat 집계 Step.
+     *
+     * short_url.clicked_at 기준으로 statDate의 시간대별 클릭 수를 채널별로 집계한다.
+     */
+    @Bean
+    public Step clickStatStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            StatsBatchService statsBatchService
+    ) {
+        return new StepBuilder("clickStatStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    String statDateParameter = chunkContext
+                            .getStepContext()
+                            .getJobParameters()
+                            .get("statDate")
+                            .toString();
+
+                    LocalDate statDate = LocalDate.parse(statDateParameter);
+
+                    log.info("[StatsBatch] clickStatStep started - statDate: {}", statDate);
+                    statsBatchService.aggregateClickStat(statDate);
+                    log.info("[StatsBatch] clickStatStep finished - statDate: {}", statDate);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)

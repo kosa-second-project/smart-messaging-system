@@ -78,4 +78,20 @@ public interface StatsBatchMapper {
     int insertChannelStat(
             @Param("systemUserId") Long systemUserId
     );
+
+    /**
+     * 특정 통계일자의 기존 click_stat 활성 row를 soft-delete 처리한다.
+     */
+    int softDeleteClickStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
+
+    /**
+     * short_url 클릭 이력을 기준으로 특정 날짜의 채널별 시간대 클릭 통계를 insert 한다.
+     */
+    int insertClickStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
 }
