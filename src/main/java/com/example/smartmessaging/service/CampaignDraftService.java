@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
 /**
  * 발송 대상자 임시 보관(Draft) 서비스
  *
@@ -60,7 +59,7 @@ public class CampaignDraftService {
             final double score = i;
             tuples.add(new DefaultTypedTuple<>(id, score));
         }
-        
+
         if (!tuples.isEmpty()) {
             zset.add(key, tuples);
             redisTemplate.expire(key, TTL); // TTL 30분 설정
@@ -106,19 +105,20 @@ public class CampaignDraftService {
 
     // =============================================
     // 2. 현재 페이지에 해당하는 ID만 슬라이싱 (Java 힙 부하 없음)
-    //    ZRANGE key startIndex endIndex
+    // ZRANGE key startIndex endIndex
     // =============================================
     public List<Long> getPagedIds(Long userId, String draftId, int page, int size) {
         String key = KEY_PREFIX + userId + ":" + draftId;
-        long start = (long)(page - 1) * size;
-        long end   = start + size - 1;
+        long start = (long) (page - 1) * size;
+        long end = start + size - 1;
 
         Set<Object> ids = redisTemplate.opsForZSet().range(key, start, end);
-        if (ids == null || ids.isEmpty()) return List.of();
+        if (ids == null || ids.isEmpty())
+            return List.of();
 
         return ids.stream()
-                  .map(id -> Long.parseLong(id.toString()))
-                  .toList();
+                .map(id -> Long.parseLong(id.toString()))
+                .toList();
     }
 
     // =============================================
@@ -166,22 +166,33 @@ public class CampaignDraftService {
     }
 
     // =============================================
-    // 8. 현재 노출해야 할 고객 ID 목록에 대해 Redis에 임시 저장되어 있는지 여부만 맵으로 부분 조회 (O(log N * pageSize)로 메모리 부하 방지)
+    // 8. 현재 노출해야 할 고객 ID 목록에 대해 Redis에 임시 저장되어 있는지 여부만 맵으로 부분 조회 (O(log N *
+    // pageSize)로 메모리 부하 방지)
     // =============================================
     public Map<Long, Boolean> getRecipientStatusMap(Long userId, String draftId, List<Long> customerIds) {
         if (draftId == null || draftId.isBlank() || customerIds == null || customerIds.isEmpty()) {
             return Map.of();
         }
         String key = KEY_PREFIX + userId + ":" + draftId;
-        ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
-        
+
+        List<Object> results = redisTemplate
+                .executePipelined(new org.springframework.data.redis.core.SessionCallback<Object>() {
+                    @Override
+                    public Object execute(org.springframework.data.redis.core.RedisOperations operations)
+                            throws org.springframework.dao.DataAccessException {
+                        org.springframework.data.redis.core.ZSetOperations<String, Object> zsetOps = operations
+                                .opsForZSet();
+                        for (Long id : customerIds) {
+                            zsetOps.score(key, id);
+                        }
+                        return null;
+                    }
+                });
+
         Map<Long, Boolean> statusMap = new HashMap<>();
-        for (Long id : customerIds) {
-            Double score = zset.score(key, id);
-            statusMap.put(id, score != null);
+        for (int i = 0; i < customerIds.size(); i++) {
+            statusMap.put(customerIds.get(i), results.get(i) != null);
         }
         return statusMap;
     }
 }
-
-

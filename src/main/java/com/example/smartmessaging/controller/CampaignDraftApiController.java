@@ -16,9 +16,9 @@ import java.util.Map;
 /**
  * 발송 대상자 Draft(임시 저장) API 컨트롤러
  *
- * POST   /api/campaigns/draft                        - 조건 기반 전체 ID → Redis 저장 → draftId 반환
- * PATCH  /api/campaigns/draft/{draftId}/recipients   - 개별 추가/제거 배치 동기화
- * DELETE /api/campaigns/draft/{draftId}              - 발송 완료/취소 시 정리
+ * POST /api/campaigns/draft - 조건 기반 전체 ID → Redis 저장 → draftId 반환
+ * PATCH /api/campaigns/draft/{draftId}/recipients - 개별 추가/제거 배치 동기화
+ * DELETE /api/campaigns/draft/{draftId} - 발송 완료/취소 시 정리
  */
 @Slf4j
 @RestController
@@ -34,7 +34,8 @@ public class CampaignDraftApiController {
      * POST /api/campaigns/draft/empty
      */
     @PostMapping("/draft/empty")
-    public ResponseEntity<Map<String, Object>> createEmptyDraft(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> createEmptyDraft(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         String draftId = draftService.createEmptyDraft(userDetails.getUserId());
         return ResponseEntity.ok(Map.of("draftId", draftId, "totalCount", 0));
     }
@@ -72,7 +73,8 @@ public class CampaignDraftApiController {
     /**
      * 개별 체크박스 추가/제거 배치 동기화 (낙관적 업데이트와 함께 사용)
      * PATCH /api/campaigns/draft/{draftId}/recipients
-     * Body: { "items": [{"customerId": 5, "action": "REMOVE"}, {"customerId": 12, "action": "ADD"}] }
+     * Body: { "items": [{"customerId": 5, "action": "REMOVE"}, {"customerId": 12,
+     * "action": "ADD"}] }
      */
     @PatchMapping("/draft/{draftId}/recipients")
     public ResponseEntity<Map<String, Object>> updateRecipients(

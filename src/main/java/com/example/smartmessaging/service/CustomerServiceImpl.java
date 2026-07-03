@@ -7,6 +7,12 @@ import com.example.smartmessaging.dto.vo.CustomerVO;
 import com.example.smartmessaging.mapper.CustomerMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.smartmessaging.dto.request.CustomerSearchRequest;
+import com.example.smartmessaging.dto.response.CustomerSummaryResponse;
+import com.example.smartmessaging.dto.response.PagedCustomerResponse;
+import com.example.smartmessaging.dto.vo.CustomerVO;
+import com.example.smartmessaging.mapper.CustomerMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +25,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+
+@Service
+@RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerMapper customerMapper;
@@ -63,6 +72,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
         log.debug("[CustomerService] 메시지 발송용 고객 목록 조회 요청 - ActiveTab: {}", request.getActiveTab());
+    @Override
+    @Transactional(readOnly = true)
+    public PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request) {
 
         // 1. 고객 목록 조회
         List<CustomerVO> customers = customerMapper.findBySearch(request);
@@ -120,6 +132,11 @@ public class CustomerServiceImpl implements CustomerService {
                 .collect(Collectors.toList());
 
         // 7. 페이징 메타 계산 후 반환
+        // 다음 커서 ID 계산 (조회된 목록의 마지막 ID)
+        Long nextCursorId = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+        boolean hasNext = content.size() == request.getSize();
+
+        // 7. 페이징 메타 계산 후 반환 (totalCount/totalPages는 UI 편의상 유지 가능)
         int totalPages = request.getSize() > 0 ? (int) Math.ceil((double) totalCount / request.getSize()) : 0;
 
         return PagedCustomerResponse.builder()
@@ -141,6 +158,11 @@ public class CustomerServiceImpl implements CustomerService {
     // 3. 내부 유틸리티 메서드
     // ==========================================
 
+                .nextCursorId(nextCursorId)
+                .hasNext(hasNext)
+                .build();
+    }
+
     private String maskPhoneNumber(String phone) {
         if (phone == null || phone.isBlank()) {
             return "-";
@@ -153,5 +175,13 @@ public class CustomerServiceImpl implements CustomerService {
             return clean.replaceAll("(\\d{3})\\d{3}(\\d{4})", "$1-***-$2");
         }
         return phone; // 기타 규격 외 번호는 그대로 반환
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> getCustomerIds(CustomerSearchRequest request) {
+        // 페이지네이션 없이 필터 조건에 맞는 전체 고객 ID 목록 반환
+        // "필터 결과 전체 선택" 기능에서 사용
+        return customerMapper.findIdsBySearch(request);
     }
 }

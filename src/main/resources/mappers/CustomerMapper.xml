@@ -315,6 +315,19 @@
             #{tid}
         </foreach>
         AND  is_deleted = 0
+            SELECT customer_id
+            FROM   customer_tag_mapping
+            WHERE  tag_id = #{dormantTagId}
+              AND  is_deleted = 0
+        )
+        AND id IN (
+            SELECT customer_id
+            FROM   customer_tag_mapping
+            WHERE  tag_id IN
+            <foreach item="tid" collection="consentTagIds" open="(" separator="," close=")">
+                #{tid}
+            </foreach>
+              AND  is_deleted = 0
         )
         <if test="customerIds != null and customerIds.size() > 0">
             AND id IN
@@ -333,6 +346,14 @@
             AND  ctm.is_deleted = 0
             AND  t.is_deleted = 0
             ))
+              OR id IN (
+                  SELECT ctm.customer_id
+                  FROM   customer_tag_mapping ctm
+                  JOIN   tag t ON ctm.tag_id = t.id
+                  WHERE  t.name LIKE '%' || #{keyword} || '%'
+                    AND  ctm.is_deleted = 0
+                    AND  t.is_deleted = 0
+              ))
         </if>
         <if test="tagIds != null and tagIds.size() > 0">
             <choose>
@@ -349,6 +370,16 @@
                     AND is_deleted = 0
                     GROUP BY customer_id
                     HAVING COUNT(DISTINCT tag_id) = #{tagCount}
+                        SELECT customer_id
+                        FROM   customer_tag_mapping
+                        WHERE  tag_id IN
+                        <foreach item="tagId" collection="tagIds"
+                                 open="(" separator="," close=")">
+                            #{tagId}
+                        </foreach>
+                        AND is_deleted = 0
+                        GROUP BY customer_id
+                        HAVING COUNT(DISTINCT tag_id) = #{tagCount}
                     )
                 </when>
                 <!-- matchType = ANY (기본): 선택한 태그 중 하나라도 가진 고객 (OR) -->
@@ -362,6 +393,14 @@
                         #{tagId}
                     </foreach>
                     AND is_deleted = 0
+                        SELECT customer_id
+                        FROM   customer_tag_mapping
+                        WHERE  tag_id IN
+                        <foreach item="tagId" collection="tagIds"
+                                 open="(" separator="," close=")">
+                            #{tagId}
+                        </foreach>
+                        AND is_deleted = 0
                     )
                 </otherwise>
             </choose>
@@ -378,6 +417,19 @@
         </where>
         ORDER BY id ASC
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    <!-- 1. 고객 목록 조회 (검색어 + 태그 복수 필터 + 커서 페이징) -->
+    <select id="findBySearch" parameterType="CustomerSearchRequest" resultType="CustomerVO">
+        SELECT id, phone, name, email,
+               customer_type, is_ad_blocked, last_active_at, joined_at
+        FROM   customer
+        <where>
+            <include refid="commonWhereConditions"/>
+            <if test="cursorId != null">
+                AND id > #{cursorId}
+            </if>
+        </where>
+        ORDER BY id ASC
+        FETCH NEXT #{size} ROWS ONLY
     </select>
 
     <!-- 2. 총 건수 조회 (페이징 totalPages 계산용) -->
@@ -412,3 +464,5 @@
         AND t.is_deleted   = 0
     </select>
 </mapper>
+
+
