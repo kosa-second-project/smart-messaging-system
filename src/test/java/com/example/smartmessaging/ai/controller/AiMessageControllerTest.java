@@ -6,7 +6,7 @@ import com.example.smartmessaging.ai.dto.response.ValidationIssue;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
-import com.example.smartmessaging.ai.service.RuleValidationService;
+import com.example.smartmessaging.ai.service.AiReviewService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,12 +28,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AiMessageControllerTest {
 
     private MockMvc mockMvc;
-    private RuleValidationService ruleValidationService;
+    private AiReviewService aiReviewService;
 
     @BeforeEach
     void setUp() {
-        ruleValidationService = mock(RuleValidationService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new AiMessageController(ruleValidationService)).build();
+        aiReviewService = mock(AiReviewService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new AiMessageController(aiReviewService)).build();
     }
 
     @Test
@@ -52,7 +52,7 @@ class AiMessageControllerTest {
                 null,
                 true
         );
-        when(ruleValidationService.review(any())).thenReturn(response);
+        when(aiReviewService.review(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/ai/messages/review")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +76,7 @@ class AiMessageControllerTest {
                 .andExpect(jsonPath("$.overallScore").doesNotExist());
 
         ArgumentCaptor<AiReviewRequest> requestCaptor = ArgumentCaptor.forClass(AiReviewRequest.class);
-        verify(ruleValidationService).review(requestCaptor.capture());
+        verify(aiReviewService).review(requestCaptor.capture());
         assertThat(requestCaptor.getValue().getChannels())
                 .containsExactly(ChannelType.SMS, ChannelType.LMS, ChannelType.KAKAO);
     }
