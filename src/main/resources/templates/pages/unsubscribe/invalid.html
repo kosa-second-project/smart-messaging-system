@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>링크 확인 필요</title>
+    <link rel="stylesheet" th:href="@{/css/pages/unsubscribe.css}">
+</head>
+<body>
+<main class="unsubscribe-page">
+    <section class="unsubscribe-card" aria-labelledby="unsubscribe-invalid-title">
+        <p class="unsubscribe-eyebrow">링크 확인 필요</p>
+        <h1 id="unsubscribe-invalid-title">링크를 확인할 수 없습니다.</h1>
+        <p class="unsubscribe-description" th:text="${message} ?: '유효하지 않거나 만료된 링크입니다.'">
+            유효하지 않거나 만료된 링크입니다.
+        </p>
+    </section>
+</main>
+</body>
+</html>
