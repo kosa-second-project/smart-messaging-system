@@ -14,6 +14,7 @@ public class ProfanityFilterResponse {
     private String trackingId;
     private Status status;
     private List<DetectedWord> detected;
+    // API가 반환하는 치환 결과이며, 사용자 원문을 변경하는 용도로 사용하지 않는다.
     private String filtered;
     private String elapsed;
 

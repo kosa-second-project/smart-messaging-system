@@ -22,6 +22,10 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/**
+ * 실제 외부 API를 호출하지 않고 MockRestServiceServer로 요청과 응답 매핑을 검증한다.
+ * 실제 API key를 사용하는 연동 확인은 구현 완료 후 Postman 또는 로컬 실행으로 별도 진행한다.
+ */
 class ProfanityFilterClientTest {
 
     private ProfanityFilterProperties properties;

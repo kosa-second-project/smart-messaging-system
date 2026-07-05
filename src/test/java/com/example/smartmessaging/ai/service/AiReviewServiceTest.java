@@ -15,18 +15,32 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * 욕설 검사 서비스를 stub 처리해 실제 외부 API 호출 없이 서버 룰과의 병합 결과를 검증한다.
+ * 실제 API key를 사용하는 연동 확인은 구현 완료 후 Postman 또는 로컬 실행으로 별도 진행한다.
+ */
 class AiReviewServiceTest {
 
     private ProfanityValidationService profanityValidationService;
+    private OpenAiModerationValidationService openAiModerationValidationService;
     private AiReviewService aiReviewService;
 
     @BeforeEach
     void setUp() {
         profanityValidationService = mock(ProfanityValidationService.class);
-        aiReviewService = new AiReviewService(new RuleValidationService(), profanityValidationService);
+        openAiModerationValidationService = mock(OpenAiModerationValidationService.class);
+        when(profanityValidationService.validate(anyString())).thenReturn(List.of());
+        when(openAiModerationValidationService.validate(anyString())).thenReturn(List.of());
+        aiReviewService = new AiReviewService(
+                new RuleValidationService(),
+                profanityValidationService,
+                openAiModerationValidationService
+        );
     }
 
     @Test
@@ -87,6 +101,43 @@ class AiReviewServiceTest {
                 .extracting(ValidationIssue::getRuleId)
                 .containsExactly("MISSING_AD_PREFIX", "MISSING_OPT_OUT");
         assertThat(response.isNeedsHumanReview()).isTrue();
+    }
+
+    @Test
+    void Moderation_경고를_병합하고_WARNING으로_결정한다() {
+        AiReviewRequest request = request(MessageType.INFO, "공격적으로 해석될 수 있는 본문");
+        ValidationIssue moderationIssue = new ValidationIssue(
+                "AI_SAFETY_DETECTED",
+                IssueSeverity.MEDIUM,
+                "OpenAI Moderation 검사에서 유해 가능 표현이 감지되었습니다.",
+                "harassment",
+                "유해하거나 공격적으로 해석될 수 있는 표현을 완화해 주세요.",
+                List.of("harassment")
+        );
+        when(openAiModerationValidationService.validate(request.getContent()))
+                .thenReturn(List.of(moderationIssue));
+
+        AiReviewResponse response = aiReviewService.review(request);
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.WARNING);
+        assertThat(response.getIssues())
+                .extracting(ValidationIssue::getRuleId)
+                .containsExactly("AI_SAFETY_DETECTED");
+        assertThat(response.isNeedsHumanReview()).isFalse();
+    }
+
+    @Test
+    void 욕설_검사_다음에_Moderation_검사를_실행한다() {
+        AiReviewRequest request = request(MessageType.INFO, "검사 순서 확인");
+
+        aiReviewService.review(request);
+
+        org.mockito.InOrder order = inOrder(
+                profanityValidationService,
+                openAiModerationValidationService
+        );
+        order.verify(profanityValidationService).validate(request.getContent());
+        order.verify(openAiModerationValidationService).validate(request.getContent());
     }
 
     private AiReviewRequest request(MessageType messageType, String content) {

@@ -13,6 +13,7 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "profanity-filter")
 public class ProfanityFilterProperties {
 
+    // 설정 파일에 timeout이 없더라도 외부 API가 무기한 대기하지 않도록 기본값을 둔다.
     private String baseUrl = "https://api.kr-filter.com";
     private String apiKey;
     private Duration connectTimeout = Duration.ofSeconds(5);
