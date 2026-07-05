@@ -113,6 +113,35 @@ const SendPage = {
                 }
             }
         });
+
+        // 진행 중인 Draft 통신이 있을 때 [다음] 버튼 블록 처리 (Race Condition 및 롤백 방어)
+        self.state.pendingDraftRequests = 0;
+        $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
+            if (self.isDraftMutationRequest(ajaxOptions)) {
+                self.state.pendingDraftRequests++;
+                const $btn = $("[data-action='next-step']");
+                if (!$btn.data("original-text")) {
+                    $btn.data("original-text", $btn.text());
+                }
+                $btn.prop("disabled", true).text("동기화 중...");
+            }
+        });
+
+        $(document).ajaxComplete(function(event, jqXHR, ajaxOptions) {
+            if (self.isDraftMutationRequest(ajaxOptions)) {
+                self.state.pendingDraftRequests = Math.max(0, self.state.pendingDraftRequests - 1);
+                if (self.state.pendingDraftRequests === 0) {
+                    const $btn = $("[data-action='next-step']");
+                    $btn.prop("disabled", false).text($btn.data("original-text") || "다음 단계");
+                }
+            }
+        });
+    },
+
+    isDraftMutationRequest: function (ajaxOptions) {
+        const url = ajaxOptions && typeof ajaxOptions.url === "string" ? ajaxOptions.url : "";
+        const method = ((ajaxOptions && (ajaxOptions.type || ajaxOptions.method)) || "GET").toUpperCase();
+        return url.includes("/api/campaigns/draft") && method !== "GET";
     },
 
     // 다음 단계 이동 처리
@@ -135,6 +164,11 @@ const SendPage = {
             // 메시지 작성 화면: 입력값 세션 저장
             sessionStorage.setItem("messageTitle", $("#messageTitle").val() || "");
             sessionStorage.setItem("messageContent", $("#messageContent").val() || "");
+            sessionStorage.setItem("messagePurpose", $(".purpose-btn.active").data("val") || "INFO");
+            sessionStorage.setItem("messagePriorities", JSON.stringify(this.getCurrentChannelPriorities()));
+            sessionStorage.setItem("linkButtonName", $("#linkButtonName").val() || "");
+            sessionStorage.setItem("linkUrl", $("#linkUrl").val() || "");
+            sessionStorage.setItem("linkPurpose", $(".link-purpose-btn.active").data("purpose") || "CLICK");
 
             // 추가: 채널 우선순위 ID 리스트 저장
             const channelIds = [];
@@ -148,37 +182,75 @@ const SendPage = {
             window.location.href = "/send/review";
 
         } else if (current === 3) {
-            // 리뷰 화면: 발송하기 로직 수행
-            const title = sessionStorage.getItem("messageTitle") || "";
-            const desc = sessionStorage.getItem("messageContent") || "";
-            const kakaoTargetUuidsStr = sessionStorage.getItem("selectedKakaoFriendsUuids") || "[]";
-            let kakaoTargetUuids = [];
+            // 리뷰 화면: 공통 발송 작업 메시지 생성 요청
+            const draftId = sessionStorage.getItem("draftId") || this.state.draftId;
+            const title = (sessionStorage.getItem("messageTitle") || "알림").trim();
+            const content = (sessionStorage.getItem("messageContent") || "").trim();
+            const purpose = sessionStorage.getItem("messagePurpose") || "INFO";
+            const linkButtonName = sessionStorage.getItem("linkButtonName") || "";
+            const linkUrl = sessionStorage.getItem("linkUrl") || "";
+            const linkPurpose = sessionStorage.getItem("linkPurpose") || "CLICK";
+            let priorities = [];
             try {
-                kakaoTargetUuids = JSON.parse(kakaoTargetUuidsStr);
+                priorities = JSON.parse(sessionStorage.getItem("messagePriorities") || "[]");
             } catch (e) {
-                console.error("Failed to parse kakao friends uuids.");
+                console.error("Failed to parse channel priorities.");
             }
 
-            // 카카오톡 피드 발송 테스트 (카카오 API) 호출
+            if (!draftId) {
+                alert("발송 대상 정보가 없습니다. 수신자 선택 단계부터 다시 진행해주세요.");
+                this.clearSendSession();
+                window.location.href = "/send/recipients";
+                return;
+            }
+            if (!content) {
+                alert("메시지 내용을 입력해주세요.");
+                window.location.href = "/send/message";
+                return;
+            }
+            if (priorities.length === 0) {
+                priorities = ["KAKAO", "EMAIL", "SMS"];
+            }
+
             $.ajax({
-                url: '/api/send/kakao',
+                url: '/api/send-requests',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
+                    draftId: draftId,
                     title: title,
-                    description: desc,
-                    targetUuids: kakaoTargetUuids
+                    content: content,
+                    purpose: purpose,
+                    priorities: priorities,
+                    linkButtonName: linkButtonName,
+                    linkUrl: linkUrl,
+                    linkPurpose: linkPurpose
                 }),
                 success: (res) => {
-                    alert("🎉 발송 성공: " + res.message);
+                    alert("발송 요청이 생성되었습니다. 준비 대상 " + (res.preparedTargetCount || 0) + "명");
                     this.clearSessionAndDraft();
                 },
                 error: (err) => {
                     const msg = err.responseJSON ? err.responseJSON.message : "알 수 없는 오류가 발생했습니다.";
-                    alert("발송 실패: " + msg);
+                    alert("발송 요청 생성 실패: " + msg);
                 }
             });
         }
+    },
+
+    getCurrentChannelPriorities: function () {
+        if (typeof MessageComposer !== "undefined" && Array.isArray(MessageComposer.channels)) {
+            return MessageComposer.channels
+                .map(ch => ch.originalType || ch.channelType)
+                .filter(Boolean);
+        }
+
+        const priorities = [];
+        $(".channel-card").each(function () {
+            const type = $(this).data("type");
+            if (type) priorities.push(type);
+        });
+        return priorities;
     },
 
     // 발송 완료 또는 초기화 시 세션/Draft 정리 헬퍼
@@ -186,10 +258,7 @@ const SendPage = {
         const draftId = this.state.draftId;
         this.isNavigatingInternal = true;
         if (draftId) {
-            sessionStorage.removeItem("draftId");
-            sessionStorage.removeItem("draftTotalCount");
-            sessionStorage.removeItem("messageTitle");
-            sessionStorage.removeItem("messageContent");
+            this.clearSendSession();
             // API 호출로 Redis Draft 비우기
             $.ajax({
                 url: '/api/campaigns/draft/' + draftId,
@@ -204,6 +273,22 @@ const SendPage = {
         } else {
             window.location.href = "/send/recipients";
         }
+    },
+
+    clearSendSession: function () {
+        sessionStorage.removeItem("draftId");
+        sessionStorage.removeItem("draftTotalCount");
+        sessionStorage.removeItem("messageTitle");
+        sessionStorage.removeItem("messageContent");
+        sessionStorage.removeItem("messagePurpose");
+        sessionStorage.removeItem("messagePriorities");
+        sessionStorage.removeItem("linkButtonName");
+        sessionStorage.removeItem("linkUrl");
+        sessionStorage.removeItem("linkPurpose");
+        sessionStorage.removeItem("selectedTemplateTitle");
+        sessionStorage.removeItem("selectedTemplateContent");
+        this.state.draftId = null;
+        this.state.draftTotalCount = 0;
     },
 
     // 이전 단계 이동 처리
@@ -242,4 +327,3 @@ const SendPage = {
 $(function () {
     SendPage.init();
 });
-

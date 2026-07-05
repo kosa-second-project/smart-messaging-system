@@ -1,0 +1,23 @@
+package com.example.smartmessaging.controller;
+
+import com.example.smartmessaging.dto.request.StatSearchRequest;
+import com.example.smartmessaging.dto.response.DashboardSummaryResponse;
+import com.example.smartmessaging.service.DashboardService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/dashboard")
+@RequiredArgsConstructor
+public class DashboardApiController {
+    private final DashboardService dashboardService;
+
+    @GetMapping("/summary")
+    public DashboardSummaryResponse getSummary(@ModelAttribute StatSearchRequest request) {
+        request.validate();
+        return dashboardService.getSummary(request);
+    }
+}

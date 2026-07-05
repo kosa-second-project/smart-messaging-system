@@ -7,6 +7,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
+import com.example.smartmessaging.dto.response.CostEstimationResponseDTO;
+import com.example.smartmessaging.dto.type.ChannelConsentTag;
+import com.example.smartmessaging.dto.vo.ChannelVO;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
+import com.example.smartmessaging.mapper.CustomerMapper;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,9 +33,12 @@ import java.util.stream.Collectors;
 public class CampaignDraftService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final CustomerMapper customerMapper;
+    private final ChannelService channelService;
 
     private static final String KEY_PREFIX = "draft:recipient:";
     private static final Duration TTL = Duration.ofMinutes(30);
+
 
     /**
      * ZSET 내 가장 큰 score 값을 찾아 +1 한 값을 반환합니다.
@@ -115,6 +125,21 @@ public class CampaignDraftService {
         Set<Object> ids = redisTemplate.opsForZSet().range(key, start, end);
         if (ids == null || ids.isEmpty())
             return List.of();
+
+        return ids.stream()
+                .map(id -> Long.parseLong(id.toString()))
+                .toList();
+    }
+
+    public List<Long> getDraftCustomerIds(Long userId, String draftId) {
+        if (draftId == null || draftId.isBlank()) {
+            return List.of();
+        }
+
+        Set<Object> ids = redisTemplate.opsForZSet().range(KEY_PREFIX + userId + ":" + draftId, 0, -1);
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
 
         return ids.stream()
                 .map(id -> Long.parseLong(id.toString()))
@@ -209,5 +234,83 @@ public class CampaignDraftService {
                 .map(id -> Long.parseLong(id.toString()))
                 .toList();
     }
-}
 
+    // =============================================
+    // 9. 예상 비용 산출 및 채널 자동 배정 (최저가 순 또는 우선순위 순)
+    // =============================================
+    public CostEstimationResponseDTO estimateCost(Long userId, String draftId, List<String> priorities) {
+        String key = KEY_PREFIX + userId + ":" + draftId;
+        Set<Object> ids = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException(ErrorCode.DRAFT_NOT_FOUND);
+        }
+
+        List<Long> customerIds = ids.stream()
+                .map(id -> Long.parseLong(id.toString()))
+                .collect(Collectors.toList());
+
+        // 1. 전체 수신자 태그 조회 (N+1 방지 및 대용량 쿼리 최적화를 위한 Chunking)
+        List<Map<String, Object>> tagRows = new ArrayList<>();
+        int chunkSize = 1000;
+        for (int i = 0; i < customerIds.size(); i += chunkSize) {
+            List<Long> chunk = customerIds.subList(i, Math.min(customerIds.size(), i + chunkSize));
+            List<Map<String, Object>> chunkTags = customerMapper.findTagsByCustomerIds(chunk);
+            if (chunkTags != null) {
+                tagRows.addAll(chunkTags);
+            }
+        }
+
+        Map<Long, List<String>> customerTagsMap = tagRows.stream()
+                .collect(Collectors.groupingBy(
+                        row -> ((Number) row.get("CUSTOMER_ID")).longValue(),
+                        Collectors.mapping(row -> (String) row.get("TAG_NAME"), Collectors.toList())
+                ));
+
+        // 2. 활성화된 채널 목록 조회
+        List<ChannelVO> activeChannels = channelService.getActiveChannels();
+
+        // 2.5. 프론트엔드에서 넘어온 커스텀 우선순위가 있다면 해당 순서대로 재정렬 (없으면 기존 최저가 순 유지)
+        if (priorities != null && !priorities.isEmpty()) {
+            activeChannels.sort(Comparator.comparingInt((ChannelVO ch) -> {
+                int index = priorities.indexOf(ch.getChannelType());
+                return index == -1 ? Integer.MAX_VALUE : index;
+            }).thenComparing(ChannelVO::getCostPerMsg));
+        }
+
+        BigDecimal totalCost = BigDecimal.ZERO;
+        Map<String, Integer> channelDistribution = new HashMap<>();
+
+        // 채널 분포 초기화 (모든 활성화된 채널의 카운트를 0으로 채움)
+        for (ChannelVO ch : activeChannels) {
+            channelDistribution.put(ch.getChannelType(), 0);
+        }
+        channelDistribution.put("UNASSIGNED", 0);
+
+        // 3. 각 고객에 대해 최저가 채널 매칭
+        for (Long cid : customerIds) {
+            List<String> tags = customerTagsMap.getOrDefault(cid, List.of());
+            boolean assigned = false;
+
+            for (ChannelVO ch : activeChannels) {
+                String requiredTag = ChannelConsentTag.getTagNameByChannel(ch.getChannelType());
+                if (requiredTag != null && tags.contains(requiredTag)) {
+                    // 배정 성공
+                    totalCost = totalCost.add(ch.getCostPerMsg());
+                    channelDistribution.put(ch.getChannelType(), channelDistribution.get(ch.getChannelType()) + 1);
+                    assigned = true;
+                    break; // 최저가 1개만 배정하고 중단
+                }
+            }
+
+            if (!assigned) {
+                channelDistribution.put("UNASSIGNED", channelDistribution.get("UNASSIGNED") + 1);
+            }
+        }
+
+        return CostEstimationResponseDTO.builder()
+                .totalEstimatedCost(totalCost)
+                .channelDistribution(channelDistribution)
+                .totalValidRecipients(customerIds.size())
+                .build();
+    }
+}

@@ -4,6 +4,7 @@ import com.example.smartmessaging.dto.request.TemplateSaveRequest;
 import com.example.smartmessaging.dto.response.TemplateChannelResponse;
 import com.example.smartmessaging.dto.response.TemplateOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateResponse;
+import com.example.smartmessaging.dto.vo.TemplateCategory;
 import com.example.smartmessaging.dto.vo.TemplateVO;
 import com.example.smartmessaging.mapper.TemplateMapper;
 import org.junit.jupiter.api.Test;
@@ -29,15 +30,21 @@ class TemplateServiceImplTest {
     private TemplateServiceImpl templateService;
 
     @Test
-    void 옵션_조회시_채널_카테고리_광고여부만_응답에_포함한다() {
+    void 옵션_조회시_채널_고정_카테고리_광고여부를_응답한다() {
         when(templateMapper.selectAllChannels()).thenReturn(List.of());
-        when(templateMapper.selectCategoryOptions(10L)).thenReturn(List.of());
         when(templateMapper.selectPurposeOptions(10L)).thenReturn(List.of());
 
         TemplateOptionResponse response = templateService.getTemplateOptions(10L);
 
         assertThat(response.getChannels()).isEmpty();
-        assertThat(response.getCategories()).isEmpty();
+        assertThat(response.getCategories())
+                .extracting("value", "label")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("BENEFIT", "혜택"),
+                        org.assertj.core.groups.Tuple.tuple("EVENT", "이벤트"),
+                        org.assertj.core.groups.Tuple.tuple("NOTICE", "공지"),
+                        org.assertj.core.groups.Tuple.tuple("CRM", "고객관리")
+                );
         assertThat(response.getPurposes()).isEmpty();
     }
 
@@ -72,7 +79,7 @@ class TemplateServiceImplTest {
         TemplateSaveRequest request = new TemplateSaveRequest();
         request.setTitle("신규 템플릿");
         request.setContent("메시지 내용");
-        request.setCategory("NOTICE");
+        request.setCategory(TemplateCategory.NOTICE);
         request.setPurpose("informational");
 
         templateService.createTemplate(10L, request);

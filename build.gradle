@@ -60,10 +60,20 @@ dependencies {
     // Validation (입력값 유효성 검증 - 이메일, 필수 입력 등 검증에 매우 유용하므로 추가 제안)
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
+    // AWS SDK SES v2
+    implementation platform('software.amazon.awssdk:bom:2.25.20')
+    implementation 'software.amazon.awssdk:sesv2'
+
+    // SOLAPI SDK for SMS/LMS
+    implementation 'com.solapi:sdk:1.1.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 }
 
 tasks.named('test') {
