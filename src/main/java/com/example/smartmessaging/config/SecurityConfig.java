@@ -23,6 +23,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // 정적 리소스(CSS, JS, 이미지 등)는 로그인 없이 모두 허용
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                // Swagger UI 및 OpenAPI 문서 경로는 로그인 없이 접근 허용
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**"
+                ).permitAll()
                 // 로그인 페이지 및 로그인 처리 주소도 누구나 접근 가능 허용
                 .requestMatchers("/auth/login", "/auth/login-proc").permitAll()
                 // 문자/카카오 링크 추적 및 수신거부 확인 페이지는 고객이 로그인 없이 접근 가능해야 함
