@@ -27,12 +27,14 @@ public class ProfanityValidationService {
                     .map(this::toIssues)
                     .orElseGet(List::of);
         } catch (RuntimeException exception) {
+            // 외부 API 장애가 1차 서버 룰 검사까지 실패시키지 않도록 빈 결과로 복구한다.
             log.warn("욕설 필터 API 검사에 실패하여 기존 서버 룰 결과만 유지합니다.", exception);
             return List.of();
         }
     }
 
     private List<ValidationIssue> toIssues(ProfanityFilterResponse response) {
+        // 이 API는 HTTP 200으로 오류를 반환할 수 있으므로 body의 status.code를 기준으로 판단한다.
         if (!isSuccessful(response)) {
             Integer statusCode = response.getStatus() == null ? null : response.getStatus().getCode();
             log.warn("욕설 필터 API가 비정상 상태 코드를 반환하여 검사 결과를 제외합니다. statusCode={}", statusCode);
