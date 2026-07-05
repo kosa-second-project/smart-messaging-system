@@ -56,7 +56,8 @@
             0
         FROM send_history sh
         WHERE sh.status = 'SENT'
-          AND TRUNC(sh.completed_at) = #{statDate}
+          AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+          AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
           AND NVL(sh.is_deleted, 0) = 0
     </insert>
 
@@ -137,8 +138,9 @@
                AND NVL(c.is_deleted, 0) = 0
         -- 완료된 발송 묶음만 통계에 포함한다.
         WHERE sh.status = 'SENT'
-          -- completed_at은 시간까지 포함하므로 TRUNC로 날짜만 비교한다.
-          AND TRUNC(sh.completed_at) = #{statDate}
+          -- completed_at은 시간까지 포함하므로 당일 시작 이상, 다음날 시작 미만으로 비교한다.
+          AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+          AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
           AND NVL(sa.is_deleted, 0) = 0
         -- 차수와 채널별로 한 row씩 집계한다.
         GROUP BY sa.attempt_order, sa.channel_id
@@ -200,7 +202,7 @@
                 SELECT COUNT(*)
                 FROM customer c
                 WHERE NVL(c.is_deleted, 0) = 0
-                  AND TRUNC(c.joined_at) &lt;= #{statDate}
+                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
             ),
 
             -- 기존 고객 화면 기준과 맞춘 일반 고객 수
@@ -208,7 +210,7 @@
                 SELECT COUNT(*)
                 FROM customer c
                 WHERE NVL(c.is_deleted, 0) = 0
-                  AND TRUNC(c.joined_at) &lt;= #{statDate}
+                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                   AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
                   AND (
                         c.last_active_at IS NULL
@@ -221,7 +223,7 @@
                 SELECT COUNT(*)
                 FROM customer c
                 WHERE NVL(c.is_deleted, 0) = 0
-                  AND TRUNC(c.joined_at) &lt;= #{statDate}
+                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                   AND c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
             ),
 
@@ -230,7 +232,7 @@
                 SELECT COUNT(*)
                 FROM customer c
                 WHERE NVL(c.is_deleted, 0) = 0
-                  AND TRUNC(c.joined_at) &lt;= #{statDate}
+                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                   AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
                   AND c.last_active_at &lt; ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
             ),
@@ -242,7 +244,7 @@
                 INNER JOIN customer c
                         ON c.id = ccc.customer_id
                        AND NVL(c.is_deleted, 0) = 0
-                       AND TRUNC(c.joined_at) &lt;= #{statDate}
+                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                 INNER JOIN channel ch
                         ON ch.id = ccc.channel_id
                        AND NVL(ch.is_deleted, 0) = 0
@@ -258,7 +260,7 @@
                 INNER JOIN customer c
                         ON c.id = ccc.customer_id
                        AND NVL(c.is_deleted, 0) = 0
-                       AND TRUNC(c.joined_at) &lt;= #{statDate}
+                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                 INNER JOIN channel ch
                         ON ch.id = ccc.channel_id
                        AND NVL(ch.is_deleted, 0) = 0
@@ -274,7 +276,7 @@
                 INNER JOIN customer c
                         ON c.id = ccc.customer_id
                        AND NVL(c.is_deleted, 0) = 0
-                       AND TRUNC(c.joined_at) &lt;= #{statDate}
+                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                 INNER JOIN channel ch
                         ON ch.id = ccc.channel_id
                        AND NVL(ch.is_deleted, 0) = 0
@@ -288,7 +290,8 @@
                 SELECT COUNT(*)
                 FROM customer c
                 WHERE NVL(c.is_deleted, 0) = 0
-                  AND TRUNC(c.joined_at) = #{statDate}
+                  AND c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                  AND c.joined_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
             ),
 
             SYSTIMESTAMP,
@@ -538,7 +541,8 @@
                 WHERE NVL(su.is_deleted, 0) = 0
                   AND su.is_clicked = 1
                   AND su.clicked_at IS NOT NULL
-                  AND TRUNC(su.clicked_at) = #{statDate}
+                  AND su.clicked_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                  AND su.clicked_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
                   AND sh.status = 'SENT'
                   AND st.final_channel_id IS NOT NULL
                 GROUP BY st.final_channel_id, EXTRACT(HOUR FROM su.clicked_at)
