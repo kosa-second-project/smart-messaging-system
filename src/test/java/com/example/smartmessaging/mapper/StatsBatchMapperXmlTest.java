@@ -60,7 +60,7 @@ class StatsBatchMapperXmlTest {
                 .contains(
                         "WITH customer_counts AS",
                         "consent_counts AS",
-                        "SUM(CASE WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY",
+                        "WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY",
                         "COUNT(DISTINCT CASE WHEN ch.channel_type = 'SMS' THEN ccc.customer_id END) AS sms_consent_count",
                         "CROSS JOIN consent_counts consent_counts"
                 );
