@@ -99,8 +99,19 @@ public class RuleValidationService {
         if (request == null) {
             throw invalidRequest("검사 요청은 필수입니다.");
         }
+        if (request.getContextType() == null) {
+            throw invalidRequest("검사 문맥 유형은 필수입니다.");
+        }
         if (request.getMessageType() == null) {
             throw invalidRequest("메시지 유형은 필수입니다.");
+        }
+        if (request.getChannels() == null
+                || request.getChannels().isEmpty()
+                || request.getChannels().stream().anyMatch(java.util.Objects::isNull)) {
+            throw invalidRequest("검사 채널은 하나 이상 필요합니다.");
+        }
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw invalidRequest("검사할 메시지 제목은 필수입니다.");
         }
         if (request.getContent() == null || request.getContent().isBlank()) {
             throw invalidRequest("검사할 메시지 내용은 필수입니다.");

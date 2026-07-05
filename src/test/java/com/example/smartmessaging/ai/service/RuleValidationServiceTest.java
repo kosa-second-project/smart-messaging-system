@@ -293,6 +293,30 @@ class RuleValidationServiceTest {
     }
 
     @Test
+    void 검사_문맥_유형이_null이면_커스텀_예외가_발생한다() {
+        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.", List.of());
+        request.setContextType(null);
+
+        assertInvalidRequest(request, "검사 문맥 유형은 필수입니다.");
+    }
+
+    @Test
+    void 검사_채널이_비어_있으면_커스텀_예외가_발생한다() {
+        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.", List.of());
+        request.setChannels(List.of());
+
+        assertInvalidRequest(request, "검사 채널은 하나 이상 필요합니다.");
+    }
+
+    @Test
+    void 검사_제목이_blank이면_커스텀_예외가_발생한다() {
+        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.", List.of());
+        request.setTitle("  \n");
+
+        assertInvalidRequest(request, "검사할 메시지 제목은 필수입니다.");
+    }
+
+    @Test
     void 본문이_null이면_커스텀_예외가_발생한다() {
         AiReviewRequest request = request(MessageType.INFO, null, List.of());
 
