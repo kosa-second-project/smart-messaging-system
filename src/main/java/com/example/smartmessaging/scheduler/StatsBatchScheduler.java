@@ -2,6 +2,7 @@ package com.example.smartmessaging.scheduler;
 
 import com.example.smartmessaging.service.StatsBatchLauncherService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,8 @@ public class StatsBatchScheduler {
             log.info("[StatsBatch] scheduled job requested - statDate: {}", statDate);
             statsBatchLauncherService.run(statDate);
             log.info("[StatsBatch] scheduled job completed - statDate: {}", statDate);
+        } catch (JobExecutionAlreadyRunningException e) {
+            log.info("[StatsBatch] scheduled job skipped - already running, statDate: {}", statDate);
         } catch (Exception e) {
             log.error("[StatsBatch] scheduled job failed - statDate: {}", statDate, e);
         }

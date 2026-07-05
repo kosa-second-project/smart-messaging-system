@@ -3,8 +3,11 @@ package com.example.smartmessaging.controller;
 import com.example.smartmessaging.service.StatsBatchLauncherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,5 +46,15 @@ public class StatsBatchController {
         response.put("startedAt", jobExecution.getStartTime());
         response.put("endedAt", jobExecution.getEndTime());
         return ResponseEntity.ok(response);
+    }
+
+    @ExceptionHandler(JobExecutionAlreadyRunningException.class)
+    public ResponseEntity<Map<String, Object>> handleJobAlreadyRunning(
+            JobExecutionAlreadyRunningException e
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 }
