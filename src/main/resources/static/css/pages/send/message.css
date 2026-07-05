@@ -1,8 +1,8 @@
 .message-step-container {
-    padding: 0 1rem 3rem 1rem; /* 좌우 여백 및 하단 액션바 겹침 방지 여백 */
+    padding: 0 1rem 2rem 1rem;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
 }
 
 /* 상단 3개 카드 그리드 (발송 대상 요약, 우선순위, 예상 비용) */
@@ -13,8 +13,13 @@
     margin-bottom: 1.5rem;
 }
 
+.top-cards-grid--message {
+    grid-template-columns: 1fr 1fr;
+}
+
 .top-cards-grid .ds-card {
-    margin-bottom: 0; /* 기존 마진 제거 */
+    margin-bottom: 0;
+    /* 기존 마진 제거 */
     display: flex;
     flex-direction: column;
 }
@@ -49,15 +54,15 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
-    flex: 1; /* 남은 공간 차지 */
-    align-items: stretch; /* 카드 높이 동일하게 늘림 */
+    min-height: 0;
+    align-items: stretch;
 }
 
 .composer-column {
     display: flex;
     flex-direction: column;
     margin-bottom: 0 !important;
-    height: 100%;
+    min-height: 0;
 }
 
 
@@ -68,6 +73,7 @@
     align-items: center;
     margin-bottom: 1rem;
 }
+
 .preview-header h3 {
     margin: 0;
     font-size: 1.1rem;
@@ -95,7 +101,7 @@
 .preview-tab-btn.active {
     background: #fff;
     color: var(--foreground);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .preview-ad-badge-row {
@@ -104,6 +110,7 @@
     margin-bottom: 10px;
     padding: 0 1.5rem;
 }
+
 .preview-ad-badge {
     background-color: #e8f0fe;
     color: #1a73e8;
@@ -205,10 +212,23 @@
     font-size: 0.9rem;
 }
 
-.priority-1 { background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%); box-shadow: 0 4px 15px 0 rgba(255, 65, 108, 0.4); }
-.priority-2 { background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%); }
-.priority-3 { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-.priority-disabled { background-color: var(--muted-foreground); color: white; }
+.priority-1 {
+    background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
+    box-shadow: 0 4px 15px 0 rgba(255, 65, 108, 0.4);
+}
+
+.priority-2 {
+    background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%);
+}
+
+.priority-3 {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.priority-disabled {
+    background-color: var(--muted-foreground);
+    color: white;
+}
 
 /* 입력 영역 */
 .input-section {
@@ -218,7 +238,7 @@
 .textarea-wrapper {
     position: relative;
     margin-top: 1rem;
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     margin-bottom: 1rem;
@@ -227,8 +247,8 @@
 
 .textarea-wrapper textarea {
     width: 100%;
-    resize: vertical;
-    min-height: 200px;
+    resize: none;
+    min-height: 220px;
 }
 
 .byte-counter {
@@ -237,7 +257,7 @@
     right: 1rem;
     color: var(--muted-foreground);
     font-size: 0.9rem;
-    background: rgba(255,255,255,0.9);
+    background: rgba(255, 255, 255, 0.9);
     padding: 0.25rem 0.5rem;
     border-radius: var(--radius-sm);
     display: flex;
@@ -245,18 +265,159 @@
     gap: 0.5rem;
 }
 
+.msg-type-badge--lms {
+    background-color: #8E54E9 !important;
+    color: white !important;
+}
+
+.message-purpose-notice {
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0.75rem 0 0;
+    padding: 0.75rem 0.9rem;
+}
+
+.message-purpose-notice--ad {
+    background: #f1f5ff;
+    color: #2445c7;
+}
+
+.message-purpose-notice--info {
+    background: #fff8e6;
+    color: #8a5a00;
+}
+
+.preview-ad-badge--info {
+    background-color: #fff8e6;
+    color: #8a5a00;
+}
+
+.message-header-actions {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.link-dropdown {
+    position: relative;
+}
+
+.link-settings-wrapper {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+    display: none;
+    flex-direction: column;
+    gap: 0.875rem;
+    min-width: 320px;
+    padding: 1rem;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: min(420px, 82vw);
+    z-index: 40;
+}
+
+.link-settings-wrapper.is-open {
+    display: flex;
+}
+
+.link-settings-header {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.link-settings-wrapper .input-wrapper {
+    margin-bottom: 0;
+}
+
+.link-settings-help {
+    color: var(--muted-foreground);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin: -0.25rem 0 0;
+}
+
+.link-settings-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.link-purpose-toggle {
+    background: var(--muted);
+    border-radius: var(--radius-pill);
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+}
+
+.link-purpose-btn {
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-pill);
+    color: var(--muted-foreground);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-height: 32px;
+    padding: 0.25rem 0.75rem;
+}
+
+.link-purpose-btn.active {
+    background: #fff;
+    color: var(--primary-600);
+    box-shadow: var(--shadow-sm);
+}
+
 /* 태블릿/모바일 반응형 */
 @media (max-width: 992px) {
+
     .message-composer-grid,
     .top-cards-grid {
         grid-template-columns: 1fr;
+    }
+
+    .link-settings-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .message-header-actions {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .link-dropdown {
+        width: 100%;
+    }
+
+    #btnToggleLinkSettings,
+    #btnSaveTemplate {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .link-settings-wrapper {
+        min-width: 0;
+        right: auto;
+        left: 0;
+        width: min(100%, 420px);
     }
 }
 
 /* 카카오 친구 선택 모달 스타일 */
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
@@ -269,7 +430,7 @@
     width: 400px;
     max-width: 90%;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -347,25 +508,13 @@
     flex-direction: column;
     gap: 1rem;
     flex: 1;
+    min-height: 0;
 }
 
-/* 검색창 아이콘 입력필드 */
 .search-input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
-}
-
-.search-input-wrapper .search-icon {
-    position: absolute;
-    left: 12px;
-    color: var(--muted-foreground);
-    font-size: 0.9rem;
-    z-index: 10;
-}
-
-.search-input-wrapper .ds-input {
-    padding-left: 36px !important;
 }
 
 /* 필터 드롭다운 가로 배치 */
@@ -380,6 +529,64 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    min-height: 2rem;
+}
+
+.filter-chip {
+    align-items: center;
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-pill);
+    color: white;
+    display: inline-flex;
+    font-size: 0.8rem;
+    font-weight: 700;
+    gap: 0.35rem;
+    min-height: 30px;
+    padding: 0.25rem 0.45rem 0.25rem 0.75rem;
+}
+
+.filter-chip__remove {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.22);
+    border: 0;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 800;
+    height: 20px;
+    justify-content: center;
+    line-height: 1;
+    width: 20px;
+}
+
+.filter-chip__remove:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+}
+
+.purpose-toggle-group {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: 1fr 1fr;
+}
+
+.purpose-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--muted-foreground);
+    cursor: pointer;
+    font-weight: 700;
+    min-height: 40px;
+}
+
+.purpose-btn.active {
+    background: rgba(36, 60, 255, 0.06);
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .tag-btn {
@@ -393,7 +600,8 @@
     transition: all 0.2s;
 }
 
-.tag-btn:hover, .tag-btn.active {
+.tag-btn:hover,
+.tag-btn.active {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
@@ -403,7 +611,7 @@
 .selected-template-alert {
     background-color: rgba(24, 67, 250, 0.05);
     border: 1px solid rgba(24, 67, 250, 0.2);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     padding: 0.75rem 1rem;
     margin-top: 1rem;
 }
@@ -421,16 +629,30 @@
     color: var(--foreground);
 }
 
+.selected-template-alert .alert-preview {
+    color: var(--muted-foreground);
+    display: -webkit-box;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin-top: 0.35rem;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
 /* 템플릿 목록 컨테이너 */
 .template-list-container {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-height: 400px;
+    max-height: 430px;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 4px;
     margin-top: 0.5rem;
-    flex: 1;
+    flex: 1 1 auto;
 }
 
 /* 개별 템플릿 카드 */
@@ -444,6 +666,9 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    min-height: 140px;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .template-card:hover {
@@ -498,6 +723,16 @@
     line-height: 1.45;
     white-space: pre-wrap;
     text-align: left;
+
+    /* 카드 높이 고정에 따라 넘치는 텍스트 말줄임 및 오버플로우 방지 */
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    /* 최대 3줄까지만 표시 */
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
 }
 
 .template-card .card-tags {
@@ -522,10 +757,56 @@
     margin-top: 0.5rem;
 }
 
+.is-hidden {
+    display: none !important;
+}
+
 /* 인라인 스타일 대체를 위한 추가 클래스들 */
-.routing-header, .message-header {
+.routing-header,
+.message-header {
     flex: 1;
     text-align: left;
+}
+
+.message-card-header {
+    align-items: flex-start;
+}
+
+.section-desc {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+}
+
+.summary-cost-header {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+}
+
+.summary-cost-title-row {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.summary-cost-title {
+    margin: 0;
+}
+
+.summary-cost-target {
+    margin: 0;
+}
+
+.summary-cost-target strong {
+    color: var(--foreground);
+    font-size: 1.1rem;
+}
+
+.summary-cost-target .highlight {
+    color: var(--primary-600);
+    font-size: 1.2rem;
 }
 
 .btn-smart-sort {
@@ -541,24 +822,89 @@
 }
 
 .cost-amount {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
 }
 
 .cost-amount strong {
-    color: #FF416C;
+    color: var(--primary-600);
     font-size: 1.5rem;
 }
 
 .cost-info {
     color: var(--muted-foreground);
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
 }
 
-.template-body, .message-body {
+.cost-distribution-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.cost-distribution-item {
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 80px;
+    padding: 1rem;
+}
+
+.cost-distribution-item--loading {
+    color: var(--muted-foreground);
+}
+
+.cost-distribution-label {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.cost-distribution-value {
+    color: var(--foreground);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.cost-distribution-cost {
+    color: var(--primary-600);
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+}
+
+.message-purpose-wrapper,
+.personalization-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.template-empty,
+.channel-empty {
+    color: var(--muted-foreground);
+    padding: 1rem;
+    text-align: center;
+}
+
+.template-empty {
+    padding: 2rem;
+}
+
+.template-body,
+.message-body {
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0;
 }
 
 .message-label {
@@ -570,7 +916,7 @@
 }
 
 .message-actions {
-    margin-top: auto;
+    margin-top: 1rem;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -581,6 +927,7 @@
     color: #191919 !important;
     border: none !important;
 }
+
 .btn-kakao-direct:hover {
     background-color: #e6ce00 !important;
 }
@@ -589,9 +936,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     flex: 1;
     padding-top: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* 추가 스타일 교정 (인라인 대체) */
@@ -605,15 +954,90 @@
 }
 
 .message-textarea {
-    flex: 1;
-    min-height: 250px;
+    flex: 1 1 auto;
+    min-height: 220px;
     resize: none;
-}
-
-.mock-icon {
-    font-size: 1.1rem;
 }
 
 .preview-wrapper {
     width: 100%;
+}
+
+.preview-section #phonePreviewBox {
+    width: min(320px, 100%);
+    height: clamp(460px, 58dvh, 620px);
+}
+
+.preview-section .preview-status-bar {
+    flex: 0 0 82px;
+}
+
+.preview-section .preview-body {
+    min-height: 0;
+}
+
+.kakao-friends-modal__body {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.kakao-friends-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.kakao-friends-list__item {
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    padding: 10px;
+}
+
+.kakao-friends-list__radio {
+    margin-right: 10px;
+}
+
+.kakao-friends-list__label {
+    cursor: pointer;
+}
+
+.kakao-friends-modal__footer {
+    border-top: 1px solid #eee;
+    padding: 15px;
+    text-align: right;
+}
+
+@media (max-width: 1400px) {
+    .preview-tabs {
+        flex-wrap: wrap;
+        border-radius: var(--radius-lg);
+    }
+
+    .preview-tab-btn {
+        padding: 6px 10px;
+    }
+
+    .channel-card {
+        padding: 0.875rem 1rem;
+    }
+
+    .channel-info {
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .message-step-container {
+        padding-inline: 0;
+    }
+
+    .template-list-container {
+        max-height: 360px;
+    }
+
+    .preview-section #phonePreviewBox {
+        height: 560px;
+    }
 }

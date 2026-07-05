@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.UnsubscribeMapper">
+
+    <select id="findTargetBySendTargetId" resultType="ShortUrlTargetVO">
+        SELECT
+            st.id AS send_target_id,
+            st.send_history_id,
+            st.customer_id,
+            st.final_channel_id AS channel_id,
+            ch.channel_type,
+            c.name AS customer_name,
+            c.phone
+        FROM send_target st
+        JOIN customer c
+          ON c.id = st.customer_id
+         AND NVL(c.is_deleted, 0) = 0
+        LEFT JOIN channel ch
+          ON ch.id = st.final_channel_id
+         AND NVL(ch.is_deleted, 0) = 0
+        WHERE st.id = #{sendTargetId}
+          AND NVL(st.is_deleted, 0) = 0
+    </select>
+
+    <select id="countRejectHistory" resultType="int">
+        SELECT COUNT(*)
+        FROM reject_history
+        WHERE customer_id = #{customerId}
+          AND NVL(is_deleted, 0) = 0
+    </select>
+
+    <insert id="insertRejectHistory">
+        INSERT INTO reject_history (
+            customer_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        ) VALUES (
+            #{customerId},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{createdBy},
+            #{createdBy},
+            0
+        )
+    </insert>
+
+    <update id="blockCustomerAds">
+        UPDATE customer
+        SET is_ad_blocked = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        WHERE id = #{customerId}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <update id="revokeSmsConsent">
+        UPDATE customer_channel_consent ccc
+        SET ccc.is_consented = 0,
+            ccc.updated_at = SYSTIMESTAMP,
+            ccc.updated_by = #{updatedBy}
+        WHERE ccc.customer_id = #{customerId}
+          AND NVL(ccc.is_deleted, 0) = 0
+          AND ccc.channel_id IN (
+              SELECT ch.id
+              FROM channel ch
+              WHERE NVL(ch.is_deleted, 0) = 0
+                AND ch.channel_type IN ('SMS', 'LMS')
+          )
+    </update>
+</mapper>

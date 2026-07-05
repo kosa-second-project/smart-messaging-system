@@ -8,29 +8,17 @@
 <body>
     <div layout:fragment="send-content">
         <div class="message-step-container">
-            <!-- 상단: 3개의 요약 카드 (발송 대상 요약, 채널 전송 우선순위, 예상 비용) -->
-            <div class="top-cards-grid">
-                <!-- 1. 발송 대상 요약 -->
-                <div class="summary-section ds-card">
-                    <div class="ds-card__header">
-                        <h3 class="ds-card__title"><span class="mock-icon">👥</span> 발송 대상 요약</h3>
-                    </div>
-                    <div class="ds-card__body summary-stats">
-                        <div class="stat-item">총 대상: <strong id="totalTargetCount" class="highlight">0</strong>명</div>
-                        <div class="stat-item tags-container" id="extractedTagsContainer">
-                            <!-- 추출된 태그 배지들이 여기에 동적으로 삽입됩니다. -->
-                        </div>
-                    </div>
-                </div>
+            <!-- 상단: 2단 레이아웃 (채널 우선순위 | 발송 대상 & 예상 비용) -->
+            <div class="top-cards-grid top-cards-grid--message">
 
-                <!-- 2. 채널 우선순위 드래그 앤 드롭 영역 -->
+                <!-- 1. 채널 우선순위 영역 (좌측) -->
                 <div class="routing-section ds-card">
-                    <div class="section-header ds-card__header">
+                    <div class="section-header ds-card__header message-card-header">
                         <div class="message-header">
-                            <h3 class="ds-card__title"><span class="mock-icon">🔄</span> 채널 전송 우선순위</h3>
+                            <h3 class="ds-card__title">채널 전송 우선순위</h3>
                             <p class="section-desc">가장 저렴한 채널부터 우선 전송됩니다.</p>
                         </div>
-                        <button type="button" class="ds-button ds-button--sm ds-button--outline btn-smart-sort" id="btnSmartSort">💰 최저가 자동정렬</button>
+                        <button type="button" class="ds-button ds-button--sm ds-button--outline btn-smart-sort" id="btnSmartSort">최저가 자동정렬</button>
                     </div>
                     <div class="ds-card__body">
                         <ul class="channel-list" id="channelSortableList">
@@ -39,13 +27,24 @@
                     </div>
                 </div>
 
-                <!-- 3. 예상 비용 (신규 영역) -->
-                <div class="cost-section ds-card">
-                    <div class="ds-card__header">
-                        <h3 class="ds-card__title"><span class="mock-icon">💸</span> 예상 비용</h3>
+                <!-- 2. 발송 대상 및 예상 비용 통합 영역 (우측) -->
+                <div class="summary-cost-section ds-card">
+                    <div class="ds-card__header summary-cost-header">
+                        <div class="summary-cost-title-row">
+                            <h3 class="ds-card__title summary-cost-title">발송 대상 및 예상 비용</h3>
+                            <div class="summary-stats summary-cost-target">
+                                <strong>총 대상: <span id="totalTargetCount" class="highlight">0</span>명</strong>
+                            </div>
+                        </div>
                     </div>
                     <div class="ds-card__body cost-stats cost-body">
-                        <div class="stat-item cost-amount">총 예상 비용: <strong class="highlight">0</strong>원</div>
+                        <div class="stat-item cost-amount">총 예상 비용: <strong class="highlight" id="estimatedTotalCost">0</strong>원</div>
+
+                        <div class="cost-distribution-wrapper">
+                            <ul id="channelDistributionList" class="cost-distribution-list">
+                                <!-- 채널 배정 분포가 동적으로 삽입됩니다. -->
+                            </ul>
+                        </div>
                         <p class="cost-info">* 실제 발송 비용은 통신사 사정에 따라 달라질 수 있습니다.</p>
                     </div>
                 </div>
@@ -60,29 +59,26 @@
                     <div class="template-search-body ds-card__body template-body">
                         <div class="template-search-box">
                             <div class="search-input-wrapper">
-                                <span class="search-icon">🔍</span>
                                 <input type="text" id="templateSearchInput" class="ds-input" placeholder="템플릿명, 채널, 문구 검색">
                             </div>
                             <div class="filter-dropdowns">
-                                <select class="ds-select filter-select"><option>전체</option></select>
-                                <select class="ds-select filter-select"><option>전체</option></select>
+                                <select class="ds-select filter-select" id="templateCategorySelect" aria-label="템플릿 카테고리">
+                                    <option value="">전체 카테고리</option>
+                                </select>
+                                <select class="ds-select filter-select" id="templateChannelSelect" aria-label="템플릿 채널">
+                                    <option value="">전체 채널</option>
+                                </select>
                             </div>
-                            <div class="filter-tags">
-                                <button type="button" class="tag-btn">리빙</button>
-                                <button type="button" class="tag-btn">생일</button>
-                                <button type="button" class="tag-btn">신규</button>
-                                <button type="button" class="tag-btn">안내</button>
-                                <button type="button" class="tag-btn">앱사용자</button>
-                                <button type="button" class="tag-btn">오프라인방문</button>
-                                <button type="button" class="tag-btn">이벤트</button>
-                                <button type="button" class="tag-btn">일반</button>
+                            <div class="filter-tags" id="templateCategoryTags">
+                                <!-- JS 동적 렌더링 -->
                             </div>
-                            
-                            <div class="selected-template-alert" id="selectedTemplateAlert" style="display:none;">
+
+                            <div class="selected-template-alert is-hidden" id="selectedTemplateAlert">
                                 <div class="alert-title">선택한 템플릿</div>
                                 <div class="alert-content" id="selectedTemplateName">선택된 템플릿이 없습니다.</div>
+                                <div class="alert-preview" id="selectedTemplatePreview"></div>
                             </div>
-                            
+
                             <!-- 템플릿 목록 뷰 -->
                             <div class="template-list-container">
                                 <!-- 더미 카드 1 -->
@@ -127,16 +123,67 @@
                 <div class="input-section ds-card composer-column">
                     <div class="section-header ds-card__header">
                         <div class="message-header">
-                            <h3 class="ds-card__title"><span class="mock-icon">✏️</span> 메시지 내용 작성</h3>
+                            <h3 class="ds-card__title">메시지 내용 작성</h3>
+                        </div>
+                        <div class="message-header-actions">
+                            <div class="link-dropdown">
+                                <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnToggleLinkSettings" aria-expanded="false" aria-controls="linkSettingsPanel">
+                                    링크 설정
+                                </button>
+                                <div class="link-settings-wrapper" id="linkSettingsPanel">
+                                    <div class="link-settings-header">
+                                        <label class="message-label">링크 삽입</label>
+                                        <div class="link-purpose-toggle" id="linkPurposeToggle" aria-label="링크 목적">
+                                            <button type="button" class="link-purpose-btn active" data-purpose="CLICK">클릭</button>
+                                            <button type="button" class="link-purpose-btn" data-purpose="PURCHASE">구매</button>
+                                        </div>
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label for="linkButtonName" class="message-label">버튼명</label>
+                                        <input type="text" id="linkButtonName" class="ds-input message-title-input" placeholder="자세히 보기" maxlength="40">
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label for="linkUrl" class="message-label">링크 URL</label>
+                                        <input type="url" id="linkUrl" class="ds-input message-title-input" placeholder="https://example.com/event" maxlength="2048">
+                                    </div>
+                                    <p class="link-settings-help">실제 발송 시 고객별 단축 링크로 변환됩니다.</p>
+                                    <div class="link-settings-actions">
+                                        <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnCancelLinkSettings">취소</button>
+                                        <button type="button" class="ds-button ds-button--sm ds-button--primary" id="btnApplyLinkSettings">확인</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnSaveTemplate">
+                                템플릿 저장
+                            </button>
                         </div>
                     </div>
                     <div class="ds-card__body template-body">
+                        <!-- 광고여부 토글 -->
+                        <div class="message-purpose-wrapper">
+                            <label class="message-label">광고여부</label>
+                            <div class="purpose-toggle-group" id="messagePurposeToggle">
+                                <!-- JS 동적 렌더링 -->
+                            </div>
+                            <p class="message-purpose-notice" id="messagePurposeNotice"></p>
+                        </div>
+
+                        <!-- 개인화 항목 -->
+                        <div class="personalization-wrapper">
+                            <label class="message-label">개인화 항목</label>
+                            <div class="personalization-tags">
+                                <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{고객명}">고객명</button>
+                                <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{주문번호}">주문번호</button>
+                                <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{쿠폰명}">쿠폰명</button>
+                            </div>
+                        </div>
+
                         <!-- 카카오톡용 제목 입력 필드 -->
                         <div class="input-wrapper">
                             <label for="messageTitle" class="message-label">제목</label>
                             <input type="text" id="messageTitle" class="ds-input message-title-input" placeholder="메시지 제목 (카카오톡 발송 시 사용)" maxlength="50">
                         </div>
-                        
+
                         <div class="textarea-wrapper">
                             <label for="messageContent" class="message-label">내용</label>
                             <textarea id="messageContent" class="ds-textarea message-textarea" placeholder="전송할 메시지 내용을 입력해주세요. (최대 1000자, 카카오톡은 Description으로 매핑됩니다)" maxlength="1000"></textarea>
@@ -144,16 +191,6 @@
                                 <span id="currentBytes">0</span> / <span id="maxBytes">최대 1000자</span>
                                 <span class="msg-type-badge ds-badge ds-badge--primary" id="msgTypeBadge">SMS</span>
                             </div>
-                        </div>
-
-                        <!-- 카카오톡 다이렉트 전송 및 나에게 보내기 버튼 -->
-                        <div class="message-actions">
-                            <button type="button" class="ds-button ds-button--outline" id="btnSendKakaoMe">
-                                <span class="mock-icon">👤</span> 나에게 기본 템플릿 보내기
-                            </button>
-                            <button type="button" class="ds-button btn-kakao-direct" id="btnOpenKakaoFriendsModal">
-                                <span class="mock-icon">💬</span> 카카오톡으로 다이렉트 보내기
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -178,7 +215,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 2단계 전용 JS -->
         <script th:src="@{/js/pages/send-message.js(v=${#dates.createNow().getTime()})}"></script>
     </div>

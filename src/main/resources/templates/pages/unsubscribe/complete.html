@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수신거부 완료</title>
+    <link rel="stylesheet" th:href="@{/css/pages/unsubscribe.css}">
+</head>
+<body>
+<main class="unsubscribe-page">
+    <section class="unsubscribe-card" aria-labelledby="unsubscribe-complete-title">
+        <p class="unsubscribe-eyebrow">처리 완료</p>
+        <h1 id="unsubscribe-complete-title">수신거부가 완료되었습니다.</h1>
+        <p class="unsubscribe-description">
+            <span th:text="${customerName} ?: '고객'">고객</span>님의 광고성 문자 수신 동의를 해제했습니다.
+        </p>
+    </section>
+</main>
+</body>
+</html>

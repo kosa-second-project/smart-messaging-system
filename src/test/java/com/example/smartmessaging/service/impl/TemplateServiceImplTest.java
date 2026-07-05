@@ -38,8 +38,13 @@ class TemplateServiceImplTest {
 
         assertThat(response.getChannels()).isEmpty();
         assertThat(response.getCategories())
-                .extracting(option -> option.getValue())
-                .containsExactly("BENEFIT", "EVENT", "NOTICE", "CRM");
+                .extracting("value", "label")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("BENEFIT", "혜택"),
+                        org.assertj.core.groups.Tuple.tuple("EVENT", "이벤트"),
+                        org.assertj.core.groups.Tuple.tuple("NOTICE", "공지"),
+                        org.assertj.core.groups.Tuple.tuple("CRM", "고객관리")
+                );
         assertThat(response.getPurposes()).isEmpty();
     }
 

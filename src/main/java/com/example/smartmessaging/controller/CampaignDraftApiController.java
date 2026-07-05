@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.smartmessaging.security.CustomUserDetails;
 import com.example.smartmessaging.dto.request.UpdateRecipientsRequest;
 import com.example.smartmessaging.dto.request.RecipientItem;
+import com.example.smartmessaging.dto.response.CostEstimationResponseDTO;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -125,6 +126,18 @@ public class CampaignDraftApiController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         draftService.deleteDraft(userDetails.getUserId(), draftId);
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
+     * Draft 예상 비용 산출 및 채널 자동 배정 결과 조회
+     * GET /api/campaigns/draft/{draftId}/estimate-cost
+     */
+    @GetMapping("/draft/{draftId}/estimate-cost")
+    public ResponseEntity<CostEstimationResponseDTO> estimateCost(
+            @PathVariable String draftId,
+            @RequestParam(required = false) List<String> priorities,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(draftService.estimateCost(userDetails.getUserId(), draftId, priorities));
     }
 
 }
