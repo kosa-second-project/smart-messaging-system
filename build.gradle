@@ -7,6 +7,10 @@ plugins {
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 
+ext {
+    set('springAiVersion', '1.1.8')
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -25,6 +29,12 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}
+
 dependencies {
     // Web & Thymeleaf
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -38,6 +48,9 @@ dependencies {
 
     // AOP (Aspect Oriented Programming - 공통 로깅)
     implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    // Spring AI / Google GenAI (Gemini)
+    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
 
 
     // Database & MyBatis

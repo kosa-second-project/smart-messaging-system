@@ -1,7 +1,7 @@
 spring:
   application:
     name: smart-messaging-system
-  
+
   # 기본 프로필을 local로 지정 (로컬 개발용)
   profiles:
     active: local
@@ -20,6 +20,15 @@ spring:
           content:
             enabled: true
             paths: /**
+
+  ai:
+    model:
+      chat: google-genai
+    google:
+      genai:
+        chat:
+          options:
+            model: gemini-2.5-flash
 
 # MyBatis 공통 설정
 mybatis:
