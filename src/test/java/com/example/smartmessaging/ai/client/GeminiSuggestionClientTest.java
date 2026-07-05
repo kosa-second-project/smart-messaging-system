@@ -1,0 +1,52 @@
+package com.example.smartmessaging.ai.client;
+
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+class GeminiSuggestionClientTest {
+
+    private final GeminiSuggestionClient client = new GeminiSuggestionClient(
+            (ChatClient) null,
+            new ObjectMapper()
+    );
+
+    @Test
+    void 코드블록과_설명이_있는_JSON을_파싱한다() {
+        AiSuggestionResponse response = client.parseResponse("""
+                아래는 추천 결과입니다.
+                ```json
+                {"suggestions":[{"title":"안내","content":"본문"}]}
+                ```
+                이상입니다.
+                """);
+
+        assertThat(response.getSuggestions()).hasSize(1);
+        assertThat(response.getSuggestions().get(0).getTitle()).isEqualTo("안내");
+        assertThat(response.getSuggestions().get(0).getContent()).isEqualTo("본문");
+    }
+
+    @Test
+    void 파싱할_수_없는_응답은_외부_API_예외로_변환한다() {
+        assertThatExceptionOfType(BusinessException.class)
+                .isThrownBy(() -> client.parseResponse("올바른 JSON이 아닙니다."))
+                .satisfies(exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EXTERNAL_API_ERROR)
+                );
+    }
+
+    @Test
+    void suggestions_배열이_없으면_파싱_실패로_처리한다() {
+        assertThatExceptionOfType(BusinessException.class)
+                .isThrownBy(() -> client.parseResponse("{\"result\":[]}"))
+                .satisfies(exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EXTERNAL_API_ERROR)
+                );
+    }
+}
