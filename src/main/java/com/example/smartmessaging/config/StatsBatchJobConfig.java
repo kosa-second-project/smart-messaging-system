@@ -19,10 +19,7 @@ import java.time.LocalDate;
 public class StatsBatchJobConfig {
 
     /**
-     * 통계 일별 집계 Job.
-     *
-     * 현재는 message_stat Step만 연결한다.
-     * 이후 message_stat_by_degree, customer_stat, channel_stat, click_stat Step을 순서대로 추가한다.
+     * statDate 기준 통계를 재집계하는 Job.
      */
     @Bean
     public Job statsDailyAggregationJob(
