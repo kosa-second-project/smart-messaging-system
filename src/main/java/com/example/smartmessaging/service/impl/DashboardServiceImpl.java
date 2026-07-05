@@ -30,7 +30,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,19 +46,20 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardSummaryResponse getSummary(StatSearchRequest request) {
-        List<MessageStatVO> messageStats = statMapper.selectMessageStats(request);
-        List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
-        List<CustomerStatVO> customerStats = statMapper.selectCustomerStats(request);
+        MessageStatVO messageSummary = dashboardMapper.selectMessageSummary(request);
+        List<MessageStatVO> messageTrend = dashboardMapper.selectMessageTrend(request);
+        List<MessageStatByDegreeVO> channelSendSummary = dashboardMapper.selectChannelSendSummary(request);
+        CustomerStatVO latestCustomerStat = dashboardMapper.selectLatestCustomerStat(request);
         List<SendHistoryVO> recentSends = dashboardMapper.selectRecentSends();
         List<TemplatePerformance> templateTop = dashboardMapper.selectTemplatePerformanceTop(request);
         Map<Long, String> channelNames = channelNames();
 
         return DashboardSummaryResponse.builder()
-                .cards(buildCards(messageStats, degreeStats, customerStats))
+                .cards(buildCards(messageSummary, channelSendSummary, latestCustomerStat))
                 .charts(List.of(
-                        buildCostComparisonChart(messageStats),
-                        buildChannelShareChart(degreeStats, channelNames),
-                        buildDailySendTrendChart(messageStats)
+                        buildCostComparisonChart(messageTrend),
+                        buildChannelShareChart(channelSendSummary, channelNames),
+                        buildDailySendTrendChart(messageTrend)
                 ))
                 .queueStatuses(buildQueueStatuses())
                 .recentSends(buildRecentSends(recentSends))
@@ -69,21 +69,22 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private List<StatCardResponse> buildCards(List<MessageStatVO> messageStats,
-                                              List<MessageStatByDegreeVO> degreeStats,
-                                              List<CustomerStatVO> customerStats) {
-        long totalSend = messageStats.stream().mapToLong(stat -> n(stat.getTotalSendCount())).sum();
-        long totalSuccess = messageStats.stream().mapToLong(stat -> n(stat.getTotalSuccessCount())).sum();
+    private List<StatCardResponse> buildCards(MessageStatVO messageSummary,
+                                              List<MessageStatByDegreeVO> channelSendSummary,
+                                              CustomerStatVO latestCustomer) {
+        MessageStatVO summary = messageSummary == null ? new MessageStatVO() : messageSummary;
+        long totalSend = n(summary.getTotalSendCount());
+        long totalSuccess = n(summary.getTotalSuccessCount());
         long failCount = Math.max(totalSend - totalSuccess, 0);
-        BigDecimal billingCost = sum(messageStats, MessageStatVO::getBillingCost);
-        BigDecimal maxCost = sum(messageStats, MessageStatVO::getMaxCost);
+        BigDecimal billingCost = n(summary.getBillingCost());
+        BigDecimal maxCost = n(summary.getMaxCost());
         BigDecimal savingCost = maxCost.subtract(billingCost).max(BigDecimal.ZERO);
-        CustomerStatVO latestCustomer = latestCustomerStat(customerStats);
-        long activeCustomers = n(latestCustomer.getNormalCustomerCount()) + n(latestCustomer.getNewCustomerCount());
+        CustomerStatVO customer = latestCustomer == null ? new CustomerStatVO() : latestCustomer;
+        long activeCustomers = n(customer.getNormalCustomerCount()) + n(customer.getNewCustomerCount());
 
         if (totalSend == 0) {
-            totalSend = degreeStats.stream().mapToLong(stat -> n(stat.getSendCount())).sum();
-            totalSuccess = degreeStats.stream().mapToLong(stat -> n(stat.getSuccessCount())).sum();
+            totalSend = channelSendSummary.stream().mapToLong(stat -> n(stat.getSendCount())).sum();
+            totalSuccess = channelSendSummary.stream().mapToLong(stat -> n(stat.getSuccessCount())).sum();
             failCount = Math.max(totalSend - totalSuccess, 0);
         }
 
@@ -300,19 +301,6 @@ public class DashboardServiceImpl implements DashboardService {
                 ? send.getCompletedAt()
                 : send.getScheduledAt() != null ? send.getScheduledAt() : send.getCreatedAt();
         return dateTime == null ? "-" : dateTime.format(DATE_TIME_FORMATTER);
-    }
-
-    private CustomerStatVO latestCustomerStat(List<CustomerStatVO> stats) {
-        return stats.stream()
-                .max(Comparator.comparing(CustomerStatVO::getDate, Comparator.nullsFirst(Comparator.naturalOrder())))
-                .orElseGet(CustomerStatVO::new);
-    }
-
-    private BigDecimal sum(List<MessageStatVO> stats, Function<MessageStatVO, BigDecimal> getter) {
-        return stats.stream()
-                .map(getter)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private String defaultText(String value, String fallback) {
