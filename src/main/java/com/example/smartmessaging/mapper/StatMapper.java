@@ -4,7 +4,7 @@ import com.example.smartmessaging.dto.request.StatSearchRequest;
 import com.example.smartmessaging.dto.vo.ChannelStatVO;
 import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.ClickStatVO;
-import com.example.smartmessaging.dto.vo.CustomerChannelConsentVO;
+import com.example.smartmessaging.dto.vo.CustomerChannelConsentSummaryVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
@@ -25,7 +25,7 @@ public interface StatMapper {
 
     List<CustomerStatVO> selectCustomerStats(StatSearchRequest request);
 
-    List<CustomerChannelConsentVO> selectCustomerChannelConsents(StatSearchRequest request);
+    List<CustomerChannelConsentSummaryVO> selectCustomerChannelConsents(StatSearchRequest request);
 
     List<ClickStatVO> selectPerformanceClickStats(StatSearchRequest request);
 }

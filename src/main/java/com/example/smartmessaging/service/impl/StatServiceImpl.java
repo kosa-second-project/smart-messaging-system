@@ -9,7 +9,7 @@ import com.example.smartmessaging.dto.response.StatTableResponse;
 import com.example.smartmessaging.dto.vo.ChannelStatVO;
 import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.ClickStatVO;
-import com.example.smartmessaging.dto.vo.CustomerChannelConsentVO;
+import com.example.smartmessaging.dto.vo.CustomerChannelConsentSummaryVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
@@ -93,7 +93,7 @@ public class StatServiceImpl implements StatService {
     @Override
     public StatPageResponse getCustomerStats(StatSearchRequest request) {
         List<CustomerStatVO> customerStats = statMapper.selectCustomerStats(request);
-        List<CustomerChannelConsentVO> consents = statMapper.selectCustomerChannelConsents(request);
+        List<CustomerChannelConsentSummaryVO> consents = statMapper.selectCustomerChannelConsents(request);
         Map<Long, String> channelNames = channelNames();
 
         return StatPageResponse.builder()
@@ -342,18 +342,17 @@ public class StatServiceImpl implements StatService {
                 .build();
     }
 
-    private StatTableResponse buildCustomerConsentTable(List<CustomerChannelConsentVO> consents, Map<Long, String> channelNames) {
-        Map<Long, List<CustomerChannelConsentVO>> byChannel = consents.stream()
+    private StatTableResponse buildCustomerConsentTable(List<CustomerChannelConsentSummaryVO> consents, Map<Long, String> channelNames) {
+        List<List<String>> rows = consents.stream()
                 .filter(consent -> consent.getChannelId() != null)
-                .collect(Collectors.groupingBy(CustomerChannelConsentVO::getChannelId, LinkedHashMap::new, Collectors.toList()));
-
-        List<List<String>> rows = byChannel.entrySet().stream()
-                .map(entry -> {
-                    long total = entry.getValue().size();
-                    long consented = entry.getValue().stream().filter(consent -> Boolean.TRUE.equals(consent.getIsConsented())).count();
-                    long rejected = Math.max(total - consented, 0);
+                .map(consent -> {
+                    long total = n(consent.getTotalCount());
+                    long consented = n(consent.getConsentedCount());
+                    long rejected = consent.getRejectedCount() == null
+                            ? Math.max(total - consented, 0)
+                            : n(consent.getRejectedCount());
                     return List.of(
-                            channelName(channelNames, entry.getKey()),
+                            channelName(channelNames, consent.getChannelId()),
                             formatNumber(consented) + "명",
                             formatNumber(rejected) + "명",
                             formatRate(rate(consented, total)) + "%"
@@ -655,6 +654,10 @@ public class StatServiceImpl implements StatService {
     }
 
     private int n(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private long n(Long value) {
         return value == null ? 0 : value;
     }
 
