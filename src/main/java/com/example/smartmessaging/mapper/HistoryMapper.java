@@ -23,4 +23,9 @@ public interface HistoryMapper {
     List<HistoryFilterOptionDTO> findChannelOptions();
     List<HistoryFilterOptionDTO> findTagOptions();
     List<String> findPurposeOptions();
+
+    /**
+     * 발송 대상(send_target)의 최종 상태를 업데이트합니다.
+     */
+    void updateSendTargetStatus(@Param("sendTargetId") Long sendTargetId, @Param("status") String status);
 }

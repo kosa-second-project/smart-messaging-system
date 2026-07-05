@@ -220,4 +220,12 @@
           AND purpose IS NOT NULL
         ORDER BY purpose
     </select>
+
+    <update id="updateSendTargetStatus">
+        UPDATE send_target
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendTargetId}
+          AND is_deleted = 0
+    </update>
 </mapper>

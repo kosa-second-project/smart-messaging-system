@@ -195,4 +195,19 @@ public class CampaignDraftService {
         }
         return statusMap;
     }
+
+    /**
+     * ZSET에 임시 보관된 모든 수신자 고객 ID 목록을 조회합니다.
+     */
+    public List<Long> getAllIds(Long userId, String draftId) {
+        String key = KEY_PREFIX + userId + ":" + draftId;
+        Set<Object> ids = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return ids.stream()
+                .map(id -> Long.parseLong(id.toString()))
+                .toList();
+    }
 }
+

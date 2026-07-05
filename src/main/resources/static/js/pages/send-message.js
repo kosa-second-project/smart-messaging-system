@@ -80,6 +80,8 @@ const MessageComposer = {
         });
 
         this.bindDragEvents();
+        sessionStorage.setItem("routingChannels", JSON.stringify(this.channels));
+        sessionStorage.setItem("routingChannelIds", JSON.stringify(this.channels.map(c => c.id)));
     },
 
     bindDragEvents: function () {

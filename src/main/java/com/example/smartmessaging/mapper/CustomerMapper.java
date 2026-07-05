@@ -51,4 +51,10 @@ public interface CustomerMapper {
      * 반환값: [{CUSTOMER_ID: 1, TAG_NAME: "남자"}, ...]
      */
     List<Map<String, Object>> findTagsByCustomerIds(@Param("customerIds") List<Long> customerIds);
+
+    /**
+     * ID 목록으로 고객 정보를 조회합니다.
+     */
+    List<CustomerVO> findByIds(@Param("ids") List<Long> ids);
 }
+

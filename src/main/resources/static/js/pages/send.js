@@ -136,8 +136,17 @@ const SendPage = {
             sessionStorage.setItem("messageTitle", $("#messageTitle").val() || "");
             sessionStorage.setItem("messageContent", $("#messageContent").val() || "");
 
+            // 추가: 채널 우선순위 ID 리스트 저장
+            const channelIds = [];
+            $("#channelSortableList li.channel-card").each(function() {
+                const id = $(this).data("id");
+                if (id) channelIds.push(parseInt(id));
+            });
+            sessionStorage.setItem("routingChannelIds", JSON.stringify(channelIds));
+
             this.isNavigatingInternal = true;
             window.location.href = "/send/review";
+
         } else if (current === 3) {
             // 리뷰 화면: 발송하기 로직 수행
             const title = sessionStorage.getItem("messageTitle") || "";

@@ -1,18 +1,16 @@
-package com.example.smartmessaging.service;
+package com.example.smartmessaging.service.impl;
 
 import com.example.smartmessaging.dto.request.CustomerSearchDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.*;
 import com.example.smartmessaging.dto.vo.CustomerVO;
 import com.example.smartmessaging.mapper.CustomerMapper;
+import com.example.smartmessaging.service.CampaignDraftService;
+import com.example.smartmessaging.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.CustomerSummaryResponse;
 import com.example.smartmessaging.dto.response.PagedCustomerResponse;
-import com.example.smartmessaging.dto.vo.CustomerVO;
-import com.example.smartmessaging.mapper.CustomerMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

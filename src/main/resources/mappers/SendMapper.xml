@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.mapper.SendMapper">
+
+    <!-- 1. 발송 마스터 이력 적재 -->
+    <insert id="insertSendHistory" parameterType="SendHistoryVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO send_history (
+            template_id,
+            user_id,
+            title,
+            content,
+            purpose,
+            status,
+            total_target_count,
+            success_count,
+            fail_count,
+            created_at,
+            created_by
+        ) VALUES (
+            #{templateId, jdbcType=BIGINT},
+            #{userId, jdbcType=BIGINT},
+            #{title, jdbcType=VARCHAR},
+            #{content, jdbcType=VARCHAR},
+            #{purpose, jdbcType=VARCHAR},
+            'SENDING',
+            #{totalTargetCount, jdbcType=INTEGER},
+            0,
+            0,
+            SYSTIMESTAMP,
+            #{createdBy, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- 2. 개별 발송 타겟 적재 -->
+    <insert id="insertSendTarget" parameterType="SendTargetVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO send_target (
+            send_history_id,
+            customer_id,
+            final_channel_id,
+            status,
+            cost,
+            user_uuid,
+            created_at,
+            created_by
+        ) VALUES (
+            #{sendHistoryId, jdbcType=BIGINT},
+            #{customerId, jdbcType=BIGINT},
+            #{finalChannelId, jdbcType=BIGINT},
+            'PENDING',
+            #{cost, jdbcType=DECIMAL},
+            #{userUuid, jdbcType=VARCHAR},
+            SYSTIMESTAMP,
+            #{createdBy, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- 3. 대량 발송 타겟 벌크 적재 (INSERT ALL) -->
+    <insert id="insertSendTargets" parameterType="java.util.List">
+        INSERT ALL
+        <foreach collection="targets" item="item" separator=" ">
+            INTO send_target (
+                send_history_id,
+                customer_id,
+                final_channel_id,
+                status,
+                cost,
+                user_uuid,
+                created_at,
+                created_by
+            ) VALUES (
+                #{item.sendHistoryId, jdbcType=BIGINT},
+                #{item.customerId, jdbcType=BIGINT},
+                #{item.finalChannelId, jdbcType=BIGINT},
+                'PENDING',
+                #{item.cost, jdbcType=DECIMAL},
+                #{item.userUuid, jdbcType=VARCHAR},
+                SYSTIMESTAMP,
+                #{item.createdBy, jdbcType=VARCHAR}
+            )
+        </foreach>
+        SELECT * FROM dual
+    </insert>
+</mapper>
+

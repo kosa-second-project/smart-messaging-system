@@ -415,6 +415,18 @@
         AND ctm.is_deleted = 0
         AND t.is_deleted   = 0
     </select>
+
+    <!-- 5. ID 목록으로 고객 정보 조회 -->
+    <select id="findByIds" resultType="com.example.smartmessaging.dto.vo.CustomerVO">
+        SELECT *
+        FROM   customer
+        WHERE  id IN
+        <foreach item="item" collection="ids" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        AND is_deleted = 0
+    </select>
 </mapper>
+
 
 
