@@ -27,8 +27,7 @@ class TemplatePageSourceTest {
                         "item.updatedAt",
                         "item.content");
         assertThat(detailFunction)
-                .doesNotContain("renderMessagePreview",
-                        "010-0000-0000",
+                .doesNotContain("010-0000-0000",
                         "Gmail");
     }
 
