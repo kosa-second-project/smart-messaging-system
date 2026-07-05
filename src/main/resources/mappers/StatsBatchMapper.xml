@@ -173,9 +173,8 @@
         - *_consent_count: 채널별 수신 동의가 켜져 있는 고객 수
         - joined_customer_count: statDate 당일 가입 고객 수
 
-        고객은 채널 동의 row를 여러 개 가질 수 있다.
-        그래서 customer와 customer_channel_consent를 직접 조인해서 COUNT하면 고객 수가 부풀 수 있으므로
-        각 항목을 독립 서브쿼리로 계산한다.
+        고객 수 계열은 customer_counts에서 한 번에 조건부 집계하고,
+        채널 동의 수 계열은 consent_counts에서 한 번에 조건부 집계한다.
     -->
     <insert id="insertCustomerStat">
         INSERT INTO customer_stat (
@@ -194,112 +193,72 @@
             updated_by,
             is_deleted
         )
+        WITH customer_counts AS (
+            SELECT
+                COUNT(*) AS total_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                     AND (
+                            c.last_active_at IS NULL
+                            OR c.last_active_at &gt;= ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
+                         )
+                    THEN 1
+                    ELSE 0
+                END) AS normal_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                    THEN 1
+                    ELSE 0
+                END) AS new_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                     AND c.last_active_at &lt; ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
+                    THEN 1
+                    ELSE 0
+                END) AS dormant_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                     AND c.joined_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+                    THEN 1
+                    ELSE 0
+                END) AS joined_customer_count
+            FROM customer c
+            WHERE NVL(c.is_deleted, 0) = 0
+              AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+        ),
+        consent_counts AS (
+            SELECT
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'SMS' THEN ccc.customer_id END) AS sms_consent_count,
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'KAKAO' THEN ccc.customer_id END) AS kakao_consent_count,
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'EMAIL' THEN ccc.customer_id END) AS email_consent_count
+            FROM customer_channel_consent ccc
+            INNER JOIN customer c
+                    ON c.id = ccc.customer_id
+                   AND NVL(c.is_deleted, 0) = 0
+                   AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+            INNER JOIN channel ch
+                    ON ch.id = ccc.channel_id
+                   AND NVL(ch.is_deleted, 0) = 0
+            WHERE NVL(ccc.is_deleted, 0) = 0
+              AND NVL(ccc.is_consented, 0) = 1
+        )
         SELECT
             #{statDate},
-
-            -- statDate까지 가입한 전체 활성 고객 수
-            (
-                SELECT COUNT(*)
-                FROM customer c
-                WHERE NVL(c.is_deleted, 0) = 0
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-            ),
-
-            -- 기존 고객 화면 기준과 맞춘 일반 고객 수
-            (
-                SELECT COUNT(*)
-                FROM customer c
-                WHERE NVL(c.is_deleted, 0) = 0
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
-                  AND (
-                        c.last_active_at IS NULL
-                        OR c.last_active_at &gt;= ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
-                  )
-            ),
-
-            -- statDate 기준 최근 7일 이내 가입한 신규 고객 수
-            (
-                SELECT COUNT(*)
-                FROM customer c
-                WHERE NVL(c.is_deleted, 0) = 0
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                  AND c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
-            ),
-
-            -- 마지막 활동이 12개월보다 오래된 휴면 고객 수
-            (
-                SELECT COUNT(*)
-                FROM customer c
-                WHERE NVL(c.is_deleted, 0) = 0
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                  AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
-                  AND c.last_active_at &lt; ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
-            ),
-
-            -- SMS 수신 동의 고객 수
-            (
-                SELECT COUNT(DISTINCT ccc.customer_id)
-                FROM customer_channel_consent ccc
-                INNER JOIN customer c
-                        ON c.id = ccc.customer_id
-                       AND NVL(c.is_deleted, 0) = 0
-                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                INNER JOIN channel ch
-                        ON ch.id = ccc.channel_id
-                       AND NVL(ch.is_deleted, 0) = 0
-                WHERE NVL(ccc.is_deleted, 0) = 0
-                  AND NVL(ccc.is_consented, 0) = 1
-                  AND ch.channel_type = 'SMS'
-            ),
-
-            -- 카카오 알림톡 수신 동의 고객 수
-            (
-                SELECT COUNT(DISTINCT ccc.customer_id)
-                FROM customer_channel_consent ccc
-                INNER JOIN customer c
-                        ON c.id = ccc.customer_id
-                       AND NVL(c.is_deleted, 0) = 0
-                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                INNER JOIN channel ch
-                        ON ch.id = ccc.channel_id
-                       AND NVL(ch.is_deleted, 0) = 0
-                WHERE NVL(ccc.is_deleted, 0) = 0
-                  AND NVL(ccc.is_consented, 0) = 1
-                  AND ch.channel_type = 'KAKAO'
-            ),
-
-            -- EMAIL 수신 동의 고객 수
-            (
-                SELECT COUNT(DISTINCT ccc.customer_id)
-                FROM customer_channel_consent ccc
-                INNER JOIN customer c
-                        ON c.id = ccc.customer_id
-                       AND NVL(c.is_deleted, 0) = 0
-                       AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-                INNER JOIN channel ch
-                        ON ch.id = ccc.channel_id
-                       AND NVL(ch.is_deleted, 0) = 0
-                WHERE NVL(ccc.is_deleted, 0) = 0
-                  AND NVL(ccc.is_consented, 0) = 1
-                  AND ch.channel_type = 'EMAIL'
-            ),
-
-            -- statDate 당일 가입한 고객 수
-            (
-                SELECT COUNT(*)
-                FROM customer c
-                WHERE NVL(c.is_deleted, 0) = 0
-                  AND c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP)
-                  AND c.joined_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-            ),
-
+            NVL(customer_counts.total_customer_count, 0),
+            NVL(customer_counts.normal_customer_count, 0),
+            NVL(customer_counts.new_customer_count, 0),
+            NVL(customer_counts.dormant_customer_count, 0),
+            NVL(consent_counts.sms_consent_count, 0),
+            NVL(consent_counts.kakao_consent_count, 0),
+            NVL(consent_counts.email_consent_count, 0),
+            NVL(customer_counts.joined_customer_count, 0),
             SYSTIMESTAMP,
             SYSTIMESTAMP,
             #{systemUserId},
             #{systemUserId},
             0
-        FROM dual
+        FROM customer_counts customer_counts
+        CROSS JOIN consent_counts consent_counts
     </insert>
 
     <!--

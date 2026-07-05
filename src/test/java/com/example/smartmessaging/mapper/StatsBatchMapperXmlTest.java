@@ -52,6 +52,22 @@ class StatsBatchMapperXmlTest {
                 );
     }
 
+    @Test
+    void 고객통계_배치는_고객과_동의테이블을_각각_한번씩_집계한다() throws Exception {
+        String mapperXml = readMapperXml();
+
+        assertThat(mapperXml)
+                .contains(
+                        "WITH customer_counts AS",
+                        "consent_counts AS",
+                        "SUM(CASE WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY",
+                        "COUNT(DISTINCT CASE WHEN ch.channel_type = 'SMS' THEN ccc.customer_id END) AS sms_consent_count",
+                        "CROSS JOIN consent_counts consent_counts"
+                );
+        assertThat(countOccurrences(mapperXml, "FROM customer c")).isLessThanOrEqualTo(2);
+        assertThat(countOccurrences(mapperXml, "FROM customer_channel_consent ccc")).isLessThanOrEqualTo(2);
+    }
+
     private void parseMapper(Configuration configuration, String resource) throws Exception {
         try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
             XMLMapperBuilder mapperParser = new XMLMapperBuilder(
@@ -68,5 +84,15 @@ class StatsBatchMapperXmlTest {
         try (InputStream inputStream = Resources.getResourceAsStream(RESOURCE)) {
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    private int countOccurrences(String text, String pattern) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(pattern, index)) >= 0) {
+            count++;
+            index += pattern.length();
+        }
+        return count;
     }
 }
