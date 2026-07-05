@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수신거부 확인</title>
+    <link rel="stylesheet" th:href="@{/css/pages/unsubscribe.css}">
+</head>
+<body>
+<main class="unsubscribe-page">
+    <section class="unsubscribe-card" aria-labelledby="unsubscribe-title">
+        <p class="unsubscribe-eyebrow">광고성 메시지 수신거부</p>
+        <h1 id="unsubscribe-title">수신거부를 진행할까요?</h1>
+        <p class="unsubscribe-description">
+            아래 버튼을 누르면 해당 고객의 광고성 문자 수신 동의가 해제됩니다.
+        </p>
+
+        <dl class="unsubscribe-summary">
+            <div>
+                <dt>고객명</dt>
+                <dd th:text="${customerName} ?: '고객'">고객</dd>
+            </div>
+            <div>
+                <dt>휴대폰</dt>
+                <dd th:text="${phone} ?: '-'">010-****-0000</dd>
+            </div>
+        </dl>
+
+        <form th:action="@{'/u/' + ${code} + '/unsubscribe'}" method="post">
+            <button type="submit" class="unsubscribe-button">수신 거부하기</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>
