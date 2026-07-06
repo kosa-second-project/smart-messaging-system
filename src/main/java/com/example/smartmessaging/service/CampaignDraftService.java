@@ -121,6 +121,17 @@ public class CampaignDraftService {
                 .toList();
     }
 
+    public List<Long> getAllIds(Long userId, String draftId) {
+        String key = KEY_PREFIX + userId + ":" + draftId;
+        Set<Object> ids = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return ids.stream()
+                .map(id -> Long.parseLong(id.toString()))
+                .toList();
+    }
+
     // =============================================
     // 3. 전체 선택 인원 수 조회 (totalCount 페이징 계산용)
     // =============================================

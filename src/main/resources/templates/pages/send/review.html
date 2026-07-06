@@ -2,13 +2,78 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/send-layout}">
+<head>
+    <link rel="stylesheet" th:href="@{/css/pages/send/review.css(v=${#dates.createNow().getTime()})}">
+</head>
 <body>
-    <div layout:fragment="send-content" class="step-mock-container">
-        <div class="mock-card">
-            <span class="mock-icon">✉️</span>
-            <h2>3단계: 검토 및 발송 화면</h2>
-            <p>1단계(수신자)와 2단계(메시지) 내용 검토 후 최종 카카오/이메일/문자로 메시지 일괄 발송을 수행하는 화면이 올 자리입니다.</p>
-        </div>
+    <div layout:fragment="send-content" class="send-review-page">
+        <section class="review-grid">
+            <article class="ds-card review-card">
+                <div class="ds-card__header">
+                    <h3 class="ds-card__title">발송 대상</h3>
+                </div>
+                <div class="ds-card__body review-metrics">
+                    <div class="review-metric">
+                        <span>총 대상</span>
+                        <strong id="reviewTotalTargets">0</strong>
+                    </div>
+                    <div class="review-metric">
+                        <span>발송 가능</span>
+                        <strong id="reviewSendableTargets">0</strong>
+                    </div>
+                    <div class="review-metric">
+                        <span>제외</span>
+                        <strong id="reviewSkippedTargets">0</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="ds-card review-card">
+                <div class="ds-card__header">
+                    <h3 class="ds-card__title">예상 비용</h3>
+                </div>
+                <div class="ds-card__body">
+                    <div class="review-cost" id="reviewEstimatedCost">0원</div>
+                    <p class="review-help">최종 발송 대상은 큐 Consumer가 DB 최신 상태 기준으로 다시 계산합니다.</p>
+                </div>
+            </article>
+
+            <article class="ds-card review-card">
+                <div class="ds-card__header">
+                    <h3 class="ds-card__title">발송 시간</h3>
+                </div>
+                <div class="ds-card__body">
+                    <div class="review-schedule" id="reviewScheduleText">즉시 발송</div>
+                    <p class="review-help" id="reviewScheduleHelp"></p>
+                </div>
+            </article>
+        </section>
+
+        <section class="review-detail-grid">
+            <article class="ds-card review-card">
+                <div class="ds-card__header">
+                    <h3 class="ds-card__title">채널별 예상 대상</h3>
+                </div>
+                <div class="ds-card__body">
+                    <div id="reviewChannelRows" class="review-channel-list"></div>
+                </div>
+            </article>
+
+            <article class="ds-card review-card">
+                <div class="ds-card__header">
+                    <h3 class="ds-card__title">메시지 확인</h3>
+                </div>
+                <div class="ds-card__body review-message">
+                    <div class="review-message__title" id="reviewMessageTitle"></div>
+                    <div class="review-message__content" id="reviewMessageContent"></div>
+                    <div class="review-message__meta" id="reviewMessageMeta"></div>
+                </div>
+            </article>
+        </section>
+
+        <div class="review-state" id="reviewState" role="status"></div>
+
+        <script th:src="@{/js/pages/send-review.js(v=${#dates.createNow().getTime()})}"></script>
     </div>
 </body>
 </html>

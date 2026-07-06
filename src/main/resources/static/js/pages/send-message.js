@@ -9,6 +9,7 @@ const MessageComposer = {
     init: function () {
         this.loadChannels();
         this.bindEvents();
+        this.restoreFormState();
         // 1단계에서 가져온 총 대상 수 렌더링
         $("#totalTargetCount").text(SendPage.state.draftTotalCount || 0);
     },
@@ -132,6 +133,25 @@ const MessageComposer = {
         this.renderChannels(); // 뱃지 재렌더링
     },
 
+    getChannelPriorityIds: function () {
+        return this.channels.map(ch => ch.id).filter(Boolean);
+    },
+
+    restoreFormState: function () {
+        $("#messageTitle").val(sessionStorage.getItem("messageTitle") || "");
+        $("#messageContent").val(sessionStorage.getItem("messageContent") || "");
+        $("#messageAdvertising").prop("checked", sessionStorage.getItem("messageAdvertising") === "true");
+        $("#scheduledAt").val(sessionStorage.getItem("scheduledAt") || "");
+        $("#messageLinkUrl").val(sessionStorage.getItem("messageLinkUrl") || "");
+        $("#messageTitle").trigger("input");
+        $("#messageContent").trigger("input");
+        this.updateAdvertisingPreview();
+    },
+
+    updateAdvertisingPreview: function () {
+        $(".preview-ad-badge-row").toggle($("#messageAdvertising").is(":checked"));
+    },
+
     bindEvents: function () {
         const self = this;
 
@@ -139,6 +159,10 @@ const MessageComposer = {
         $("#btnSmartSort").on("click", function () {
             self.channels.sort((a, b) => (a.costPerMsg || 0) - (b.costPerMsg || 0));
             self.renderChannels();
+        });
+
+        $("#messageAdvertising").on("change", function () {
+            self.updateAdvertisingPreview();
         });
 
         // 미리보기 탭 스위칭 이벤트

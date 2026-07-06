@@ -46,6 +46,8 @@ dependencies {
     
     // Redis (RedisConfig 및 CampaignDraftService 컴파일용 필수 의존성 추가)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'com.solapi:sdk:1.1.0'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
 
     // Developer Tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

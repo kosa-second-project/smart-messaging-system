@@ -56,4 +56,72 @@
             SUM(COALESCE(ts.click_count, 0)) DESC
         FETCH FIRST 5 ROWS ONLY
     </select>
+    <select id="selectSendTargetStatusCounts" resultType="com.example.smartmessaging.dto.response.DashboardSummaryResponse$QueueStatus">
+        SELECT
+            st.status AS label,
+            COUNT(*) AS count
+        FROM send_target st
+        WHERE NVL(st.is_deleted, 0) = 0
+        GROUP BY st.status
+    </select>
+
+    <select id="selectQueueJobs" resultType="com.example.smartmessaging.dto.response.DashboardSummaryResponse$QueueJob">
+        SELECT
+            'H-' || sh.id AS id,
+            COALESCE(sh.title, '제목 없음') AS title,
+            COALESCE(channel_rows.channel_names, '-') AS channel,
+            CASE sh.status
+                WHEN 'QUEUED' THEN '대기'
+                WHEN 'PREPARING' THEN '준비 중'
+                WHEN 'SENDING' THEN '발송 중'
+                WHEN 'SCHEDULED' THEN '예약'
+                WHEN 'COMPLETED' THEN '완료'
+                WHEN 'SENT' THEN '완료'
+                WHEN 'FAILED' THEN '실패'
+                ELSE COALESCE(sh.status, '-')
+            END AS status,
+            CASE
+                WHEN COALESCE(target_rows.requested, sh.total_target_count, 0) = 0
+                     AND sh.status IN ('COMPLETED', 'SENT') THEN 100
+                WHEN COALESCE(target_rows.requested, sh.total_target_count, 0) = 0 THEN 0
+                ELSE ROUND(
+                    (COALESCE(target_rows.processed, COALESCE(sh.success_count, 0) + COALESCE(sh.fail_count, 0), 0)
+                        / COALESCE(target_rows.requested, sh.total_target_count)) * 100
+                )
+            END AS progress,
+            COALESCE(target_rows.requested, sh.total_target_count, 0) AS requested,
+            COALESCE(target_rows.processed, COALESCE(sh.success_count, 0) + COALESCE(sh.fail_count, 0), 0) AS processed
+        FROM send_history sh
+        LEFT JOIN (
+            SELECT
+                shr.send_history_id,
+                LISTAGG(c.channel_type, ', ') WITHIN GROUP (ORDER BY shr.priority_order) AS channel_names
+            FROM send_history_routing shr
+            JOIN channel c
+              ON c.id = shr.channel_id
+             AND NVL(c.is_deleted, 0) = 0
+            WHERE NVL(shr.is_deleted, 0) = 0
+            GROUP BY shr.send_history_id
+        ) channel_rows
+          ON channel_rows.send_history_id = sh.id
+        LEFT JOIN (
+            SELECT
+                st.send_history_id,
+                COUNT(*) AS requested,
+                SUM(CASE WHEN st.status IN ('SUCCEEDED', 'FAILED', 'SKIPPED') THEN 1 ELSE 0 END) AS processed
+            FROM send_target st
+            WHERE NVL(st.is_deleted, 0) = 0
+            GROUP BY st.send_history_id
+        ) target_rows
+          ON target_rows.send_history_id = sh.id
+        WHERE NVL(sh.is_deleted, 0) = 0
+        ORDER BY
+            CASE
+                WHEN sh.status IN ('QUEUED', 'PREPARING', 'SENDING', 'SCHEDULED') THEN 0
+                ELSE 1
+            END,
+            COALESCE(sh.scheduled_at, sh.completed_at, sh.created_at) DESC,
+            sh.id DESC
+        FETCH FIRST 8 ROWS ONLY
+    </select>
 </mapper>

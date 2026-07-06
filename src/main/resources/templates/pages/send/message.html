@@ -39,16 +39,6 @@
                     </div>
                 </div>
 
-                <!-- 3. 예상 비용 (신규 영역) -->
-                <div class="cost-section ds-card">
-                    <div class="ds-card__header">
-                        <h3 class="ds-card__title"><span class="mock-icon">💸</span> 예상 비용</h3>
-                    </div>
-                    <div class="ds-card__body cost-stats cost-body">
-                        <div class="stat-item cost-amount">총 예상 비용: <strong class="highlight">0</strong>원</div>
-                        <p class="cost-info">* 실제 발송 비용은 통신사 사정에 따라 달라질 수 있습니다.</p>
-                    </div>
-                </div>
             </div>
 
             <div class="message-composer-grid">
@@ -143,6 +133,21 @@
                             <div class="byte-counter">
                                 <span id="currentBytes">0</span> / <span id="maxBytes">최대 1000자</span>
                                 <span class="msg-type-badge ds-badge ds-badge--primary" id="msgTypeBadge">SMS</span>
+                            </div>
+                        </div>
+
+                        <div class="message-options-grid">
+                            <label class="message-option-toggle">
+                                <input type="checkbox" id="messageAdvertising">
+                                <span>광고성 메시지</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <label for="scheduledAt" class="message-label">예약 시간</label>
+                                <input type="datetime-local" id="scheduledAt" class="ds-input">
+                            </div>
+                            <div class="input-wrapper message-option-full">
+                                <label for="messageLinkUrl" class="message-label">링크</label>
+                                <input type="url" id="messageLinkUrl" class="ds-input" placeholder="https://example.com">
                             </div>
                         </div>
 

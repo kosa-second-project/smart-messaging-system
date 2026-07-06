@@ -25,10 +25,10 @@ class TemplatePageSourceTest {
                 .contains("item.id",
                         "item.createdAt",
                         "item.updatedAt",
-                        "item.content");
+                        "item.content",
+                        "renderMessagePreview(item.title, item.content");
         assertThat(detailFunction)
-                .doesNotContain("renderMessagePreview",
-                        "010-0000-0000",
+                .doesNotContain("010-0000-0000",
                         "Gmail");
     }
 

@@ -26,13 +26,16 @@ class HistoryTypeTest {
     @Test
     void 전송기록_상태는_DB_CHECK_제약조건의_값과_일치한다() {
         assertThat(Arrays.stream(SendHistoryStatus.values()).map(SendHistoryStatus::getValue))
-                .containsExactly("SCHEDULED", "SENDING", "SENT", "FAILED");
+                .containsExactly("QUEUED", "PREPARING", "SCHEDULED", "SENDING", "COMPLETED", "SENT", "FAILED");
     }
 
     @Test
     void 전송기록_상태별_라벨과_CSS_클래스를_반환한다() {
+        assertThat(SendHistoryStatus.labelOf("QUEUED")).isEqualTo("대기");
+        assertThat(SendHistoryStatus.labelOf("PREPARING")).isEqualTo("전개중");
         assertThat(SendHistoryStatus.labelOf("SCHEDULED")).isEqualTo("예약");
         assertThat(SendHistoryStatus.labelOf("SENDING")).isEqualTo("전송중");
+        assertThat(SendHistoryStatus.labelOf("COMPLETED")).isEqualTo("완료");
         assertThat(SendHistoryStatus.labelOf("SENT")).isEqualTo("완료");
         assertThat(SendHistoryStatus.labelOf("FAILED")).isEqualTo("실패");
         assertThat(SendHistoryStatus.styleClassOf("SENT")).isEqualTo("history-status--completed");

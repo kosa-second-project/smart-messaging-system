@@ -14,7 +14,8 @@
             <div class="stats-queue-card__head">
                 <div>
                     <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
-                    <p class="stats-card-subtitle">대량 발송 요청의 현재 처리 흐름입니다.</p>
+                    <p class="stats-card-subtitle">캠페인 전개, 개별 메시지 큐, 예약/발송/결과 기록 흐름입니다.</p>
+                    <p id="dashboardRefreshedAt" class="dashboard-refresh-meta"></p>
                 </div>
                 <button type="button" class="dashboard-link-button" data-dashboard-modal-open>
                     상세 분석
@@ -49,7 +50,7 @@
         <section class="dashboard-bottom-row">
             <article class="stats-card dashboard-list-card">
                 <div class="dashboard-card-head">
-                    <h3 class="stats-card-title">최근 전송 기록</h3>
+                    <h3 class="stats-card-title">최근 발송 기록</h3>
                     <a href="/history" class="dashboard-link-button">
                         전체보기
                         <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -69,7 +70,7 @@
 
             <article class="stats-card dashboard-list-card">
                 <div class="dashboard-card-head">
-                    <h3 class="stats-card-title">템플릿별 성과 Top 5</h3>
+                    <h3 class="stats-card-title">템플릿 성과 Top 5</h3>
                     <a href="/templates" class="dashboard-link-button">
                         전체보기
                         <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -86,7 +87,10 @@
         <button type="button" class="dashboard-modal__backdrop" data-dashboard-modal-close aria-label="상세 분석 닫기"></button>
         <section class="dashboard-modal__panel" role="dialog" aria-modal="true" aria-labelledby="dashboardQueueModalTitle">
             <div class="dashboard-modal__head">
-                <h3 id="dashboardQueueModalTitle">실시간 발송 큐 상태</h3>
+                <div>
+                    <h3 id="dashboardQueueModalTitle">발송 큐 상세 분석</h3>
+                    <p class="dashboard-modal__subtitle">캠페인 큐부터 개별 발송 결과 기록까지 현재 처리 상태를 보여줍니다.</p>
+                </div>
                 <button type="button" class="dashboard-modal__close" data-dashboard-modal-close aria-label="닫기">
                     <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M18 6 6 18"></path>
@@ -102,7 +106,7 @@
                         <div id="dashboardProcessSteps" class="dashboard-process-steps"></div>
                     </article>
                     <article class="dashboard-work-card">
-                        <h4>현재 큐 작업</h4>
+                        <h4>최근 캠페인 작업</h4>
                         <div id="dashboardQueueJobs" class="dashboard-queue-jobs"></div>
                     </article>
                 </div>

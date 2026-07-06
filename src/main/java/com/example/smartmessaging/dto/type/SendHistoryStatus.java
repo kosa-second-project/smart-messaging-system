@@ -10,8 +10,11 @@ import java.util.Optional;
 @Getter
 @RequiredArgsConstructor
 public enum SendHistoryStatus {
+    QUEUED("QUEUED", "대기", "history-status--queued"),
+    PREPARING("PREPARING", "전개중", "history-status--preparing"),
     SCHEDULED("SCHEDULED", "예약", "history-status--scheduled"),
     SENDING("SENDING", "전송중", "history-status--sending"),
+    COMPLETED("COMPLETED", "완료", "history-status--completed"),
     SENT("SENT", "완료", "history-status--completed"),
     FAILED("FAILED", "실패", "history-status--failed");
 

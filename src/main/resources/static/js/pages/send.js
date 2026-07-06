@@ -74,6 +74,8 @@ const SendPage = {
             if (typeof RecipientSelector !== "undefined") RecipientSelector.init();
         } else if (this.state.currentStep === 2) {
             if (typeof MessageComposer !== "undefined") MessageComposer.init();
+        } else if (this.state.currentStep === 3) {
+            if (typeof SendReview !== "undefined") SendReview.init();
         }
     },
 
@@ -133,42 +135,32 @@ const SendPage = {
             window.location.href = "/send/message";
         } else if (current === 2) {
             // 메시지 작성 화면: 입력값 세션 저장
-            sessionStorage.setItem("messageTitle", $("#messageTitle").val() || "");
-            sessionStorage.setItem("messageContent", $("#messageContent").val() || "");
+            const title = ($("#messageTitle").val() || "").trim();
+            const content = ($("#messageContent").val() || "").trim();
+            const channelPriorityIds = typeof MessageComposer !== "undefined" ? MessageComposer.getChannelPriorityIds() : [];
+
+            if (!title || !content) {
+                alert("제목과 내용을 입력해주세요.");
+                return;
+            }
+            if (!channelPriorityIds.length) {
+                alert("발송 채널 우선순위를 선택해주세요.");
+                return;
+            }
+
+            sessionStorage.setItem("messageTitle", title);
+            sessionStorage.setItem("messageContent", content);
+            sessionStorage.setItem("messageAdvertising", String($("#messageAdvertising").is(":checked")));
+            sessionStorage.setItem("scheduledAt", $("#scheduledAt").val() || "");
+            sessionStorage.setItem("messageLinkUrl", $("#messageLinkUrl").val() || "");
+            sessionStorage.setItem("channelPriorityIds", JSON.stringify(channelPriorityIds));
 
             this.isNavigatingInternal = true;
             window.location.href = "/send/review";
         } else if (current === 3) {
-            // 리뷰 화면: 발송하기 로직 수행
-            const title = sessionStorage.getItem("messageTitle") || "";
-            const desc = sessionStorage.getItem("messageContent") || "";
-            const kakaoTargetUuidsStr = sessionStorage.getItem("selectedKakaoFriendsUuids") || "[]";
-            let kakaoTargetUuids = [];
-            try {
-                kakaoTargetUuids = JSON.parse(kakaoTargetUuidsStr);
-            } catch (e) {
-                console.error("Failed to parse kakao friends uuids.");
+            if (typeof SendReview !== "undefined") {
+                SendReview.queueCampaign();
             }
-
-            // 카카오톡 피드 발송 테스트 (카카오 API) 호출
-            $.ajax({
-                url: '/api/send/kakao',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    title: title,
-                    description: desc,
-                    targetUuids: kakaoTargetUuids
-                }),
-                success: (res) => {
-                    alert("🎉 발송 성공: " + res.message);
-                    this.clearSessionAndDraft();
-                },
-                error: (err) => {
-                    const msg = err.responseJSON ? err.responseJSON.message : "알 수 없는 오류가 발생했습니다.";
-                    alert("발송 실패: " + msg);
-                }
-            });
         }
     },
 
@@ -181,6 +173,10 @@ const SendPage = {
             sessionStorage.removeItem("draftTotalCount");
             sessionStorage.removeItem("messageTitle");
             sessionStorage.removeItem("messageContent");
+            sessionStorage.removeItem("messageAdvertising");
+            sessionStorage.removeItem("scheduledAt");
+            sessionStorage.removeItem("messageLinkUrl");
+            sessionStorage.removeItem("channelPriorityIds");
             // API 호출로 Redis Draft 비우기
             $.ajax({
                 url: '/api/campaigns/draft/' + draftId,
@@ -195,6 +191,18 @@ const SendPage = {
         } else {
             window.location.href = "/send/recipients";
         }
+    },
+
+    clearSessionAfterQueued: function () {
+        this.isNavigatingInternal = true;
+        sessionStorage.removeItem("draftId");
+        sessionStorage.removeItem("draftTotalCount");
+        sessionStorage.removeItem("messageTitle");
+        sessionStorage.removeItem("messageContent");
+        sessionStorage.removeItem("messageAdvertising");
+        sessionStorage.removeItem("scheduledAt");
+        sessionStorage.removeItem("messageLinkUrl");
+        sessionStorage.removeItem("channelPriorityIds");
     },
 
     // 이전 단계 이동 처리

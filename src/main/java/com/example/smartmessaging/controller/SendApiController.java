@@ -1,12 +1,19 @@
 package com.example.smartmessaging.controller;
 
 import com.example.smartmessaging.dto.request.KakaoFeedMessageRequest;
+import com.example.smartmessaging.dto.request.SendPrepareRequestDTO;
+import com.example.smartmessaging.dto.response.CostEstimationResponseDTO;
+import com.example.smartmessaging.dto.response.SendPrepareResponseDTO;
+import com.example.smartmessaging.security.CustomUserDetails;
 import com.example.smartmessaging.service.KakaoMessageService;
+import com.example.smartmessaging.service.SendPreparationService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +25,7 @@ import java.util.Map;
 public class SendApiController {
 
     private final KakaoMessageService kakaoMessageService;
+    private final SendPreparationService sendPreparationService;
 
     private String getKakaoAccessToken(HttpSession session) {
         String token = (String) session.getAttribute("kakaoAccessToken");
@@ -26,6 +34,20 @@ public class SendApiController {
 
     private ResponseEntity<?> unauthorizedResponse() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "카카오 로그인이 필요합니다."));
+    }
+
+    @PostMapping("/estimate-cost")
+    public ResponseEntity<CostEstimationResponseDTO> estimateCost(
+            @Valid @RequestBody SendPrepareRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(sendPreparationService.estimate(userDetails.getUserId(), request));
+    }
+
+    @PostMapping("/campaigns")
+    public ResponseEntity<SendPrepareResponseDTO> queueCampaign(
+            @Valid @RequestBody SendPrepareRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.accepted().body(sendPreparationService.queueCampaign(userDetails.getUserId(), request));
     }
 
     @GetMapping("/kakao/friends")

@@ -1,5 +1,6 @@
 package com.example.smartmessaging.service.impl;
 
+import com.example.smartmessaging.config.RabbitMQConfig;
 import com.example.smartmessaging.dto.request.StatSearchRequest;
 import com.example.smartmessaging.dto.response.DashboardSummaryResponse;
 import com.example.smartmessaging.dto.response.DashboardSummaryResponse.ProcessStep;
@@ -18,6 +19,7 @@ import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.mapper.DashboardMapper;
 import com.example.smartmessaging.mapper.StatMapper;
 import com.example.smartmessaging.service.DashboardService;
+import com.example.smartmessaging.service.queue.QueueMonitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -44,6 +47,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final StatMapper statMapper;
     private final DashboardMapper dashboardMapper;
+    private final QueueMonitorService queueMonitorService;
 
     @Override
     public DashboardSummaryResponse getSummary(StatSearchRequest request) {
@@ -53,6 +57,10 @@ public class DashboardServiceImpl implements DashboardService {
         List<SendHistoryVO> recentSends = dashboardMapper.selectRecentSends();
         List<TemplatePerformance> templateTop = dashboardMapper.selectTemplatePerformanceTop(request);
         Map<Long, String> channelNames = channelNames();
+        Map<String, Long> targetStatusCounts = targetStatusCounts();
+        QueueDepths queueDepths = queueDepths();
+        List<QueueStatus> queueStatuses = buildQueueStatuses(queueDepths, targetStatusCounts);
+        List<QueueJob> queueJobs = dashboardMapper.selectQueueJobs();
 
         return DashboardSummaryResponse.builder()
                 .cards(buildCards(messageStats, degreeStats, customerStats))
@@ -61,11 +69,12 @@ public class DashboardServiceImpl implements DashboardService {
                         buildChannelShareChart(degreeStats, channelNames),
                         buildDailySendTrendChart(messageStats)
                 ))
-                .queueStatuses(buildQueueStatuses())
+                .refreshedAt(LocalDateTime.now().format(DATE_TIME_FORMATTER))
+                .queueStatuses(queueStatuses)
                 .recentSends(buildRecentSends(recentSends))
                 .templatePerformance(buildTemplatePerformance(templateTop))
-                .queueJobs(buildQueueJobs())
-                .processSteps(buildProcessSteps())
+                .queueJobs(queueJobs)
+                .processSteps(buildProcessSteps(queueDepths, targetStatusCounts))
                 .build();
     }
 
@@ -89,19 +98,27 @@ public class DashboardServiceImpl implements DashboardService {
 
         return List.of(
                 card("총 발송 건수", formatNumber(totalSend), ""),
-                card("발송 성공률 / 실패 현황", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", ""),
-                card("활성 고객 수 (일반, 신규)", formatNumber(activeCustomers), ""),
+                card("발송 성공률 / 실패", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", ""),
+                card("활성 고객 수", formatNumber(activeCustomers), ""),
                 card("실제 청구 비용", formatWon(billingCost), ""),
-                card("스마트 라우팅 절감 현황", formatWon(savingCost), "")
+                card("스마트 라우팅 절감", formatWon(savingCost), "")
         );
     }
 
-    private List<QueueStatus> buildQueueStatuses() {
+    private List<QueueStatus> buildQueueStatuses(QueueDepths queueDepths, Map<String, Long> targetStatusCounts) {
+        long pending = statusCount(targetStatusCounts, "PENDING");
+        long sending = statusCount(targetStatusCounts, "SENDING");
+        long succeeded = statusCount(targetStatusCounts, "SUCCEEDED");
+        long failed = statusCount(targetStatusCounts, "FAILED") + statusCount(targetStatusCounts, "SKIPPED");
+        long deadQueueCount = visibleQueueCount(queueDepths.deadQueue());
+
         return List.of(
-                queueStatus("대기", 0, "#94A3B8", "amber"),
-                queueStatus("발송 중", 2500, "#3B82F6", "green"),
-                queueStatus("완료", 12847, "#10B981", "green"),
-                queueStatus("실패", 165, "#EF4444", "red")
+                queueStatus(queueLabel("캠페인 큐", queueDepths.campaignQueue()), visibleQueueCount(queueDepths.campaignQueue()), "#7C3AED", queueDepths.campaignQueue() < 0 ? "red" : "amber"),
+                queueStatus(queueLabel("메시지 큐", queueDepths.messageQueue()), visibleQueueCount(queueDepths.messageQueue()), "#0EA5E9", queueDepths.messageQueue() < 0 ? "red" : "amber"),
+                queueStatus("예약/대기", pending, "#94A3B8", "amber"),
+                queueStatus("발송 중", sending, "#3B82F6", "green"),
+                queueStatus("완료", succeeded, "#10B981", "green"),
+                queueStatus("실패/DLQ", failed + deadQueueCount, "#EF4444", failed + deadQueueCount > 0 ? "red" : "green")
         );
     }
 
@@ -121,22 +138,19 @@ public class DashboardServiceImpl implements DashboardService {
         return templateTop;
     }
 
-    private List<QueueJob> buildQueueJobs() {
-        return List.of(
-                queueJob("Q-2401", "6월 여름 할인 이벤트", "카카오톡", "발송 중", 72, 284391, 204762),
-                queueJob("Q-2402", "포인트 소멸 안내", "LMS", "대기", 0, 92841, 0),
-                queueJob("Q-2403", "생일 축하 메시지", "SMS", "완료", 100, 1284, 1284),
-                queueJob("Q-2404", "신규 가입 환영", "카카오톡", "실패", 91, 341, 338)
-        );
-    }
+    private List<ProcessStep> buildProcessSteps(QueueDepths queueDepths, Map<String, Long> targetStatusCounts) {
+        long pending = statusCount(targetStatusCounts, "PENDING");
+        long sending = statusCount(targetStatusCounts, "SENDING");
+        long succeeded = statusCount(targetStatusCounts, "SUCCEEDED");
+        long failed = statusCount(targetStatusCounts, "FAILED") + statusCount(targetStatusCounts, "SKIPPED");
 
-    private List<ProcessStep> buildProcessSteps() {
         return List.of(
-                processStep("요청 접수", "완료", "done"),
-                processStep("대상 검증", "완료", "done"),
-                processStep("채널 라우팅", "진행 중", "active"),
-                processStep("발송 처리", "진행 중", "active"),
-                processStep("결과 집계", "대기", "")
+                processStep("캠페인 명령", queueDepthText(queueDepths.campaignQueue()), queueState(queueDepths.campaignQueue())),
+                processStep("대상 전개", formatNumber(pending + sending + succeeded + failed) + "명 생성", (pending + sending) > 0 ? "active" : doneState(succeeded + failed)),
+                processStep("개별 메시지 큐", queueDepthText(queueDepths.messageQueue()), queueState(queueDepths.messageQueue())),
+                processStep("실제/Mock 발송", formatNumber(sending) + "명 처리 중", sending > 0 ? "active" : doneState(succeeded)),
+                processStep("결과 기록", formatNumber(succeeded) + "명 성공 / " + formatNumber(failed) + "명 실패", failed > 0 ? "error" : doneState(succeeded)),
+                processStep("공통 DLQ", queueDepthText(queueDepths.deadQueue()), queueDepths.deadQueue() > 0 ? "error" : queueState(queueDepths.deadQueue()))
         );
     }
 
@@ -196,22 +210,36 @@ public class DashboardServiceImpl implements DashboardService {
                         LinkedHashMap::new));
     }
 
+    private Map<String, Long> targetStatusCounts() {
+        return dashboardMapper.selectSendTargetStatusCounts().stream()
+                .collect(Collectors.toMap(
+                        status -> defaultText(status.getLabel(), "").toUpperCase(),
+                        QueueStatus::getCount,
+                        Long::sum,
+                        LinkedHashMap::new
+                ));
+    }
+
+    private QueueDepths queueDepths() {
+        return new QueueDepths(
+                queueMonitorService.messageCount(RabbitMQConfig.CAMPAIGN_COMMAND_QUEUE),
+                queueMonitorService.messageCount(RabbitMQConfig.MESSAGE_SEND_QUEUE),
+                queueMonitorService.messageCount(RabbitMQConfig.DEAD_QUEUE)
+        );
+    }
+
     private String normalizeStatus(String status) {
         String upper = defaultText(status, "").toUpperCase();
-        if (upper.contains("FAIL") || upper.contains("ERROR") || statusContains(status, "실패")) {
+        if (upper.contains("FAIL") || upper.contains("ERROR")) {
             return "실패";
         }
-        if (upper.contains("WAIT") || upper.contains("READY") || upper.contains("SCHEDULE") || statusContains(status, "대기")) {
+        if (upper.contains("QUEUED") || upper.contains("PREPARING") || upper.contains("WAIT") || upper.contains("READY") || upper.contains("SCHEDULE")) {
             return "대기";
         }
-        if (upper.contains("SEND") || upper.contains("PROGRESS") || statusContains(status, "진행") || statusContains(status, "발송 중")) {
+        if (upper.contains("SEND") || upper.contains("PROGRESS")) {
             return "발송 중";
         }
         return "완료";
-    }
-
-    private boolean statusContains(String status, String keyword) {
-        return status != null && status.contains(keyword);
     }
 
     private String displayChannelName(String channelType) {
@@ -238,19 +266,6 @@ public class DashboardServiceImpl implements DashboardService {
                 .count(count)
                 .color(color)
                 .badge(badge)
-                .build();
-    }
-
-    private QueueJob queueJob(String id, String title, String channel, String status,
-                                               int progress, long requested, long processed) {
-        return QueueJob.builder()
-                .id(id)
-                .title(title)
-                .channel(channel)
-                .status(status)
-                .progress(progress)
-                .requested(requested)
-                .processed(processed)
                 .build();
     }
 
@@ -315,6 +330,33 @@ public class DashboardServiceImpl implements DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    private long statusCount(Map<String, Long> targetStatusCounts, String status) {
+        return targetStatusCounts.getOrDefault(status, 0L);
+    }
+
+    private String queueLabel(String label, long count) {
+        return count < 0 ? label + " 확인 불가" : label;
+    }
+
+    private long visibleQueueCount(long count) {
+        return Math.max(count, 0L);
+    }
+
+    private String queueDepthText(long count) {
+        return count < 0 ? "RabbitMQ 확인 불가" : formatNumber(count) + "건 대기";
+    }
+
+    private String queueState(long count) {
+        if (count < 0) {
+            return "error";
+        }
+        return count > 0 ? "active" : "done";
+    }
+
+    private String doneState(long count) {
+        return count > 0 ? "done" : "";
+    }
+
     private String defaultText(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
@@ -352,5 +394,8 @@ public class DashboardServiceImpl implements DashboardService {
 
     private long toLong(BigDecimal value) {
         return n(value).setScale(0, RoundingMode.HALF_UP).longValue();
+    }
+
+    private record QueueDepths(long campaignQueue, long messageQueue, long deadQueue) {
     }
 }

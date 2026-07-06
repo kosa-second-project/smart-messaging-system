@@ -36,3 +36,12 @@ logging:
 
 server:
   port: 8080
+
+solapi:
+  enabled: false
+  api-key: ${SOLAPI_API_KEY:}
+  api-secret: ${SOLAPI_API_SECRET:}
+  from-number: ${SOLAPI_FROM_NUMBER:}
+
+messaging:
+  unsubscribe-url: ${MESSAGING_UNSUBSCRIBE_URL:}

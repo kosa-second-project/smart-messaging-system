@@ -1,21 +1,44 @@
+let dashboardRefreshTimer = null;
+let dashboardRequest = null;
+
 $(function() {
     bindModal();
     loadDashboardSummary();
+    dashboardRefreshTimer = window.setInterval(function() {
+        if (!document.hidden) {
+            loadDashboardSummary();
+        }
+    }, 5000);
+
+    $(window).on("beforeunload", function() {
+        if (dashboardRefreshTimer) {
+            window.clearInterval(dashboardRefreshTimer);
+        }
+    });
 });
 
 function loadDashboardSummary() {
-    ApiClient.get("/api/dashboard/summary").done(function(response) {
-        const charts = response.charts || [];
-        const channelShare = findChart(charts, "channelShare");
+    if (dashboardRequest) {
+        return;
+    }
 
-        renderMetricCards(response.cards || []);
-        renderQueueStatus(response.queueStatuses || []);
-        renderCharts(charts);
-        renderChannelLegend(toChartEntries(channelShare));
-        renderHistory(response.recentSends || []);
-        renderTemplates(response.templatePerformance || []);
-        renderModal(response.queueStatuses || [], response.queueJobs || [], response.processSteps || []);
-    });
+    dashboardRequest = ApiClient.get("/api/dashboard/summary")
+        .done(function(response) {
+            const charts = response.charts || [];
+            const channelShare = findChart(charts, "channelShare");
+
+            renderMetricCards(response.cards || []);
+            renderQueueStatus(response.queueStatuses || []);
+            renderCharts(charts);
+            renderChannelLegend(toChartEntries(channelShare));
+            renderHistory(response.recentSends || []);
+            renderTemplates(response.templatePerformance || []);
+            renderModal(response.queueStatuses || [], response.queueJobs || [], response.processSteps || []);
+            renderRefreshedAt(response.refreshedAt);
+        })
+        .always(function() {
+            dashboardRequest = null;
+        });
 }
 
 function renderMetricCards(cards) {
@@ -27,6 +50,12 @@ function renderMetricCards(cards) {
 
 function renderQueueStatus(queueStatus) {
     const total = getQueueTotal(queueStatus);
+
+    if (!queueStatus.length) {
+        $("#dashboardQueueItems").html('<div class="dashboard-queue-empty">표시할 큐 상태가 없습니다.</div>');
+        $("#dashboardQueueBar").empty();
+        return;
+    }
 
     $("#dashboardQueueItems").html(queueStatus.map(function(item) {
         const rate = total === 0 ? 0 : (Number(item.count || 0) / total) * 100;
@@ -91,6 +120,11 @@ function renderChannelLegend(channelRows) {
 }
 
 function renderHistory(historyRows) {
+    if (!historyRows.length) {
+        $("#dashboardHistoryList").html('<div class="dashboard-queue-empty">최근 발송 기록이 없습니다.</div>');
+        return;
+    }
+
     $("#dashboardHistoryList").html(historyRows.map(function(record) {
         const variant = statusVariant(record.status);
         return `
@@ -109,9 +143,14 @@ function renderHistory(historyRows) {
 }
 
 function renderTemplates(templateRows) {
+    if (!templateRows.length) {
+        $("#dashboardTemplateList").html('<div class="dashboard-queue-empty">표시할 템플릿 성과가 없습니다.</div>');
+        return;
+    }
+
     $("#dashboardTemplateList").html(templateRows.map(function(template, index) {
         const conversion = template.conversion === null || template.conversion === undefined ? "-" : `${template.conversion}%`;
-        const sourceBadge = template.source === "AI 템플릿"
+        const sourceBadge = String(template.source || "").toUpperCase().includes("AI")
             ? '<span class="dashboard-source-badge">AI</span>'
             : "";
 
@@ -162,8 +201,14 @@ function renderModal(queueStatus, queueJobs, processSteps) {
         `;
     }).join(""));
 
+    if (!queueJobs.length) {
+        $("#dashboardQueueJobs").html('<div class="dashboard-queue-empty">최근 캠페인 작업이 없습니다.</div>');
+        return;
+    }
+
     $("#dashboardQueueJobs").html(queueJobs.map(function(job) {
         const variant = statusVariant(job.status);
+        const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
         return `
             <div class="dashboard-queue-job">
                 <div class="dashboard-queue-job__head">
@@ -174,15 +219,19 @@ function renderModal(queueStatus, queueJobs, processSteps) {
                     <span class="dashboard-status-badge dashboard-status-badge--${variant}">${escapeHtml(job.status)}</span>
                 </div>
                 <div class="dashboard-queue-job__progress">
-                    <div class="dashboard-queue-job__bar" style="width:${Number(job.progress || 0)}%"></div>
+                    <div class="dashboard-queue-job__bar" style="width:${progress}%"></div>
                 </div>
                 <div class="dashboard-queue-job__foot">
                     <span>${Number(job.processed || 0).toLocaleString()}건 처리</span>
-                    <span>${Number(job.progress || 0)}%</span>
+                    <span>${progress}%</span>
                 </div>
             </div>
         `;
     }).join(""));
+}
+
+function renderRefreshedAt(refreshedAt) {
+    $("#dashboardRefreshedAt").text(refreshedAt ? `최근 갱신 ${refreshedAt}` : "");
 }
 
 function bindModal() {
@@ -250,11 +299,15 @@ function toDailyRows(chart) {
 }
 
 function statusVariant(status) {
-    if (status === "완료") {
+    const value = String(status || "").toUpperCase();
+    if (value.includes("완료") || value.includes("성공") || value.includes("COMPLETED") || value.includes("SENT") || value.includes("SUCCEEDED")) {
         return "green";
     }
-    if (status === "실패") {
+    if (value.includes("실패") || value.includes("ERROR") || value.includes("FAIL") || value.includes("DLQ")) {
         return "red";
+    }
+    if (value.includes("발송") || value.includes("준비") || value.includes("SENDING") || value.includes("PREPARING")) {
+        return "blue";
     }
     return "amber";
 }
@@ -262,7 +315,7 @@ function statusVariant(status) {
 function getQueueTotal(queueStatus) {
     return queueStatus.reduce(function(sum, item) {
         return sum + Number(item.count || 0);
-    }, 0) || 1;
+    }, 0);
 }
 
 function compactWon(value) {

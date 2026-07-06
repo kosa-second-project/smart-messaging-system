@@ -86,3 +86,13 @@ const DraftApi = {
         return _request.json('DELETE', `/api/campaigns/draft/${draftId}`);
     }
 };
+
+const SendApi = {
+    estimateCost: function(payload) {
+        return _request.json('POST', '/api/send/estimate-cost', payload);
+    },
+
+    queueCampaign: function(payload) {
+        return _request.json('POST', '/api/send/campaigns', payload);
+    }
+};

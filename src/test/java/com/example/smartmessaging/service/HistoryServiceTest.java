@@ -93,12 +93,15 @@ class HistoryServiceTest {
     }
 
     @Test
-    void 상태필터는_DB_CHECK_제약조건에_정의된_네_상태를_제공한다() {
+    void 상태필터는_DB_CHECK_제약조건에_정의된_큐_상태를_제공한다() {
         assertThat(historyService.getStatusOptions())
                 .extracting("value", "label")
                 .containsExactly(
+                        tuple("QUEUED", "대기"),
+                        tuple("PREPARING", "전개중"),
                         tuple("SCHEDULED", "예약"),
                         tuple("SENDING", "전송중"),
+                        tuple("COMPLETED", "완료"),
                         tuple("SENT", "완료"),
                         tuple("FAILED", "실패")
                 );

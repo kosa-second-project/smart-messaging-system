@@ -16,6 +16,7 @@ import java.util.List;
 public class DashboardSummaryResponse {
     private List<StatCardResponse> cards;
     private List<StatChartResponse> charts;
+    private String refreshedAt;
     private List<QueueStatus> queueStatuses;
     private List<RecentSend> recentSends;
     private List<TemplatePerformance> templatePerformance;

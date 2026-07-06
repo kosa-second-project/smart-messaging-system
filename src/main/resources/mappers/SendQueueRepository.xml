@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.smartmessaging.service.repository.SendQueueRepository">
+
+    <insert id="insertSendHistory" parameterType="SendHistoryVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO send_history (
+            template_id,
+            user_id,
+            title,
+            content,
+            purpose,
+            status,
+            total_target_count,
+            success_count,
+            fail_count,
+            estimated_cost,
+            estimated_saving,
+            actual_cost,
+            scheduled_at,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{templateId},
+            #{userId},
+            #{title},
+            #{content},
+            #{purpose},
+            #{status},
+            #{totalTargetCount},
+            #{successCount},
+            #{failCount},
+            #{estimatedCost},
+            #{estimatedSaving},
+            #{actualCost},
+            #{scheduledAt},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <insert id="insertSendHistoryRouting" parameterType="SendHistoryRoutingVO">
+        INSERT INTO send_history_routing (
+            send_history_id,
+            channel_id,
+            priority_order,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{sendHistoryId},
+            #{channelId},
+            #{priorityOrder},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <select id="findSendHistoryById" resultType="SendHistoryVO">
+        SELECT
+            id,
+            template_id,
+            user_id,
+            title,
+            content,
+            purpose,
+            status,
+            solapi_group_id,
+            total_target_count,
+            success_count,
+            fail_count,
+            estimated_cost,
+            estimated_saving,
+            actual_cost,
+            scheduled_at,
+            completed_at
+        FROM send_history
+        WHERE id = #{sendHistoryId}
+          AND NVL(is_deleted, 0) = 0
+    </select>
+
+    <select id="findSendTargetById" resultType="SendTargetVO">
+        SELECT
+            id,
+            send_history_id,
+            customer_id,
+            final_channel_id,
+            status,
+            cost,
+            user_uuid
+        FROM send_target
+        WHERE id = #{sendTargetId}
+          AND NVL(is_deleted, 0) = 0
+    </select>
+
+    <select id="findRoutingByHistoryId" resultType="SendHistoryRoutingVO">
+        SELECT
+            id,
+            send_history_id,
+            channel_id,
+            priority_order
+        FROM send_history_routing
+        WHERE send_history_id = #{sendHistoryId}
+          AND NVL(is_deleted, 0) = 0
+        ORDER BY priority_order ASC
+    </select>
+
+    <select id="findChannelsByIds" resultType="ChannelVO">
+        SELECT
+            id,
+            channel_type AS channel_type,
+            cost_per_msg AS cost_per_msg,
+            max_length AS max_length,
+            is_active AS is_active
+        FROM channel
+        WHERE NVL(is_deleted, 0) = 0
+          AND id IN
+        <foreach item="channelId" collection="channelIds" open="(" separator="," close=")">
+            #{channelId}
+        </foreach>
+    </select>
+
+    <select id="findRecipientCandidatesByCustomerIds" resultType="SendRecipientCandidateVO">
+        SELECT
+            c.id AS customer_id,
+            c.phone AS phone,
+            c.email AS email,
+            ch.id AS channel_id,
+            ch.channel_type AS channel_type,
+            ch.cost_per_msg AS cost_per_msg,
+            ch.max_length AS max_length,
+            NVL(ccc.is_consented, 0) AS consented
+        FROM customer c
+        JOIN channel ch
+          ON NVL(ch.is_deleted, 0) = 0
+         AND NVL(ch.is_active, 0) = 1
+        LEFT JOIN customer_channel_consent ccc
+          ON ccc.customer_id = c.id
+         AND ccc.channel_id = ch.id
+         AND NVL(ccc.is_deleted, 0) = 0
+        WHERE NVL(c.is_deleted, 0) = 0
+          AND NVL(c.is_ad_blocked, 0) = 0
+          AND c.id IN
+        <foreach item="customerId" collection="customerIds" open="(" separator="," close=")">
+            #{customerId}
+        </foreach>
+        ORDER BY c.id ASC, ch.id ASC
+    </select>
+
+    <insert id="insertSendTarget" parameterType="SendTargetVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO send_target (
+            send_history_id,
+            customer_id,
+            final_channel_id,
+            status,
+            cost,
+            user_uuid,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{sendHistoryId},
+            #{customerId},
+            #{finalChannelId},
+            #{status},
+            #{cost},
+            #{userUuid},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <insert id="insertSendAttempt" parameterType="SendAttemptVO">
+        INSERT INTO send_attempt (
+            send_target_id,
+            attempt_order,
+            channel_id,
+            is_succeeded,
+            solapi_message_id,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{sendTargetId},
+            #{attemptOrder},
+            #{channelId},
+            #{isSucceeded},
+            #{solapiMessageId},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <update id="updateSendHistoryStatus">
+        UPDATE send_history
+        SET status = #{status},
+            <include refid="Common.auditUpdateValues"/>
+        WHERE id = #{sendHistoryId}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <update id="updateSendTargetStatus">
+        UPDATE send_target
+        SET status = #{status},
+            final_channel_id = #{finalChannelId},
+            cost = #{cost},
+            <include refid="Common.auditUpdateValues"/>
+        WHERE id = #{sendTargetId}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <update id="refreshHistoryCounters">
+        UPDATE send_history sh
+        SET total_target_count = (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            success_count = (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            fail_count = (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status IN ('FAILED', 'SKIPPED')
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            actual_cost = (
+                SELECT NVL(SUM(NVL(st.cost, 0)), 0)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            <include refid="Common.auditUpdateValues"/>
+        WHERE sh.id = #{sendHistoryId}
+          AND NVL(sh.is_deleted, 0) = 0
+    </update>
+
+    <select id="countUnfinishedTargets" resultType="int">
+        SELECT COUNT(*)
+        FROM send_target
+        WHERE send_history_id = #{sendHistoryId}
+          AND status IN ('PENDING', 'SENDING')
+          AND NVL(is_deleted, 0) = 0
+    </select>
+
+    <update id="markHistoryTerminal">
+        UPDATE send_history sh
+        SET status = CASE
+                WHEN (
+                    SELECT COUNT(*)
+                    FROM send_target st
+                    WHERE st.send_history_id = sh.id
+                      AND st.status = 'SUCCEEDED'
+                      AND NVL(st.is_deleted, 0) = 0
+                ) > 0 THEN 'COMPLETED'
+                ELSE 'FAILED'
+            END,
+            completed_at = SYSTIMESTAMP,
+            <include refid="Common.auditUpdateValues"/>
+        WHERE sh.id = #{sendHistoryId}
+          AND NVL(sh.is_deleted, 0) = 0
+    </update>
+
+    <select id="findDueScheduledTargets" resultType="SendTargetVO">
+        SELECT
+            st.id,
+            st.send_history_id,
+            st.customer_id,
+            st.final_channel_id,
+            st.status,
+            st.cost,
+            st.user_uuid
+        FROM send_target st
+        JOIN send_history sh
+          ON sh.id = st.send_history_id
+         AND NVL(sh.is_deleted, 0) = 0
+        WHERE st.status = 'PENDING'
+          AND sh.status = 'SCHEDULED'
+          AND sh.scheduled_at IS NOT NULL
+          AND sh.scheduled_at <![CDATA[<=]]> SYSTIMESTAMP
+          AND NVL(st.is_deleted, 0) = 0
+        ORDER BY sh.scheduled_at ASC, st.id ASC
+    </select>
+
+    <select id="countWhitelistedRecipient" resultType="int">
+        SELECT COUNT(*)
+        FROM send_real_recipient_whitelist
+        WHERE channel_type = #{channelType}
+          AND recipient_value = #{recipientValue}
+          AND NVL(is_active, 0) = 1
+    </select>
+</mapper>
