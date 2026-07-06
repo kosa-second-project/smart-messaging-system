@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "AI 메시지 검사", description = "메시지/템플릿 문구를 서버 룰과 욕설 필터로 검사하는 API")
+@Tag(name = "AI 메시지 검사", description = "메시지/템플릿 문구를 서버 룰, 욕설 필터, OpenAI Moderation으로 검사하는 API")
 @RestController
 @RequestMapping("/api/ai/messages")
 @RequiredArgsConstructor
@@ -34,6 +34,7 @@ public class AiMessageController {
 
                     참고:
                     - availableVariables는 현재 화면에서 실제로 허용된 변수 목록입니다.
+                    - OpenAI Moderation API를 기반으로 유해 가능 표현을 추가 검사합니다.
                     """
     )
     @RequestBody(

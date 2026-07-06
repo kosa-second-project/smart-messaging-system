@@ -10,12 +10,15 @@ import java.time.Duration;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "profanity-filter")
-public class ProfanityFilterProperties {
+@ConfigurationProperties(prefix = "openai.moderation")
+public class OpenAiModerationProperties {
 
-    // 설정 파일에 timeout이 없더라도 외부 API가 무기한 대기하지 않도록 기본값을 둔다.
-    private String baseUrl = "https://api.kr-filter.com";
+    private String baseUrl = "https://api.openai.com";
     private String apiKey;
+    private String model = "omni-moderation-latest";
+    private boolean enabled = true;
+
+    // 외부 안전성 검사가 지연되더라도 전체 AI 리뷰 요청이 무기한 대기하지 않도록 제한한다.
     private Duration connectTimeout = Duration.ofSeconds(5);
     private Duration readTimeout = Duration.ofSeconds(5);
 }

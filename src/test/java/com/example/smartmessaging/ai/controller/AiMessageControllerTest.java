@@ -71,6 +71,7 @@ class AiMessageControllerTest {
                 .andExpect(jsonPath("$.status").value("FAIL"))
                 .andExpect(jsonPath("$.summary").value("검사 결과 반드시 수정해야 하는 항목이 있습니다."))
                 .andExpect(jsonPath("$.issues[0].ruleId").value("MISSING_AD_PREFIX"))
+                .andExpect(jsonPath("$.issues[0].detail").doesNotExist())
                 .andExpect(jsonPath("$.suggestedRewrite").isEmpty())
                 .andExpect(jsonPath("$.needsHumanReview").value(true))
                 .andExpect(jsonPath("$.overallScore").doesNotExist());

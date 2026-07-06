@@ -8,5 +8,6 @@ import lombok.Getter;
 public class ProfanityFilterRequest {
 
     private final String text;
+    // 원문 치환을 막기 위해 현재 검사는 항상 NORMAL 모드를 사용한다.
     private final String mode;
 }
