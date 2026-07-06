@@ -1,18 +1,15 @@
 spring:
   application:
     name: smart-messaging-system
-  
-  # 기본 프로필을 local로 지정 (로컬 개발용)
+
   profiles:
     active: local
 
-  # 공통 Thymeleaf 설정
   thymeleaf:
     cache: false
     prefix: classpath:/templates/
     suffix: .html
 
-  # 정적 리소스 캐시 버스팅(Cache Busting) 설정: CSS/JS 수정 시 브라우저 캐시 자동 갱신
   web:
     resources:
       chain:
@@ -21,18 +18,25 @@ spring:
             enabled: true
             paths: /**
 
-# MyBatis 공통 설정
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        missing-queues-fatal: false
+
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: com.example.smartmessaging.dto   # dto 하위의 모든 패키지(vo, response, request) 자동 별칭 등록
+  type-aliases-package: com.example.smartmessaging.dto
   configuration:
     map-underscore-to-camel-case: true
 
-# 콘솔 로그 설정 (개발 편의를 위해 MyBatis SQL 쿼리 및 파라미터 로깅 활성화)
 logging:
   level:
     root: info
-    com.example.smartmessaging.mapper: trace  # Mapper 패키지 하위 쿼리/바인딩 파라미터를 콘솔에 실시간 출력
+    com.example.smartmessaging.mapper: trace
 
 server:
   port: 8080
