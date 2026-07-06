@@ -6,7 +6,8 @@ import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface SendRealRecipientWhitelistMapper {
-    boolean existsActiveRecipient(@Param("customerId") Long customerId,
+    boolean existsActiveRecipient(@Param("phone") String phone,
+                                  @Param("email") String email,
                                   @Param("channelId") Long channelId);
 
     int insertWhitelistRecipient(SendRealRecipientWhitelistVO whitelist);

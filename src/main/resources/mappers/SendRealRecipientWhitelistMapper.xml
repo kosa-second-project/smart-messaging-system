@@ -5,23 +5,44 @@
 
     <select id="existsActiveRecipient" resultType="boolean">
         SELECT CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
-        FROM send_real_recipient_whitelist
-        WHERE customer_id = #{customerId}
-          AND channel_id = #{channelId}
-          AND is_active = 1
-          AND NVL(is_deleted, 0) = 0
+        FROM send_real_recipient_whitelist w
+        JOIN send_real_whitelist_consent c ON w.id = c.whitelist_id
+        WHERE c.channel_id = #{channelId}
+          AND w.is_active = 1
+          AND c.is_consented = 1
+          AND NVL(w.is_deleted, 0) = 0
+          AND NVL(c.is_deleted, 0) = 0
+          AND (
+              (#{phone, jdbcType=VARCHAR} IS NOT NULL AND w.phone = #{phone, jdbcType=VARCHAR})
+              OR
+              (#{email, jdbcType=VARCHAR} IS NOT NULL AND w.email = #{email, jdbcType=VARCHAR})
+          )
     </select>
 
     <insert id="insertWhitelistRecipient" parameterType="com.example.smartmessaging.dto.vo.SendRealRecipientWhitelistVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO send_real_recipient_whitelist (
-            customer_id,
-            channel_id,
+            phone,
+            name,
+            email,
+            customer_type,
+            is_ad_blocked,
+            birth_date,
+            gender,
+            last_active_at,
+            joined_at,
             description,
             is_active,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{customerId, jdbcType=BIGINT},
-            #{channelId, jdbcType=BIGINT},
+            #{phone, jdbcType=VARCHAR},
+            #{name, jdbcType=VARCHAR},
+            #{email, jdbcType=VARCHAR},
+            #{customerType, jdbcType=VARCHAR},
+            #{isAdBlocked, jdbcType=INTEGER},
+            #{birthDate, jdbcType=DATE},
+            #{gender, jdbcType=VARCHAR},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
             #{description, jdbcType=VARCHAR},
             <choose><when test="isActive == null or isActive">1</when><otherwise>0</otherwise></choose>,
             <include refid="Common.auditInsertValues"/>

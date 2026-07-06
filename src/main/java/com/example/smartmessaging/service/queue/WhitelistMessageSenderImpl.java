@@ -45,8 +45,11 @@ public class WhitelistMessageSenderImpl implements MessageSender {
                 continue;
             }
 
-            boolean realSendAllowed = task.getCustomerId() != null
-                    && whitelistMapper.existsActiveRecipient(task.getCustomerId(), channelId);
+            boolean realSendAllowed = whitelistMapper.existsActiveRecipient(
+                    task.getPhoneNumber(),
+                    task.getEmail(),
+                    channelId
+            );
 
             if (!realSendAllowed) {
                 saveMockSuccess(task, step + 1, channelId, channelType);
