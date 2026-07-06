@@ -13,23 +13,47 @@
                 OR t.purpose LIKE '%' || #{keyword} || '%'
             )
         </if>
-        <if test="category != null">
+        <choose>
+            <when test="categories != null and categories.size() > 0">
+                AND t.category IN
+                <foreach item="categoryItem" collection="categories" open="(" separator="," close=")">
+                    #{categoryItem}
+                </foreach>
+            </when>
+            <when test="category != null">
             AND t.category = #{category}
-        </if>
+            </when>
+        </choose>
         <if test="purpose != null and purpose != ''">
             AND t.purpose = #{purpose}
         </if>
-        <if test="channelType != null and channelType != ''">
-            AND EXISTS (
-                SELECT 1
-                FROM template_channel tc
-                JOIN channel c ON c.id = tc.channel_id
-                WHERE tc.template_id = t.id
-                  AND NVL(tc.is_deleted, 0) = 0
-                  AND NVL(c.is_deleted, 0) = 0
-                  AND c.channel_type = #{channelType}
-            )
-        </if>
+        <choose>
+            <when test="channelTypes != null and channelTypes.size() > 0">
+                AND EXISTS (
+                    SELECT 1
+                    FROM template_channel tc
+                    JOIN channel c ON c.id = tc.channel_id
+                    WHERE tc.template_id = t.id
+                      AND NVL(tc.is_deleted, 0) = 0
+                      AND NVL(c.is_deleted, 0) = 0
+                      AND c.channel_type IN
+                      <foreach item="channelTypeItem" collection="channelTypes" open="(" separator="," close=")">
+                          #{channelTypeItem}
+                      </foreach>
+                )
+            </when>
+            <when test="channelType != null and channelType != ''">
+                AND EXISTS (
+                    SELECT 1
+                    FROM template_channel tc
+                    JOIN channel c ON c.id = tc.channel_id
+                    WHERE tc.template_id = t.id
+                      AND NVL(tc.is_deleted, 0) = 0
+                      AND NVL(c.is_deleted, 0) = 0
+                      AND c.channel_type = #{channelType}
+                )
+            </when>
+        </choose>
     </sql>
 
     <select id="selectTemplateList" parameterType="TemplateSearchRequest" resultType="TemplateResponse">

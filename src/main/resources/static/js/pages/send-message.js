@@ -12,26 +12,35 @@ const MessageComposer = {
     channelDistribution: {},
     templateFilters: {
         keyword: "",
-        category: "",
-        channelType: ""
+        categories: [],
+        channelTypes: []
     },
     templateCategories: [],
     templateChannels: [],
     searchTimer: null,
     linkSettingsSnapshot: null,
-    previewShortCode: "Ab3dE5gH7jK9mNpQrS",
+    previewActionCode: "Ab3dE5gH",
+    previewUnsubscribeCode: "Qr7xK2Lm",
 
     init: function () {
         this.loadChannels();
         this.bindEvents();
         // 1단계에서 가져온 총 대상 수 렌더링
         $("#totalTargetCount").text(SendPage.state.draftTotalCount || 0);
-        $("#messageTitle").val(sessionStorage.getItem("messageTitle") || "");
-        $("#messageContent").val(sessionStorage.getItem("messageContent") || "");
-        $("#linkButtonName").val(sessionStorage.getItem("linkButtonName") || "");
-        $("#linkUrl").val(sessionStorage.getItem("linkUrl") || "");
-        this.restorePurposeState();
-        this.restoreLinkPurposeState();
+        const shouldRestoreMessageDraft = sessionStorage.getItem("messageEntrySource") === "review";
+        if (shouldRestoreMessageDraft) {
+            $("#messageTitle").val(sessionStorage.getItem("messageTitle") || "");
+            $("#messageContent").val(sessionStorage.getItem("messageContent") || "");
+            $("#linkButtonName").val(sessionStorage.getItem("linkButtonName") || "");
+            $("#linkUrl").val(sessionStorage.getItem("linkUrl") || "");
+        } else {
+            $("#messageTitle").val("");
+            $("#messageContent").val("");
+            $("#linkButtonName").val("");
+            $("#linkUrl").val("");
+        }
+        this.restorePurposeState(shouldRestoreMessageDraft);
+        this.restoreLinkPurposeState(shouldRestoreMessageDraft);
         this.loadTemplateOptions();
         this.loadTemplates();
         this.restoreSelectedTemplate();
@@ -40,8 +49,35 @@ const MessageComposer = {
     },
 
     getByteLength: function (text) {
-        // 글자 수 기준으로 계산 (기존 바이트 계산에서 변경)
+        if (!text) {
+            return 0;
+        }
+        let byteCount = 0;
+        for (let i = 0; i < text.length; i++) {
+            byteCount += text.charCodeAt(i) <= 0x007F ? 1 : 2;
+        }
+        return byteCount;
+    },
+
+    getCharacterLength: function (text) {
         return text ? text.length : 0;
+    },
+
+    normalizeChannelType: function (channelType) {
+        const normalized = (channelType || "").trim().toUpperCase();
+        if (normalized.startsWith("KAKAO")) {
+            return "KAKAO";
+        }
+        return normalized;
+    },
+
+    normalizeDistribution: function (distribution) {
+        const normalized = {};
+        Object.entries(distribution || {}).forEach(([channelType, count]) => {
+            const key = this.normalizeChannelType(channelType);
+            normalized[key] = (normalized[key] || 0) + (count || 0);
+        });
+        return normalized;
     },
 
     loadChannels: function () {
@@ -106,24 +142,24 @@ const MessageComposer = {
 
     renderTemplateFilterControls: function () {
         const $categorySelect = $("#templateCategorySelect");
-        const selectedCategory = this.templateFilters.category;
         $categorySelect.empty().append('<option value="">전체 카테고리</option>');
         this.templateCategories.forEach(category => {
-            const selected = selectedCategory === category.value ? "selected" : "";
-            $categorySelect.append(`<option value="${escapeHtml(category.value)}" ${selected}>${escapeHtml(category.label)}</option>`);
+            const disabled = this.templateFilters.categories.includes(category.value) ? "disabled" : "";
+            $categorySelect.append(`<option value="${escapeHtml(category.value)}" ${disabled}>${escapeHtml(category.label)}</option>`);
         });
 
         const $channelSelect = $("#templateChannelSelect");
-        const selectedChannel = this.templateFilters.channelType;
         $channelSelect.empty().append('<option value="">전체 채널</option>');
         this.templateChannels.forEach(channel => {
             const value = channel.channelType || "";
             const label = this.getChannelLabel(value);
-            const selected = selectedChannel === value ? "selected" : "";
-            $channelSelect.append(`<option value="${escapeHtml(value)}" ${selected}>${escapeHtml(label)}</option>`);
+            const disabled = this.templateFilters.channelTypes.includes(value) ? "disabled" : "";
+            $channelSelect.append(`<option value="${escapeHtml(value)}" ${disabled}>${escapeHtml(label)}</option>`);
         });
 
-        this.renderSelectedCategoryTags();
+        $categorySelect.val("");
+        $channelSelect.val("");
+        this.renderSelectedFilterTags();
     },
 
     renderPurposeButtons: function () {
@@ -145,33 +181,36 @@ const MessageComposer = {
         this.updateMessageMetrics();
     },
 
-    renderSelectedCategoryTags: function () {
+    renderSelectedFilterTags: function () {
         const $container = $("#templateCategoryTags");
         $container.empty();
-        if (!this.templateFilters.category) {
-            return;
-        }
-        const category = this.templateCategories.find(item => item.value === this.templateFilters.category);
-        const label = category ? category.label : this.templateFilters.category;
-        $container.append(`
-            <span class="filter-chip" data-val="${escapeHtml(this.templateFilters.category)}">
+        this.templateFilters.categories.forEach(value => {
+            const category = this.templateCategories.find(item => item.value === value);
+            const label = category ? category.label : value;
+            $container.append(this.buildFilterChip("category", value, label));
+        });
+        this.templateFilters.channelTypes.forEach(value => {
+            $container.append(this.buildFilterChip("channel", value, this.getChannelLabel(value)));
+        });
+    },
+
+    buildFilterChip: function (type, value, label) {
+        return `
+            <span class="filter-chip" data-filter-type="${escapeHtml(type)}" data-val="${escapeHtml(value)}">
                 ${escapeHtml(label)}
                 <button type="button" class="filter-chip__remove" aria-label="${escapeHtml(label)} 필터 제거">x</button>
             </span>
-        `);
+        `;
     },
 
     loadTemplates: function () {
+        const self = this;
         const params = new URLSearchParams({ size: "50" });
         if (this.templateFilters.keyword) {
             params.set("keyword", this.templateFilters.keyword);
         }
-        if (this.templateFilters.category) {
-            params.set("category", this.templateFilters.category);
-        }
-        if (this.templateFilters.channelType) {
-            params.set("channelType", this.templateFilters.channelType);
-        }
+        this.templateFilters.categories.forEach(category => params.append("categories", category));
+        this.templateFilters.channelTypes.forEach(channelType => params.append("channelTypes", channelType));
         const url = "/api/templates?" + params.toString();
 
         $.ajax({
@@ -197,8 +236,9 @@ const MessageComposer = {
                     let channelHtml = "";
                     if (item.channels && item.channels.length > 0) {
                         const firstCh = item.channels[0].channelType;
-                        const chClass = firstCh === 'KAKAO' ? 'kakao' : (firstCh === 'EMAIL' ? 'email' : 'sms');
-                        const chName = firstCh === 'KAKAO' ? '카카오톡' : (firstCh === 'EMAIL' ? '이메일' : '문자');
+                        const normalizedCh = self.normalizeChannelType(firstCh);
+                        const chClass = normalizedCh === 'KAKAO' ? 'kakao' : (normalizedCh === 'EMAIL' ? 'email' : 'sms');
+                        const chName = self.getChannelLabel(normalizedCh);
                         channelHtml = `<span class="card-channel ${chClass}">${chName}</span>`;
                     }
 
@@ -229,8 +269,8 @@ const MessageComposer = {
     },
 
     getChannelLabel: function (channelType) {
-        const normalized = (channelType || "").toUpperCase();
-        if (normalized === "KAKAO" || normalized === "KAKAO_ALIM") {
+        const normalized = this.normalizeChannelType(channelType);
+        if (normalized === "KAKAO") {
             return "카카오톡";
         }
         if (normalized === "EMAIL") {
@@ -416,21 +456,16 @@ const MessageComposer = {
         });
 
         $("#templateCategorySelect").on("change", function () {
-            self.templateFilters.category = $(this).val() || "";
-            self.renderSelectedCategoryTags();
-            self.loadTemplates();
+            self.addTemplateFilter("categories", $(this).val() || "");
         });
 
         $("#templateChannelSelect").on("change", function () {
-            self.templateFilters.channelType = $(this).val() || "";
-            self.loadTemplates();
+            self.addTemplateFilter("channelTypes", $(this).val() || "");
         });
 
         $(document).on("click", ".filter-chip__remove", function () {
-            self.templateFilters.category = "";
-            $("#templateCategorySelect").val("");
-            self.renderSelectedCategoryTags();
-            self.loadTemplates();
+            const $chip = $(this).closest(".filter-chip");
+            self.removeTemplateFilter($chip.data("filter-type"), $chip.data("val"));
         });
 
         $(document).on("click", ".purpose-btn", function() {
@@ -443,6 +478,10 @@ const MessageComposer = {
 
         $("#btnSaveTemplate").on("click", function () {
             self.saveCurrentTemplate();
+        });
+
+        $("#btnSendTestMessage").on("click", function () {
+            self.sendTestMessageToMe();
         });
 
         $("#btnToggleLinkSettings").on("click", function (event) {
@@ -491,6 +530,28 @@ const MessageComposer = {
         $(document).on("click", ".js-insert-variable", function () {
             self.insertVariable($(this).data("variable") || "");
         });
+    },
+
+    addTemplateFilter: function (filterKey, value) {
+        if (!value || !Array.isArray(this.templateFilters[filterKey])) {
+            this.renderTemplateFilterControls();
+            return;
+        }
+        if (!this.templateFilters[filterKey].includes(value)) {
+            this.templateFilters[filterKey].push(value);
+        }
+        this.renderTemplateFilterControls();
+        this.loadTemplates();
+    },
+
+    removeTemplateFilter: function (filterType, value) {
+        const filterKey = filterType === "channel" ? "channelTypes" : "categories";
+        if (!Array.isArray(this.templateFilters[filterKey])) {
+            return;
+        }
+        this.templateFilters[filterKey] = this.templateFilters[filterKey].filter(item => item !== value);
+        this.renderTemplateFilterControls();
+        this.loadTemplates();
     },
 
     toggleLinkSettings: function () {
@@ -554,14 +615,10 @@ const MessageComposer = {
 
                 // 1. 총 비용 표시 (동적 계산을 위해 변수에 저장)
                 self.baseEstimatedCost = res.totalEstimatedCost || 0;
-                self.channelDistribution = res.channelDistribution || {};
+                self.channelDistribution = self.normalizeDistribution(res.channelDistribution || {});
                 self.smsCount = self.channelDistribution["SMS"] || 0;
 
-                // 현재 작성 내용 바이트에 맞춰 SMS/LMS 상태 파악
-                const byteCount = self.getByteLength(self.buildPreviewMessageText(false));
-                const currentIsLms = byteCount > self.smsMaxLength;
-
-                self.updateCostUI(currentIsLms);
+                self.updateCostUI(self.isCurrentLmsMessage());
             },
             error: function (err) {
                 if (err.status === 404) {
@@ -612,14 +669,14 @@ const MessageComposer = {
 
             if (channelType === "KAKAO") {
                 label = "카카오톡";
-                const ch = self.channels.find(c => c.channelType === "KAKAO");
+                const ch = self.channels.find(c => self.normalizeChannelType(c.channelType) === "KAKAO");
                 if (ch) costPerMsg = ch.costPerMsg || 0;
             }
             else if (channelType === "SMS") { label = "SMS"; costPerMsg = self.smsCost; }
             else if (channelType === "LMS") { label = "LMS"; costPerMsg = self.lmsCost; }
             else if (channelType === "EMAIL") {
                 label = "이메일";
-                const ch = self.channels.find(c => c.channelType === "EMAIL");
+                const ch = self.channels.find(c => self.normalizeChannelType(c.channelType) === "EMAIL");
                 if (ch) costPerMsg = ch.costPerMsg || 0;
             }
             else if (channelType === "UNASSIGNED") { label = "배정 불가"; }
@@ -638,7 +695,13 @@ const MessageComposer = {
         });
     },
 
-    restorePurposeState: function () {
+    restorePurposeState: function (shouldRestore = true) {
+        if (!shouldRestore) {
+            sessionStorage.removeItem("messagePurpose");
+            $(".purpose-btn").removeClass("active");
+            $(".purpose-btn[data-val='AD']").addClass("active");
+            return;
+        }
         const savedPurpose = sessionStorage.getItem("messagePurpose");
         if (!savedPurpose) {
             return;
@@ -647,7 +710,13 @@ const MessageComposer = {
         $(`.purpose-btn[data-val="${savedPurpose}"]`).addClass("active");
     },
 
-    restoreLinkPurposeState: function () {
+    restoreLinkPurposeState: function (shouldRestore = true) {
+        if (!shouldRestore) {
+            sessionStorage.removeItem("linkPurpose");
+            $(".link-purpose-btn").removeClass("active");
+            $(".link-purpose-btn[data-purpose='CLICK']").addClass("active");
+            return;
+        }
         const savedPurpose = sessionStorage.getItem("linkPurpose") || "CLICK";
         $(".link-purpose-btn").removeClass("active");
         $(`.link-purpose-btn[data-purpose="${savedPurpose}"]`).addClass("active");
@@ -684,10 +753,10 @@ const MessageComposer = {
     },
 
     updateMessageMetrics: function () {
-        const byteCount = this.getByteLength(this.buildPreviewMetricText());
-        $("#currentBytes").text(byteCount);
+        const characterCount = this.getCharacterLength(this.buildPreviewMetricText());
+        $("#currentBytes").text(characterCount);
 
-        const isLms = this.hasMessageTitle() || byteCount > this.smsMaxLength;
+        const isLms = this.isCurrentLmsMessage();
         const $badge = $("#msgTypeBadge");
         if (isLms) {
             $badge.text("LMS")
@@ -743,12 +812,16 @@ const MessageComposer = {
     },
 
     getPreviewShortUrl: function (path) {
-        const origin = window.location && window.location.origin ? window.location.origin : "http://localhost:8080";
-        return origin + "/" + path + "/" + this.previewShortCode;
+        const code = path === "u" ? this.previewUnsubscribeCode : this.previewActionCode;
+        return "https://kosa.kr/" + path + "/" + code;
     },
 
     hasMessageTitle: function () {
         return !!($("#messageTitle").val() || "").trim();
+    },
+
+    isCurrentLmsMessage: function () {
+        return this.hasMessageTitle() || this.getByteLength(this.buildPreviewMessageText(false)) > this.smsMaxLength;
     },
 
     updateSelectedTemplate: function (title, content) {
@@ -816,6 +889,100 @@ const MessageComposer = {
                 $button.prop("disabled", false).html(originalText);
             }
         });
+    },
+
+    sendTestMessageToMe: function () {
+        const title = ($("#messageTitle").val() || "").trim();
+        const content = ($("#messageContent").val() || "").trim();
+        const purpose = $(".purpose-btn.active").data("val") || "INFO";
+        const linkButtonName = ($("#linkButtonName").val() || "").trim();
+        const linkUrl = ($("#linkUrl").val() || "").trim();
+        const linkPurpose = $(".link-purpose-btn.active").data("purpose") || "CLICK";
+
+        if (!title) {
+            alert("테스트 발송 전에 제목을 입력해주세요.");
+            $("#messageTitle").focus();
+            return;
+        }
+        if (!content) {
+            alert("테스트 발송 전에 내용을 입력해주세요.");
+            $("#messageContent").focus();
+            return;
+        }
+        if (!linkUrl) {
+            alert("클릭 확인을 위해 링크 URL을 입력해주세요.");
+            $("#linkUrl").focus();
+            this.openLinkSettings();
+            return;
+        }
+        if (!/^https?:\/\//i.test(linkUrl)) {
+            alert("링크 URL은 http 또는 https로 시작해야 합니다.");
+            $("#linkUrl").focus();
+            this.openLinkSettings();
+            return;
+        }
+        if (!window.confirm("내 카카오 계정으로 테스트 메시지를 발송할까요?")) {
+            return;
+        }
+
+        const $button = $("#btnSendTestMessage");
+        const originalText = $button.text();
+        $button.prop("disabled", true).text("테스트 발송 중...");
+
+        $.ajax({
+            url: "/api/dev/message-test",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                title: title,
+                content: content,
+                purpose: purpose,
+                linkButtonName: linkButtonName,
+                linkUrl: linkUrl,
+                linkPurpose: linkPurpose
+            }),
+            success: function (res) {
+                alert(MessageComposer.buildTestSendResultMessage(res));
+            },
+            error: function (xhr) {
+                const response = xhr.responseJSON || {};
+                alert(response.message || "테스트 발송에 실패했습니다.");
+            },
+            complete: function () {
+                $button.prop("disabled", false).text(originalText);
+            }
+        });
+    },
+
+    openLinkSettings: function () {
+        this.captureLinkSettingsSnapshot();
+        $("#linkSettingsPanel").addClass("is-open");
+        $("#btnToggleLinkSettings").attr("aria-expanded", "true");
+    },
+
+    buildTestSendResultMessage: function (res) {
+        const lines = [
+            "테스트 발송 요청이 완료되었습니다.",
+            "대상: " + (res.customerName || "테스트 고객"),
+            "",
+            this.formatChannelResult("문자", res.smsResult, res.smsActionUrl),
+            this.formatChannelResult("이메일", res.emailResult, res.emailActionUrl),
+            this.formatChannelResult("카카오", res.kakaoResult, res.kakaoActionUrl)
+        ];
+        return lines.join("\n");
+    },
+
+    formatChannelResult: function (label, result, actionUrl) {
+        if (!result) {
+            return label + ": 결과 없음";
+        }
+        if (result.success) {
+            return label + ": 성공\n" + actionUrl;
+        }
+        if (result.errorCode === "SKIPPED") {
+            return label + ": 스킵 - " + (result.errorMessage || "이번 테스트 발송 대상이 아닙니다.");
+        }
+        return label + ": 실패 - " + (result.errorMessage || result.errorCode || "알 수 없는 오류");
     },
 
     getCurrentChannelIds: function () {

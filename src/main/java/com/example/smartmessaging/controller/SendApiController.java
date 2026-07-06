@@ -49,7 +49,14 @@ public class SendApiController {
         }
 
         // 카카오톡 메시지 전송
-        boolean isSuccess = kakaoMessageService.sendFeedMessage(kakaoAccessToken, targetUuids, request.getTitle(), request.getDescription());
+        boolean isSuccess = kakaoMessageService.sendFeedMessage(
+                kakaoAccessToken,
+                targetUuids,
+                request.getTitle(),
+                request.getDescription(),
+                request.getLinkButtonName(),
+                request.getLinkUrl()
+        );
 
         if (isSuccess) {
             return ResponseEntity.ok(Map.of("message", "선택한 카카오 친구들에게 메시지를 성공적으로 발송했습니다."));
@@ -63,7 +70,13 @@ public class SendApiController {
         String kakaoAccessToken = getKakaoAccessToken(session);
         if (kakaoAccessToken == null) return unauthorizedResponse();
 
-        boolean isSuccess = kakaoMessageService.sendMemoMessage(kakaoAccessToken, request.getTitle(), request.getDescription());
+        boolean isSuccess = kakaoMessageService.sendMemoMessage(
+                kakaoAccessToken,
+                request.getTitle(),
+                request.getDescription(),
+                request.getLinkButtonName(),
+                request.getLinkUrl()
+        );
         
         return ResponseEntity.ok(Map.of("success", isSuccess, "message", isSuccess ? "발송 성공" : "발송 실패"));
     }
@@ -72,7 +85,13 @@ public class SendApiController {
         String kakaoAccessToken = getKakaoAccessToken(session);
         if (kakaoAccessToken == null) return unauthorizedResponse();
 
-        boolean isSuccess = kakaoMessageService.sendFeedMessageToAll(kakaoAccessToken, request.getTitle(), request.getDescription());
+        boolean isSuccess = kakaoMessageService.sendFeedMessageToAll(
+                kakaoAccessToken,
+                request.getTitle(),
+                request.getDescription(),
+                request.getLinkButtonName(),
+                request.getLinkUrl()
+        );
 
         if (isSuccess) {
             return ResponseEntity.ok(Map.of("message", "모든 카카오 친구에게 메시지를 성공적으로 발송했습니다."));
@@ -81,4 +100,3 @@ public class SendApiController {
         }
     }
 }
-

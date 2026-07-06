@@ -41,6 +41,7 @@ public class MessageRouterService {
                             "DUMMY_TOKEN",
                             task.getTitle(),
                             task.getContent(),
+                            task.getActionButtonName(),
                             task.getActionUrl()
                     );
                     if (kakaoSuccess) {
@@ -53,7 +54,13 @@ public class MessageRouterService {
                     String resolvedMessageType = SmsMessageTypeResolver.resolve(
                             currentChannel,
                             task.getTitle(),
-                            buildSmsTextForTypeResolution(task)
+                            SmsMessageTypeResolver.buildMessageText(
+                                    task.getContent(),
+                                    task.getPurpose(),
+                                    task.getActionButtonName(),
+                                    task.getActionUrl(),
+                                    task.getUnsubscribeUrl()
+                            )
                     );
                     return smsMessageService.sendTextMessage(
                             task.getPhoneNumber(),
@@ -74,20 +81,5 @@ public class MessageRouterService {
             log.error("[MessageRouter] Exception occurred sending via channel={}", currentChannel, e);
             return SendResult.fail(currentChannel, "SYSTEM_ERROR", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
         }
-    }
-
-    private String buildSmsTextForTypeResolution(MessageTaskDto task) {
-        StringBuilder text = new StringBuilder(task.getContent() == null ? "" : task.getContent().trim());
-        if (task.getActionUrl() != null && !task.getActionUrl().isBlank()) {
-            text.append("\n\n")
-                    .append(task.getActionButtonName() == null || task.getActionButtonName().isBlank() ? "자세히 보기" : task.getActionButtonName().trim())
-                    .append("\n")
-                    .append(task.getActionUrl().trim());
-        }
-        if ("AD".equalsIgnoreCase(task.getPurpose()) && task.getUnsubscribeUrl() != null && !task.getUnsubscribeUrl().isBlank()) {
-            text.append("\n\n수신거부를 원하시면 아래 링크를 눌러주세요.\n")
-                    .append(task.getUnsubscribeUrl().trim());
-        }
-        return text.toString();
     }
 }

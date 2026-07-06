@@ -7,12 +7,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
+import com.example.smartmessaging.dto.model.RecipientSendPlan;
 import com.example.smartmessaging.dto.response.CostEstimationResponseDTO;
-import com.example.smartmessaging.dto.type.ChannelConsentTag;
 import com.example.smartmessaging.dto.vo.ChannelVO;
+import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
-import com.example.smartmessaging.mapper.CustomerMapper;
+import com.example.smartmessaging.mapper.SendPreparationMapper;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
@@ -33,8 +34,9 @@ import java.util.stream.Collectors;
 public class CampaignDraftService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final CustomerMapper customerMapper;
     private final ChannelService channelService;
+    private final SendPreparationMapper sendPreparationMapper;
+    private final RecipientChannelResolver recipientChannelResolver;
 
     private static final String KEY_PREFIX = "draft:recipient:";
     private static final Duration TTL = Duration.ofMinutes(30);
@@ -235,68 +237,54 @@ public class CampaignDraftService {
                 .map(id -> Long.parseLong(id.toString()))
                 .collect(Collectors.toList());
 
-        // 1. 전체 수신자 태그 조회 (N+1 방지 및 대용량 쿼리 최적화를 위한 Chunking)
-        List<Map<String, Object>> tagRows = new ArrayList<>();
+        List<SendRecipientCandidateVO> recipients = new ArrayList<>();
         int chunkSize = 1000;
         for (int i = 0; i < customerIds.size(); i += chunkSize) {
             List<Long> chunk = customerIds.subList(i, Math.min(customerIds.size(), i + chunkSize));
-            List<Map<String, Object>> chunkTags = customerMapper.findTagsByCustomerIds(chunk);
-            if (chunkTags != null) {
-                tagRows.addAll(chunkTags);
+            List<SendRecipientCandidateVO> chunkRecipients = sendPreparationMapper.findRecipientCandidatesByCustomerIds(chunk);
+            if (chunkRecipients != null) {
+                recipients.addAll(chunkRecipients);
             }
         }
 
-        Map<Long, List<String>> customerTagsMap = tagRows.stream()
-                .collect(Collectors.groupingBy(
-                        row -> ((Number) row.get("CUSTOMER_ID")).longValue(),
-                        Collectors.mapping(row -> (String) row.get("TAG_NAME"), Collectors.toList())
-                ));
-
-        // 2. 활성화된 채널 목록 조회
-        List<ChannelVO> activeChannels = channelService.getActiveChannels();
-
-        // 2.5. 프론트엔드에서 넘어온 커스텀 우선순위가 있다면 해당 순서대로 재정렬 (없으면 기존 최저가 순 유지)
-        if (priorities != null && !priorities.isEmpty()) {
-            activeChannels.sort(Comparator.comparingInt((ChannelVO ch) -> {
-                int index = priorities.indexOf(ch.getChannelType());
-                return index == -1 ? Integer.MAX_VALUE : index;
-            }).thenComparing(ChannelVO::getCostPerMsg));
-        }
+        List<ChannelVO> activeChannels = new ArrayList<>(channelService.getActiveChannels());
+        List<RecipientSendPlan> plans = recipientChannelResolver.resolve(recipients, activeChannels, priorities);
 
         BigDecimal totalCost = BigDecimal.ZERO;
         Map<String, Integer> channelDistribution = new HashMap<>();
 
         // 채널 분포 초기화 (모든 활성화된 채널의 카운트를 0으로 채움)
         for (ChannelVO ch : activeChannels) {
-            channelDistribution.put(ch.getChannelType(), 0);
+            channelDistribution.put(normalizeChannelType(ch.getChannelType()), 0);
         }
         channelDistribution.put("UNASSIGNED", 0);
 
-        // 3. 각 고객에 대해 최저가 채널 매칭
-        for (Long cid : customerIds) {
-            List<String> tags = customerTagsMap.getOrDefault(cid, List.of());
-            boolean assigned = false;
+        Map<Long, String> firstChannelTypeById = activeChannels.stream()
+                .collect(Collectors.toMap(ChannelVO::getId, channel -> normalizeChannelType(channel.getChannelType()), (left, right) -> left));
 
-            for (ChannelVO ch : activeChannels) {
-                String requiredTag = ChannelConsentTag.getTagNameByChannel(ch.getChannelType());
-                if (requiredTag != null && tags.contains(requiredTag)) {
-                    // 배정 성공
-                    totalCost = totalCost.add(ch.getCostPerMsg());
-                    channelDistribution.put(ch.getChannelType(), channelDistribution.get(ch.getChannelType()) + 1);
-                    assigned = true;
-                    break; // 최저가 1개만 배정하고 중단
-                }
-            }
-
-            if (!assigned) {
-                channelDistribution.put("UNASSIGNED", channelDistribution.get("UNASSIGNED") + 1);
-            }
+        for (RecipientSendPlan plan : plans) {
+            totalCost = totalCost.add(plan.getEstimatedCost() == null ? BigDecimal.ZERO : plan.getEstimatedCost());
+            String channelType = firstChannelTypeById.getOrDefault(plan.getFirstChannelId(), "UNASSIGNED");
+            channelDistribution.put(channelType, channelDistribution.getOrDefault(channelType, 0) + 1);
         }
+
+        channelDistribution.put("UNASSIGNED", customerIds.size() - plans.size());
 
         return CostEstimationResponseDTO.builder()
                 .totalEstimatedCost(totalCost)
                 .channelDistribution(channelDistribution)
-                .totalValidRecipients(customerIds.size())
+                .totalValidRecipients(plans.size())
                 .build();
+    }
+
+    private String normalizeChannelType(String channelType) {
+        if (channelType == null) {
+            return "";
+        }
+        String normalized = channelType.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("KAKAO")) {
+            return "KAKAO";
+        }
+        return normalized;
     }
 }

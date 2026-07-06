@@ -23,14 +23,9 @@ import java.util.Map;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import java.time.Duration;
 
-import org.springframework.beans.factory.annotation.Value;
-
 @Slf4j
 @Service
 public class KakaoMessageService {
-
-    @Value("${app.base-url:http://localhost:8080}")
-    private String appBaseUrl;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -111,10 +106,10 @@ public class KakaoMessageService {
      * 카카오톡 친구들에게 피드(Feed) 템플릿 메시지를 발송합니다.
      */
     public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description) {
-        return sendFeedMessage(accessToken, receiverUuids, title, description, null);
+        return sendFeedMessage(accessToken, receiverUuids, title, description, "자세히 보기", null);
     }
 
-    public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description, String actionUrl) {
+    public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description, String buttonName, String actionUrl) {
         if (receiverUuids == null || receiverUuids.isEmpty()) {
             return false;
         }
@@ -150,10 +145,18 @@ public class KakaoMessageService {
                     Map<String, Object> templateObject = Map.of(
                             "object_type", "text",
                             "text", personalizedTitle + "\n\n" + personalizedDescription,
-                            "button_title", "자세히 보기",
                             "link", Map.of(
                                     "web_url", linkUrl,
                                     "mobile_web_url", linkUrl
+                            ),
+                            "buttons", List.of(
+                                    Map.of(
+                                            "title", buttonName != null && !buttonName.isBlank() ? buttonName : "자세히 보기",
+                                            "link", Map.of(
+                                                    "web_url", linkUrl,
+                                                    "mobile_web_url", linkUrl
+                                            )
+                                    )
                             )
                     );
 
@@ -200,10 +203,10 @@ public class KakaoMessageService {
      * 카카오톡 나에게 기본 템플릿(피드) 메시지를 발송합니다.
      */
     public boolean sendMemoMessage(String accessToken, String title, String description) {
-        return sendMemoMessage(accessToken, title, description, null);
+        return sendMemoMessage(accessToken, title, description, "자세히 보기", null);
     }
 
-    public boolean sendMemoMessage(String accessToken, String title, String description, String actionUrl) {
+    public boolean sendMemoMessage(String accessToken, String title, String description, String buttonName, String actionUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
@@ -220,10 +223,18 @@ public class KakaoMessageService {
         Map<String, Object> templateObject = Map.of(
                 "object_type", "text",
                 "text", personalizedTitle + "\n\n" + personalizedDescription,
-                "button_title", "자세히 보기",
                 "link", Map.of(
                         "web_url", linkUrl,
                         "mobile_web_url", linkUrl
+                ),
+                "buttons", List.of(
+                        Map.of(
+                                "title", buttonName != null && !buttonName.isBlank() ? buttonName : "자세히 보기",
+                                "link", Map.of(
+                                        "web_url", linkUrl,
+                                        "mobile_web_url", linkUrl
+                                )
+                        )
                 )
         );
 
@@ -257,6 +268,10 @@ public class KakaoMessageService {
      * 카카오톡 친구 목록 전체에게 피드(Feed) 템플릿 메시지를 발송합니다.
      */
     public boolean sendFeedMessageToAll(String accessToken, String title, String description) {
+        return sendFeedMessageToAll(accessToken, title, description, "자세히 보기", null);
+    }
+
+    public boolean sendFeedMessageToAll(String accessToken, String title, String description, String buttonName, String actionUrl) {
         List<KakaoFriendElement> friends = getKakaoFriends(accessToken);
         if (friends == null || friends.isEmpty()) {
             throw new KakaoApiException("발송 가능한 카카오 친구가 없습니다. (메시지 수신 동의 필요)");
@@ -266,12 +281,12 @@ public class KakaoMessageService {
                 .map(KakaoFriendElement::getUuid)
                 .toList();
                 
-        return sendFeedMessage(accessToken, targetUuids, title, description);
+        return sendFeedMessage(accessToken, targetUuids, title, description, buttonName, actionUrl);
     }
 
     private String resolveTemplateLink(String actionUrl) {
         if (actionUrl == null || actionUrl.isBlank()) {
-            return appBaseUrl;
+            throw new KakaoApiException("카카오 메시지 링크 URL이 없습니다. short_url 생성 경로를 확인해주세요.");
         }
         return actionUrl.trim();
     }
