@@ -116,6 +116,22 @@ class AiSuggestionServiceTest {
     }
 
     @Test
+    void customerTags가_없어도_추천_문구를_생성한다() {
+        AiSuggestionRequest request = request(MessageType.INFO);
+        request.setCustomerTags(null);
+        when(geminiSuggestionClient.generate(anyString())).thenReturn(
+                response(new AiSuggestionItem("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
+        );
+
+        AiSuggestionResponse result = service.suggest(request);
+
+        assertThat(result.getSuggestions()).hasSize(1);
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(geminiSuggestionClient).generate(promptCaptor.capture());
+        assertThat(promptCaptor.getValue()).contains("고객 태그: []");
+    }
+
+    @Test
     void 사용자가_지정한_변수만_허용한다() {
         AiSuggestionRequest request = request(MessageType.INFO);
         request.setAvailableVariables(List.of("#{고객명}"));

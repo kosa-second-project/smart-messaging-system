@@ -128,7 +128,7 @@ public class AiSuggestionService {
                 request.getContextType(),
                 request.getMessageType(),
                 request.getChannels(),
-                request.getCustomerTags(),
+                request.getCustomerTags() == null ? List.of() : request.getCustomerTags(),
                 direction,
                 category,
                 availableVariables,
@@ -258,9 +258,8 @@ public class AiSuggestionService {
                 || request.getChannels() == null
                 || request.getChannels().isEmpty()
                 || request.getChannels().stream().anyMatch(java.util.Objects::isNull)
-                || request.getCustomerTags() == null
-                || request.getCustomerTags().isEmpty()
-                || request.getCustomerTags().stream().anyMatch(tag -> tag == null || tag.isBlank())) {
+                || (request.getCustomerTags() != null
+                && request.getCustomerTags().stream().anyMatch(tag -> tag == null || tag.isBlank()))) {
             throw invalidRequest("추천 요청값이 올바르지 않습니다.");
         }
     }
