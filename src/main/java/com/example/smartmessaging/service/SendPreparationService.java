@@ -9,6 +9,7 @@ import com.example.smartmessaging.dto.response.SendPrepareResponseDTO;
 import com.example.smartmessaging.dto.vo.SendHistoryRoutingVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.service.queue.MessageQueuePublisher;
+import com.example.smartmessaging.service.queue.QueueFailureHandler;
 import com.example.smartmessaging.service.repository.SendQueueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class SendPreparationService {
     private final SendQueueRepository sendQueueRepository;
     private final RecipientChannelResolver recipientChannelResolver;
     private final MessageQueuePublisher messageQueuePublisher;
+    private final QueueFailureHandler queueFailureHandler;
 
     @Value("${messaging.advertising.quiet-start-hour:21}")
     private int advertisingQuietStartHour;
@@ -83,6 +85,7 @@ public class SendPreparationService {
                 .userId(userId)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .linkUrl(request.getLinkUrl())
                 .purpose(resolvePurpose(request))
                 .status(status)
                 .totalTargetCount(estimate.getTotalTargetCount())
@@ -108,7 +111,7 @@ public class SendPreparationService {
             sendQueueRepository.insertSendHistoryRouting(routing);
         }
 
-        messageQueuePublisher.publishCampaignCommandAfterCommit(CampaignCommandQueueDto.builder()
+        CampaignCommandQueueDto command = CampaignCommandQueueDto.builder()
                 .sendHistoryId(history.getId())
                 .userId(userId)
                 .draftId(request.getDraftId())
@@ -117,7 +120,11 @@ public class SendPreparationService {
                 .linkUrl(request.getLinkUrl())
                 .advertising(Boolean.TRUE.equals(request.getAdvertising()))
                 .scheduledAt(effectiveScheduledAt)
-                .build());
+                .build();
+
+        messageQueuePublisher.publishCampaignCommandAfterCommit(
+                command,
+                e -> queueFailureHandler.markCampaignFailed(history.getId(), userId, "CAMPAIGN_COMMAND_PUBLISH_FAILED"));
 
         return SendPrepareResponseDTO.builder()
                 .sendHistoryId(history.getId())
