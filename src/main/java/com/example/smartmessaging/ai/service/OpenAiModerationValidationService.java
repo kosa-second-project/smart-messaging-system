@@ -32,8 +32,14 @@ public class OpenAiModerationValidationService {
             return unavailableIssue(exception);
         } catch (RuntimeException exception) {
             // 예상하지 못한 클라이언트 오류도 기존 검사 결과를 깨뜨리지 않는 시스템 경고로 변환한다.
-            log.warn("OpenAI Moderation 검사 중 예상하지 못한 오류가 발생했습니다. failureType={}", API_ERROR);
-            return unavailableIssue(API_ERROR);
+            log.warn(
+                    "OpenAI Moderation 검사 중 예상하지 못한 오류가 발생했습니다. "
+                            + "failureType={}, exceptionType={}",
+                    API_ERROR,
+                    exception.getClass().getSimpleName(),
+                    exception
+            );
+            return createUnavailableIssue(API_ERROR);
         }
     }
 
@@ -70,7 +76,12 @@ public class OpenAiModerationValidationService {
 
     private List<ValidationIssue> unavailableIssue(OpenAiModerationException exception) {
         logUnavailable(exception);
-        OpenAiModerationException.FailureType failureType = exception.getFailureType();
+        return createUnavailableIssue(exception.getFailureType());
+    }
+
+    private List<ValidationIssue> createUnavailableIssue(
+            OpenAiModerationException.FailureType failureType
+    ) {
         return List.of(new ValidationIssue(
                 MODERATION_UNAVAILABLE,
                 IssueSeverity.MEDIUM,

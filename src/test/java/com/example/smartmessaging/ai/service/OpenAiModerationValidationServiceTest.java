@@ -7,8 +7,11 @@ import com.example.smartmessaging.ai.dto.response.ValidationIssue;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.util.List;
 
@@ -19,6 +22,7 @@ import static org.mockito.Mockito.when;
 /**
  * OpenAiModerationClient를 mock 처리해 외부 호출 없이 경고 이슈 변환과 장애 복구를 검증한다.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class OpenAiModerationValidationServiceTest {
 
     private OpenAiModerationClient client;
@@ -83,6 +87,22 @@ class OpenAiModerationValidationServiceTest {
 
         assertThat(issue.getRuleId()).isEqualTo("MODERATION_UNAVAILABLE");
         assertThat(issue.getDetail()).containsExactly("PARSING_ERROR");
+    }
+
+    @Test
+    void 예상하지_못한_예외는_원인과_스택_트레이스를_한_번만_기록한다(CapturedOutput output) {
+        when(client.moderate("검사 본문"))
+                .thenThrow(new IllegalStateException("unexpected failure"));
+
+        ValidationIssue issue = service.validate("검사 본문").get(0);
+
+        assertThat(issue.getRuleId()).isEqualTo("MODERATION_UNAVAILABLE");
+        assertThat(issue.getDetail()).containsExactly("API_ERROR");
+        assertThat(output.getOut())
+                .containsOnlyOnce("OpenAI Moderation 검사 중 예상하지 못한 오류가 발생했습니다.")
+                .contains("exceptionType=IllegalStateException")
+                .contains("unexpected failure")
+                .doesNotContain("OpenAI Moderation 검사를 완료하지 못했습니다.");
     }
 
     private OpenAiModerationResponse response(
