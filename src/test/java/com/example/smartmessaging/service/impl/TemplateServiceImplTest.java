@@ -30,7 +30,7 @@ class TemplateServiceImplTest {
     private TemplateServiceImpl templateService;
 
     @Test
-    void 옵션_조회시_채널_카테고리_광고여부만_응답에_포함한다() {
+    void 옵션_조회시_채널_고정_카테고리_광고여부를_응답한다() {
         when(templateMapper.selectAllChannels()).thenReturn(List.of());
         when(templateMapper.selectPurposeOptions(10L)).thenReturn(List.of());
 
