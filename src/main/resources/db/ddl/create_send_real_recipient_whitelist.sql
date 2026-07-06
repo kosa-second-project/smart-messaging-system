@@ -50,7 +50,6 @@ CREATE TABLE send_real_recipient_whitelist (
 
     CONSTRAINT chk_send_real_whitelist_active CHECK (is_active IN (0, 1)),
     CONSTRAINT chk_send_real_whitelist_deleted CHECK (is_deleted IN (0, 1)),
-    CONSTRAINT fk_send_real_whitelist_customer FOREIGN KEY (customer_id) REFERENCES customer(id),
     CONSTRAINT fk_send_real_whitelist_channel FOREIGN KEY (channel_id) REFERENCES channel(id),
 
     -- 같은 고객/채널 조합이 동일한 삭제 상태로 중복 등록되는 것을 방지한다.
