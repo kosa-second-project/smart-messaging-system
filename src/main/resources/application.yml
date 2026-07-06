@@ -45,3 +45,7 @@ solapi:
 
 messaging:
   unsubscribe-url: ${MESSAGING_UNSUBSCRIBE_URL:}
+  email:
+    dummy-enabled: ${MESSAGING_EMAIL_DUMMY_ENABLED:false}
+  kakao:
+    dummy-enabled: ${MESSAGING_KAKAO_DUMMY_ENABLED:false}

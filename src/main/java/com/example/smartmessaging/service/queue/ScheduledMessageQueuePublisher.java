@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,13 +25,23 @@ public class ScheduledMessageQueuePublisher {
     private final SendQueueRepository sendQueueRepository;
     private final RecipientChannelResolver recipientChannelResolver;
     private final MessageQueuePublisher messageQueuePublisher;
+    private final QueueFailureHandler queueFailureHandler;
+    private final TransactionTemplate transactionTemplate;
 
     @Scheduled(fixedDelayString = "${messaging.queue.scheduled-scan-delay-ms:60000}")
-    @Transactional
     public void enqueueDueScheduledTargets() {
         List<SendTargetVO> dueTargets = sendQueueRepository.findDueScheduledTargets();
         for (SendTargetVO target : dueTargets) {
-            enqueueTarget(target);
+            try {
+                transactionTemplate.executeWithoutResult(status -> enqueueTarget(target));
+            } catch (Exception e) {
+                queueFailureHandler.markTargetFailed(
+                        target.getId(),
+                        target.getSendHistoryId(),
+                        null,
+                        "SCHEDULED_TARGET_ENQUEUE_FAILED");
+                log.error("Failed to enqueue scheduled target. targetId={}", target.getId(), e);
+            }
         }
     }
 
@@ -53,21 +63,32 @@ public class ScheduledMessageQueuePublisher {
 
         if (!plan.isSendable()) {
             sendQueueRepository.updateSendTargetStatus(target.getId(), "SKIPPED", null, BigDecimal.ZERO, history.getUserId());
-            sendQueueRepository.refreshHistoryCounters(history.getId(), history.getUserId());
+            refreshAndComplete(history.getId(), history.getUserId());
             return;
         }
 
         sendQueueRepository.updateSendTargetStatus(target.getId(), "SENDING", plan.getFirstChannelId(), BigDecimal.ZERO, history.getUserId());
         sendQueueRepository.updateSendHistoryStatus(history.getId(), "SENDING", history.getUserId());
-        messageQueuePublisher.publishMessageSendAfterCommit(MessageQueueDto.builder()
+        MessageQueueDto message = MessageQueueDto.builder()
                 .sendHistoryId(history.getId())
                 .sendTargetId(target.getId())
                 .customerId(target.getCustomerId())
                 .userId(history.getUserId())
                 .title(history.getTitle())
                 .content(history.getContent())
+                .linkUrl(history.getLinkUrl())
                 .advertising("AD".equalsIgnoreCase(history.getPurpose()))
                 .channelSequence(plan.getChannelSequence())
-                .build());
+                .build();
+        messageQueuePublisher.publishMessageSendAfterCommit(
+                message,
+                e -> queueFailureHandler.markMessageFailed(message, "SCHEDULED_MESSAGE_PUBLISH_FAILED"));
+    }
+
+    private void refreshAndComplete(Long sendHistoryId, Long userId) {
+        sendQueueRepository.refreshHistoryCounters(sendHistoryId, userId);
+        if (sendQueueRepository.countUnfinishedTargets(sendHistoryId) == 0) {
+            sendQueueRepository.markHistoryTerminal(sendHistoryId, userId);
+        }
     }
 }

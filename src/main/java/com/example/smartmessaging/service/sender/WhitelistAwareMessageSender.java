@@ -3,6 +3,8 @@ package com.example.smartmessaging.service.sender;
 import com.example.smartmessaging.dto.model.MessageSendContext;
 import com.example.smartmessaging.dto.model.MessageSendResult;
 import com.example.smartmessaging.dto.vo.SendResult;
+import com.example.smartmessaging.service.EmailMessageService;
+import com.example.smartmessaging.service.KakaoQueueMessageService;
 import com.example.smartmessaging.service.SmsMessageService;
 import com.example.smartmessaging.service.repository.SendQueueRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,8 @@ import java.util.UUID;
 public class WhitelistAwareMessageSender implements MessageSender {
 
     private final SendQueueRepository sendQueueRepository;
+    private final EmailMessageService emailMessageService;
+    private final KakaoQueueMessageService kakaoQueueMessageService;
     private final SmsMessageService smsMessageService;
 
     @Override
@@ -28,22 +32,34 @@ public class WhitelistAwareMessageSender implements MessageSender {
             return MessageSendResult.success(true, "MOCK-" + UUID.randomUUID());
         }
 
-        if (isSmsChannel(context.getChannelType())) {
-            SendResult result = smsMessageService.sendTextMessage(
+        SendResult result = switch (normalize(context.getChannelType())) {
+            case "SMS", "LMS" -> smsMessageService.sendTextMessage(
                     context.getRecipientValue(),
                     context.getTitle(),
                     context.getContent(),
                     context.getChannelType(),
                     context.isAdvertising(),
                     context.getLinkUrl());
+            case "EMAIL" -> emailMessageService.sendEmail(
+                    context.getRecipientValue(),
+                    context.getTitle(),
+                    context.getContent(),
+                    context.getLinkUrl());
+            case "KAKAO" -> kakaoQueueMessageService.sendKakao(
+                    context.getRecipientValue(),
+                    context.getTitle(),
+                    context.getContent(),
+                    context.getLinkUrl());
+            default -> SendResult.fail(
+                    normalize(context.getChannelType()),
+                    "UNSUPPORTED_CHANNEL",
+                    "Unsupported channel type.");
+        };
 
-            if (result.isSuccess()) {
-                return MessageSendResult.success(false, result.getProviderMessageId());
-            }
-            return MessageSendResult.failure(result.getErrorCode() + ":" + result.getErrorMessage());
+        if (result.isSuccess()) {
+            return MessageSendResult.success(false, result.getProviderMessageId());
         }
-
-        return MessageSendResult.failure("REAL_PROVIDER_NOT_CONFIGURED:" + normalize(context.getChannelType()));
+        return MessageSendResult.failure(result.getErrorCode() + ":" + result.getErrorMessage());
     }
 
     private boolean isWhitelisted(MessageSendContext context) {
