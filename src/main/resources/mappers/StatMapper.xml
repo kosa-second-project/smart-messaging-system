@@ -192,17 +192,12 @@
         ORDER BY stat_date
     </select>
 
-    <select id="selectCustomerChannelConsents" parameterType="StatSearchRequest" resultType="CustomerChannelConsentVO">
+    <select id="selectCustomerChannelConsents" parameterType="StatSearchRequest" resultType="CustomerChannelConsentSummaryVO">
         SELECT
-            ccc.id,
-            ccc.is_consented,
-            ccc.customer_id,
             ccc.channel_id,
-            ccc.created_at,
-            ccc.updated_at,
-            ccc.created_by,
-            ccc.updated_by,
-            ccc.is_deleted
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN NVL(ccc.is_consented, 0) = 1 THEN 1 ELSE 0 END) AS consented_count,
+            SUM(CASE WHEN NVL(ccc.is_consented, 0) = 1 THEN 0 ELSE 1 END) AS rejected_count
         FROM customer_channel_consent ccc
         INNER JOIN channel c
                 ON c.id = ccc.channel_id
@@ -211,7 +206,8 @@
         <if test="channel != null and channel != ''">
           AND c.channel_type = #{channel}
         </if>
-        ORDER BY ccc.channel_id, ccc.customer_id
+        GROUP BY ccc.channel_id
+        ORDER BY ccc.channel_id
     </select>
 
     <select id="selectPerformanceClickStats" parameterType="StatSearchRequest" resultType="ClickStatVO">
