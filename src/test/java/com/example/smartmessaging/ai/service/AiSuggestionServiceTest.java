@@ -178,6 +178,20 @@ class AiSuggestionServiceTest {
                 .contains("혜택을 과장하거나 광고처럼 보이는");
     }
 
+    @Test
+    void SMS와_LMS가_함께_있으면_SMS_길이_규칙을_우선하고_부가_채널_규칙은_유지한다() {
+        AiSuggestionRequest request = request(MessageType.INFO);
+        request.setChannels(List.of(ChannelType.SMS, ChannelType.LMS, ChannelType.KAKAO));
+
+        String prompt = service.buildPrompt(request, List.of("#{고객명}"), java.util.Set.of());
+
+        assertThat(prompt)
+                .contains("SMS가 포함되어 있으므로 본문을 짧고 간결하게")
+                .contains("카카오 메시지에 어울리는 친근하지만 과하지 않은 톤")
+                .contains("가장 제약이 큰 채널을 기준으로")
+                .doesNotContain("LMS에 맞게 SMS보다 조금 자세하되");
+    }
+
     private AiSuggestionRequest request(MessageType messageType) {
         AiSuggestionRequest request = new AiSuggestionRequest();
         request.setContextType(AiContextType.MESSAGE_SEND);
