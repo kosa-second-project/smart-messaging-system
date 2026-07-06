@@ -50,7 +50,7 @@ class TemplatePageSourceTest {
     }
 
     @Test
-    void 새_템플릿_모달은_태그와_카카오값을_전송하지_않는다() throws Exception {
+    void 새_템플릿_모달은_AI_검사완료상태만_저장요청에_반영한다() throws Exception {
         String script = Files.readString(
                 Path.of("src/main/resources/static/js/pages/templates.js"),
                 StandardCharsets.UTF_8
@@ -64,9 +64,13 @@ class TemplatePageSourceTest {
                 script.indexOf("function renderFormPreview")
         );
 
-        assertThat(template).doesNotContain("태그", "templateTagList", "카카오 상태", "templateKakaoStatus", "kakaoTemplateCode");
-        assertThat(script).contains("getCategoryLabel");
-        assertThat(saveFunction).doesNotContain("tagIds", "templateTag", "kakaoTemplateStatus", "kakaoTemplateCode");
+        assertThat(template).contains("templateReviewButton", "templateSaveButton");
+        assertThat(template).contains("AI 문구 추천", "template-ai-open-button", "template-review-action-button");
+        assertThat(template).doesNotContain("AI로 작성");
+        assertThat(template).doesNotContain("templateTagCheckboxes", "고객 태그");
+        assertThat(script).contains("getCategoryLabel", "invalidateTemplateReview");
+        assertThat(saveFunction).contains("templateReviewSignature");
+        assertThat(saveFunction).doesNotContain("tagIds", "templateTag", "templateKakaoStatus", "kakaoTemplateCode");
     }
 
     @Test

@@ -64,7 +64,8 @@ class AiSuggestionControllerTest {
     }
 
     @Test
-    void customerTags가_비어_있으면_400을_반환한다() throws Exception {
+    void customerTags가_비어_있어도_추천을_요청한다() throws Exception {
+        when(aiSuggestionService.suggest(any())).thenReturn(new AiSuggestionResponse(List.of()));
         mockMvc.perform(post("/api/ai/suggestions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -75,9 +76,9 @@ class AiSuggestionControllerTest {
                                   "customerTags": []
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("SYS-400"));
-        verify(aiSuggestionService, never()).suggest(any());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions").isArray());
+        verify(aiSuggestionService).suggest(any());
     }
 
     @Test

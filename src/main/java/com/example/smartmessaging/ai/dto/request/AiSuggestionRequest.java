@@ -30,8 +30,7 @@ public class AiSuggestionRequest {
     @NotEmpty
     private List<@NotNull ChannelType> channels;
 
-    @NotEmpty
-    private List<@NotBlank String> customerTags;
+    private List<@NotBlank String> customerTags = List.of();
 
     private String direction;
 

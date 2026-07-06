@@ -1,11 +1,18 @@
 let templateCurrentPage = 1;
 let templatePageSize = 10;
 let templatePreviewMode = "message";
+let templateIsAiGenerated = false;
+let templateReviewSignature = null;
+let templateReviewStatus = null;
+let templateGenerating = false;
+let templateReviewing = false;
 let templateOptions = {
     channels: [],
     categories: [],
     purposes: []
 };
+
+const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}", "#{주문번호}", "#{쿠폰명}"];
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();
@@ -28,8 +35,14 @@ function bindTemplateEvents() {
     });
 
     ["templateTitle", "templateContent"].forEach(id => {
-        document.getElementById(id).addEventListener("input", renderFormPreview);
+        document.getElementById(id).addEventListener("input", function() {
+            renderFormPreview();
+            invalidateTemplateReview();
+        });
     });
+
+    document.getElementById("templateCategory").addEventListener("change", invalidateTemplateReview);
+    document.getElementById("templateChannelCheckboxes").addEventListener("change", invalidateTemplateReview);
 
     document.getElementById("templateContent").addEventListener("input", function(event) {
         document.getElementById("templateContentCount").innerText = `${event.target.value.length}자`;
@@ -51,8 +64,15 @@ function bindTemplateEvents() {
             document.querySelectorAll("[data-purpose-value]").forEach(item => {
                 item.classList.toggle("is-active", item.dataset.purposeValue === button.dataset.purposeValue);
             });
+            invalidateTemplateReview();
         });
     });
+
+    document.getElementById("templateAiPanelButton").addEventListener("click", openTemplateAiPanel);
+    document.getElementById("templateAiPanelClose").addEventListener("click", closeTemplateAiPanel);
+    document.getElementById("templateAiGenerateButton").addEventListener("click", generateTemplateSuggestions);
+    document.getElementById("templateReviewButton").addEventListener("click", reviewTemplate);
+    document.getElementById("templateReviewAcknowledge").addEventListener("change", updateTemplateSaveState);
 
     document.getElementById("templateForm").addEventListener("submit", function(event) {
         event.preventDefault();
@@ -423,6 +443,11 @@ function closeTemplateDetailOnBackdrop(event) {
 
 function resetTemplateForm() {
     document.getElementById("templateForm").reset();
+    templateIsAiGenerated = false;
+    templateReviewSignature = null;
+    templateReviewStatus = null;
+    templateGenerating = false;
+    templateReviewing = false;
     document.getElementById("templatePurpose").value = "AD";
     document.querySelectorAll("[data-purpose-value]").forEach(button => {
         button.classList.toggle("is-active", button.dataset.purposeValue === "AD");
@@ -434,12 +459,36 @@ function resetTemplateForm() {
     });
     document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
+    document.getElementById("templateAiDirection").value = "";
+    document.getElementById("templateAiMessage").innerText = "";
+    document.getElementById("templateAiSuggestions").innerHTML = "";
+    document.getElementById("templateReviewResult").innerHTML = "";
+    document.getElementById("templateReviewPanel").hidden = true;
+    document.getElementById("templateReviewAcknowledgeRow").hidden = true;
+    document.getElementById("templateReviewAcknowledge").checked = false;
+    document.getElementById("templateReviewButton").disabled = false;
+    document.getElementById("templateReviewButton").innerText = "AI 검사";
+    document.getElementById("templateAiGenerateButton").disabled = false;
+    document.getElementById("templateAiGenerateButton").innerText = "추천 문구 생성";
+    closeTemplateAiPanel();
+    updateTemplateSaveState();
 }
 
 function saveTemplate() {
+    if (templateReviewSignature !== getTemplateReviewSignature()) {
+        invalidateTemplateReview();
+        alert("현재 내용으로 AI 검사를 먼저 완료해 주세요.");
+        return;
+    }
+    if (templateReviewStatus !== "PASS" && !document.getElementById("templateReviewAcknowledge").checked) {
+        alert("검사 결과 확인에 동의해 주세요.");
+        return;
+    }
+
     const body = {
         title: document.getElementById("templateTitle").value.trim(),
         content: document.getElementById("templateContent").value.trim(),
+        isAiGenerated: templateIsAiGenerated,
         category: document.getElementById("templateCategory").value,
         purpose: document.getElementById("templatePurpose").value,
         channelIds: Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
@@ -457,6 +506,280 @@ function saveTemplate() {
             console.error("Template save fail:", err);
             alert("템플릿 저장 중 오류가 발생했습니다.");
         });
+}
+
+function openTemplateAiPanel() {
+    document.getElementById("templatePreviewPanel").hidden = true;
+    document.getElementById("templateAiPanel").hidden = false;
+    document.getElementById("templateAiDirection").focus();
+}
+
+function closeTemplateAiPanel() {
+    document.getElementById("templatePreviewPanel").hidden = false;
+    document.getElementById("templateAiPanel").hidden = true;
+}
+
+function generateTemplateSuggestions() {
+    if (templateGenerating) return;
+
+    const message = document.getElementById("templateAiMessage");
+    message.classList.remove("is-error");
+    const direction = document.getElementById("templateAiDirection").value.trim();
+    const missing = [];
+    if (!getSelectedChannelTypes().length) missing.push("채널");
+    if (!document.getElementById("templateCategory").value) missing.push("카테고리");
+    if (!document.getElementById("templatePurpose").value) missing.push("광고 여부");
+    if (!direction) missing.push("원하는 문구 방향");
+    if (missing.length) {
+        message.innerText = `${missing.join(", ")} 항목을 입력해 주세요.`;
+        message.classList.add("is-error");
+        return;
+    }
+
+    const body = buildAiRequestBase();
+    body.direction = direction;
+    const generationSignature = JSON.stringify(body);
+    templateGenerating = true;
+    setGeneratingState(true);
+    message.innerText = "조건에 맞는 문구를 생성하고 있습니다...";
+    document.getElementById("templateAiSuggestions").innerHTML = "";
+
+    fetch("/api/ai/suggestions", withJsonBody("POST", body))
+        .then(async res => {
+            if (!res.ok) throw new Error(await readErrorMessage(res, "AI 문구 생성에 실패했습니다."));
+            return res.json();
+        })
+        .then(data => {
+            const currentRequest = buildAiRequestBase();
+            currentRequest.direction = document.getElementById("templateAiDirection").value.trim();
+            if (generationSignature !== JSON.stringify(currentRequest)) {
+                throw new Error("생성 중 조건이 변경되었습니다. 다시 생성해 주세요.");
+            }
+            const suggestions = (data.suggestions || []).slice(0, 3);
+            if (!suggestions.length) throw new Error("추천 가능한 문구가 없습니다. 입력 방향을 바꿔 다시 시도해 주세요.");
+            message.innerText = `${suggestions.length}개의 문구를 생성했습니다.`;
+            renderTemplateSuggestions(suggestions);
+        })
+        .catch(err => {
+            console.error("AI suggestion fail:", err);
+            message.innerText = err.message || "AI 문구 생성 중 오류가 발생했습니다.";
+            message.classList.add("is-error");
+        })
+        .finally(() => {
+            templateGenerating = false;
+            setGeneratingState(false);
+        });
+}
+
+function setGeneratingState(loading) {
+    const button = document.getElementById("templateAiGenerateButton");
+    button.disabled = loading;
+    button.innerText = loading ? "생성 중..." : "추천 문구 생성";
+}
+
+function renderTemplateSuggestions(suggestions) {
+    const wrapper = document.getElementById("templateAiSuggestions");
+    wrapper.innerHTML = "";
+    suggestions.forEach((suggestion, index) => {
+        const card = document.createElement("article");
+        card.className = "template-ai-suggestion";
+        card.innerHTML = `
+            <strong class="template-ai-suggestion__title">${index + 1}. ${escapeHtml(suggestion.title)}</strong>
+            <p class="template-ai-suggestion__content">${escapeHtml(suggestion.content)}</p>
+            <button type="button" class="ds-button ds-button--outline">이 문구 적용</button>
+        `;
+        card.querySelector("button").addEventListener("click", function() {
+            applyTemplateSuggestion(suggestion);
+        });
+        wrapper.appendChild(card);
+    });
+}
+
+function applyTemplateSuggestion(suggestion) {
+    document.getElementById("templateTitle").value = suggestion.title || "";
+    document.getElementById("templateContent").value = suggestion.content || "";
+    document.getElementById("templateContentCount").innerText = `${(suggestion.content || "").length}자`;
+    templateIsAiGenerated = true;
+    invalidateTemplateReview();
+    renderFormPreview();
+    closeTemplateAiPanel();
+}
+
+function reviewTemplate() {
+    if (templateReviewing || !validateTemplateForReview()) return;
+
+    const requestSignature = getTemplateReviewSignature();
+    templateReviewing = true;
+    templateReviewSignature = null;
+    templateReviewStatus = null;
+    updateTemplateSaveState();
+    const button = document.getElementById("templateReviewButton");
+    button.disabled = true;
+    button.innerText = "검사 중...";
+    const panel = document.getElementById("templateReviewPanel");
+    panel.hidden = false;
+    document.getElementById("templateReviewResult").innerHTML = `<p class="template-review-summary">문구를 검사하고 있습니다...</p>`;
+    document.getElementById("templateReviewAcknowledgeRow").hidden = true;
+
+    fetch("/api/ai/messages/review", withJsonBody("POST", buildAiReviewRequest()))
+        .then(async res => {
+            if (!res.ok) throw new Error(await readErrorMessage(res, "AI 검사에 실패했습니다."));
+            return res.json();
+        })
+        .then(data => {
+            if (requestSignature !== getTemplateReviewSignature()) {
+                throw new Error("검사 중 입력 내용이 변경되었습니다. 다시 검사해 주세요.");
+            }
+            templateReviewSignature = requestSignature;
+            templateReviewStatus = data.status || "NOTICE";
+            renderTemplateReview(data);
+        })
+        .catch(err => {
+            console.error("AI review fail:", err);
+            templateReviewSignature = null;
+            templateReviewStatus = null;
+            document.getElementById("templateReviewResult").innerHTML = `
+                <div class="template-review-header"><strong>검사를 완료하지 못했습니다.</strong></div>
+                <p class="template-review-summary">${escapeHtml(err.message || "잠시 후 다시 시도해 주세요.")}</p>
+            `;
+        })
+        .finally(() => {
+            templateReviewing = false;
+            button.disabled = false;
+            button.innerText = "다시 검사";
+            updateTemplateSaveState();
+        });
+}
+
+function validateTemplateForReview() {
+    const form = document.getElementById("templateForm");
+    if (!form.reportValidity()) return false;
+    if (!getSelectedChannelTypes().length) {
+        alert("하나 이상의 채널을 선택해 주세요.");
+        return false;
+    }
+    return true;
+}
+
+function buildAiRequestBase() {
+    return {
+        contextType: "TEMPLATE_CREATE",
+        messageType: document.getElementById("templatePurpose").value,
+        channels: getSelectedChannelTypes(),
+        customerTags: [],
+        category: document.getElementById("templateCategory").value,
+        availableVariables: TEMPLATE_AVAILABLE_VARIABLES
+    };
+}
+
+function buildAiReviewRequest() {
+    return {
+        ...buildAiRequestBase(),
+        title: document.getElementById("templateTitle").value.trim(),
+        content: document.getElementById("templateContent").value.trim(),
+        templateId: null,
+        userId: null
+    };
+}
+
+function getSelectedChannelTypes() {
+    const selectedIds = new Set(Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
+        .map(input => Number(input.value)));
+    return (templateOptions.channels || [])
+        .filter(channel => selectedIds.has(Number(channel.channelId)))
+        .map(channel => channel.channelType);
+}
+
+function getTemplateReviewSignature() {
+    return JSON.stringify({
+        title: document.getElementById("templateTitle").value.trim(),
+        content: document.getElementById("templateContent").value.trim(),
+        category: document.getElementById("templateCategory").value,
+        purpose: document.getElementById("templatePurpose").value,
+        channelTypes: getSelectedChannelTypes().slice().sort()
+    });
+}
+
+function invalidateTemplateReview() {
+    templateReviewSignature = null;
+    templateReviewStatus = null;
+    document.getElementById("templateReviewAcknowledge").checked = false;
+    document.getElementById("templateReviewAcknowledgeRow").hidden = true;
+    const panel = document.getElementById("templateReviewPanel");
+    if (!panel.hidden) {
+        document.getElementById("templateReviewResult").innerHTML = `<p class="template-review-summary">입력 내용이 변경되었습니다. 다시 AI 검사를 실행해 주세요.</p>`;
+    }
+    updateTemplateSaveState();
+}
+
+function updateTemplateSaveState() {
+    const currentReview = templateReviewSignature !== null
+        && templateReviewSignature === getTemplateReviewSignature();
+    const acknowledged = templateReviewStatus === "PASS"
+        || document.getElementById("templateReviewAcknowledge").checked;
+    document.getElementById("templateSaveButton").disabled = !(currentReview && acknowledged);
+}
+
+function renderTemplateReview(data) {
+    const status = data.status || "NOTICE";
+    const issues = data.issues || [];
+    const issueHtml = issues.length
+        ? issues.map(issue => `
+            <article class="template-review-issue">
+                <div class="template-review-issue__header">
+                    <strong>${escapeHtml(issue.message || issue.ruleId || "검토 항목")}</strong>
+                    <span class="template-review-status template-review-status--${escapeHtml(issue.status || status)}">${escapeHtml(issue.status || status)}</span>
+                </div>
+                <div class="template-review-meta">
+                    ${issue.source ? renderBadge(issue.source, "default") : ""}
+                    ${issue.severity ? renderBadge(issue.severity, issue.severity === "HIGH" ? "amber" : "default") : ""}
+                    ${issue.field ? renderBadge(issue.field, "blue") : ""}
+                </div>
+                ${issue.targetText ? `<p><strong>대상:</strong> ${escapeHtml(issue.targetText)}</p>` : ""}
+                ${issue.suggestion ? `<p><strong>수정 제안:</strong> ${escapeHtml(issue.suggestion)}</p>` : ""}
+                ${(issue.detail || []).length ? `<p><strong>상세:</strong> ${escapeHtml(issue.detail.join(", "))}</p>` : ""}
+            </article>
+        `).join("")
+        : `<p class="template-review-summary">발견된 이슈가 없습니다.</p>`;
+
+    document.getElementById("templateReviewResult").innerHTML = `
+        <div class="template-review-header">
+            <strong>AI 검사 결과</strong>
+            <span class="template-review-status template-review-status--${escapeHtml(status)}">${escapeHtml(status)}</span>
+        </div>
+        <p class="template-review-summary">${escapeHtml(data.summary || "검사가 완료되었습니다.")}</p>
+        <div class="template-review-issues">${issueHtml}</div>
+        ${data.suggestedRewrite ? `
+            <div class="template-review-rewrite">
+                <strong>AI 수정 문구</strong>
+                <p>${escapeHtml(data.suggestedRewrite)}</p>
+                <button id="templateApplyRewriteButton" type="button" class="ds-button ds-button--outline">수정 문구 적용</button>
+            </div>
+        ` : ""}
+    `;
+
+    if (data.suggestedRewrite) {
+        document.getElementById("templateApplyRewriteButton").addEventListener("click", function() {
+            document.getElementById("templateContent").value = data.suggestedRewrite;
+            document.getElementById("templateContentCount").innerText = `${data.suggestedRewrite.length}자`;
+            renderFormPreview();
+            invalidateTemplateReview();
+        });
+    }
+
+    const needsAcknowledge = status !== "PASS";
+    document.getElementById("templateReviewAcknowledgeRow").hidden = !needsAcknowledge;
+    document.getElementById("templateReviewAcknowledge").checked = false;
+    updateTemplateSaveState();
+}
+
+async function readErrorMessage(response, fallback) {
+    try {
+        const data = await response.json();
+        return data.message || fallback;
+    } catch (error) {
+        return fallback;
+    }
 }
 
 function renderFormPreview() {
