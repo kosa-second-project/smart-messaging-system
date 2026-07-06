@@ -131,29 +131,59 @@
                                 </div>
 
                                 <label class="ds-field">
-                                    <span class="ds-label">메시지 내용</span>
+                                    <span class="template-content-label">
+                                        <span class="ds-label">메시지 내용</span>
+                                        <button id="templateAiPanelButton" type="button" class="ds-button template-ai-open-button">
+                                            AI 문구 추천
+                                        </button>
+                                    </span>
                                     <textarea id="templateContent" class="ds-textarea template-content-input" rows="8" maxlength="2000" required></textarea>
                                     <span id="templateContentCount" class="ds-help">0자</span>
                                 </label>
                             </div>
 
-                            <section class="template-form-preview">
-                                <div class="template-preview-header">
+                            <section class="template-form-preview" id="templateSidePanel">
+                                <div id="templatePreviewPanel">
+                                    <div class="template-preview-header">
                                     <span>미리보기</span>
                                     <div class="ds-segment">
                                         <button type="button" class="ds-segment__item is-active" data-preview-mode="message">메시지</button>
                                         <button type="button" class="ds-segment__item" data-preview-mode="kakao">카카오톡</button>
                                         <button type="button" class="ds-segment__item" data-preview-mode="email">이메일</button>
                                     </div>
+                                    </div>
+                                    <div id="templateFormPreview"></div>
                                 </div>
-                                <div id="templateFormPreview"></div>
+
+                                <div id="templateAiPanel" class="template-ai-panel" hidden>
+                                    <div class="template-preview-header">
+                                        <span>AI 문구 추천</span>
+                                        <button id="templateAiPanelClose" type="button" class="ds-icon-button" aria-label="미리보기로 돌아가기">×</button>
+                                    </div>
+                                    <label class="ds-field">
+                                        <span class="ds-label">원하는 문구 방향</span>
+                                        <textarea id="templateAiDirection" class="ds-textarea" rows="4" maxlength="500" placeholder="예: 신규 고객에게 여름 쿠폰을 친근하지만 과장되지 않게 안내해 주세요."></textarea>
+                                    </label>
+                                    <button id="templateAiGenerateButton" type="button" class="ds-button ds-button--primary template-ai-generate-button">추천 문구 생성</button>
+                                    <div id="templateAiMessage" class="template-inline-message" aria-live="polite"></div>
+                                    <div id="templateAiSuggestions" class="template-ai-suggestions"></div>
+                                </div>
                             </section>
                         </div>
+
+                        <section id="templateReviewPanel" class="template-review-panel" hidden aria-live="polite">
+                            <div id="templateReviewResult"></div>
+                            <label id="templateReviewAcknowledgeRow" class="template-review-acknowledge" hidden>
+                                <input id="templateReviewAcknowledge" type="checkbox">
+                                <span>검사 결과를 확인했으며 이 상태로 저장합니다.</span>
+                            </label>
+                        </section>
                     </div>
 
                     <div class="ds-modal__footer">
                         <button type="button" class="ds-button ds-button--outline" onclick="closeAddTemplateModal()">취소</button>
-                        <button type="submit" class="ds-button ds-button--primary">저장</button>
+                        <button id="templateReviewButton" type="button" class="ds-button template-review-action-button">AI 검사</button>
+                        <button id="templateSaveButton" type="submit" class="ds-button ds-button--primary" disabled>저장</button>
                     </div>
                 </form>
             </div>

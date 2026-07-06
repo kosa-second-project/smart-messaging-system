@@ -6,18 +6,24 @@ import com.example.smartmessaging.ai.dto.response.ValidationIssue;
 import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
+import com.example.smartmessaging.ai.dto.type.IssueSource;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
+import com.example.smartmessaging.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,18 +34,23 @@ class AiReviewServiceTest {
 
     private ProfanityValidationService profanityValidationService;
     private OpenAiModerationValidationService openAiModerationValidationService;
+    private LlmReviewService llmReviewService;
     private AiReviewService aiReviewService;
 
     @BeforeEach
     void setUp() {
         profanityValidationService = mock(ProfanityValidationService.class);
         openAiModerationValidationService = mock(OpenAiModerationValidationService.class);
+        llmReviewService = mock(LlmReviewService.class);
         when(profanityValidationService.validate(anyString())).thenReturn(List.of());
         when(openAiModerationValidationService.validate(anyString())).thenReturn(List.of());
+        when(llmReviewService.review(any(), anyList())).thenAnswer(invocation ->
+                new LlmReviewService.ReviewResult(invocation.getArgument(1), List.of(), null));
         aiReviewService = new AiReviewService(
                 new RuleValidationService(),
                 profanityValidationService,
-                openAiModerationValidationService
+                openAiModerationValidationService,
+                llmReviewService
         );
     }
 
@@ -73,6 +84,9 @@ class AiReviewServiceTest {
         assertThat(response.getIssues())
                 .extracting(ValidationIssue::getRuleId)
                 .containsExactly("PERSONAL_EMAIL", "PROFANITY_DETECTED");
+        assertThat(response.getIssues())
+                .extracting(ValidationIssue::getSource)
+                .containsExactly(IssueSource.SERVER_RULE, IssueSource.PROFANITY_FILTER);
         assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
         assertThat(response.getSummary()).isEqualTo("검사 결과 수정이 필요한 항목이 있습니다.");
         assertThat(response.isNeedsHumanReview()).isTrue();
@@ -134,10 +148,74 @@ class AiReviewServiceTest {
 
         org.mockito.InOrder order = inOrder(
                 profanityValidationService,
-                openAiModerationValidationService
+                openAiModerationValidationService,
+                llmReviewService
         );
         order.verify(profanityValidationService).validate(request.getContent());
         order.verify(openAiModerationValidationService).validate(request.getContent());
+        order.verify(llmReviewService).review(any(), anyList());
+    }
+
+    @Test
+    void LLM_신규_이슈와_수정안을_최종_응답에_병합한다() {
+        AiReviewRequest request = request(MessageType.INFO, "역대급 혜택을 확인하세요.");
+        ValidationIssue llmIssue = new ValidationIssue(
+                "OVERSTATED_BENEFIT",
+                IssueSource.LLM_REVIEW,
+                IssueSeverity.MEDIUM,
+                ReviewStatus.WARNING,
+                "content",
+                "과장된 혜택 표현입니다.",
+                "역대급 혜택",
+                "혜택 조건을 구체적으로 안내해 주세요.",
+                List.of()
+        );
+        when(llmReviewService.review(any(), anyList())).thenAnswer(invocation ->
+                new LlmReviewService.ReviewResult(
+                        invocation.getArgument(1),
+                        List.of(llmIssue),
+                        "혜택 조건을 확인해보세요."
+                ));
+
+        AiReviewResponse response = aiReviewService.review(request);
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.WARNING);
+        assertThat(response.getIssues()).containsExactly(llmIssue);
+        assertThat(response.getSuggestedRewrite()).isEqualTo("혜택 조건을 확인해보세요.");
+    }
+
+    @Test
+    void LLM_호출이_실패하면_기존_결과와_가용성_이슈를_반환한다() {
+        AiReviewRequest request = request(MessageType.AD, "광고 안내");
+        when(llmReviewService.review(any(), anyList()))
+                .thenThrow(new IllegalStateException("LLM unavailable"));
+
+        AiReviewResponse response = aiReviewService.review(request);
+
+        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
+        assertThat(response.getIssues())
+                .extracting(ValidationIssue::getRuleId)
+                .containsExactly("MISSING_AD_PREFIX", "MISSING_OPT_OUT", "LLM_REVIEW_UNAVAILABLE");
+        ValidationIssue unavailable = response.getIssues().get(2);
+        assertThat(unavailable.getSource()).isEqualTo(IssueSource.LLM_REVIEW);
+        assertThat(unavailable.getSeverity()).isEqualTo(IssueSeverity.LOW);
+        assertThat(unavailable.getStatus()).isEqualTo(ReviewStatus.NOTICE);
+        assertThat(unavailable.getField()).isNull();
+    }
+
+    @Test
+    void 필수값이_없으면_외부_검사를_호출하지_않는다() {
+        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.");
+        request.setTitle("  ");
+
+        assertThatExceptionOfType(BusinessException.class)
+                .isThrownBy(() -> aiReviewService.review(request));
+
+        verifyNoInteractions(
+                profanityValidationService,
+                openAiModerationValidationService,
+                llmReviewService
+        );
     }
 
     private AiReviewRequest request(MessageType messageType, String content) {
