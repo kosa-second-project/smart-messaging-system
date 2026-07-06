@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -23,6 +24,22 @@ import java.util.Set;
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> handleValidationException(
+            MethodArgumentNotValidException exception
+    ) {
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        log.warn("Request validation failed: errorCount={}",
+                exception.getBindingResult().getErrorCount());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", errorCode.getStatus());
+        response.put("code", errorCode.getCode());
+        response.put("message", errorCode.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 
     // 1. 공통 비즈니스 예외(BusinessException) 통합 처리
     @ExceptionHandler(BusinessException.class)
