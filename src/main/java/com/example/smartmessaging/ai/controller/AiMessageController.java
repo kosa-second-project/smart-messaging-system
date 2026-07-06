@@ -2,7 +2,7 @@ package com.example.smartmessaging.ai.controller;
 
 import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
 import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.service.RuleValidationService;
+import com.example.smartmessaging.ai.service.AiReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "AI 메시지 검사", description = "메시지/템플릿 문구를 서버 룰 기반으로 검사하는 API")
+@Tag(name = "AI 메시지 검사", description = "메시지/템플릿 문구를 서버 룰과 욕설 필터로 검사하는 API")
 @RestController
 @RequestMapping("/api/ai/messages")
 @RequiredArgsConstructor
 public class AiMessageController {
 
-    private final RuleValidationService ruleValidationService;
+    private final AiReviewService aiReviewService;
 
     @Operation(
             summary = "AI 메시지/템플릿 문구 검사",
@@ -84,6 +84,6 @@ public class AiMessageController {
     public ResponseEntity<AiReviewResponse> reviewMessage(
             @org.springframework.web.bind.annotation.RequestBody AiReviewRequest request
     ) {
-        return ResponseEntity.ok(ruleValidationService.review(request));
+        return ResponseEntity.ok(aiReviewService.review(request));
     }
 }
