@@ -48,6 +48,31 @@
         )
     </insert>
 
+    <insert id="insertRejectHistoryIfAbsent">
+        INSERT INTO reject_history (
+            customer_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            #{customerId},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{createdBy},
+            #{createdBy},
+            0
+        FROM dual
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM reject_history
+            WHERE customer_id = #{customerId}
+              AND NVL(is_deleted, 0) = 0
+        )
+    </insert>
+
     <update id="blockCustomerAds">
         UPDATE customer
         SET is_ad_blocked = 1,

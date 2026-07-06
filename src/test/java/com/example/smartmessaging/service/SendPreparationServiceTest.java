@@ -9,18 +9,22 @@ import com.example.smartmessaging.dto.vo.SendHistoryRoutingVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
 import com.example.smartmessaging.dto.vo.SendTargetVO;
+import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.mapper.SendPreparationMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,6 +52,20 @@ class SendPreparationServiceTest {
                 messageQueuePublisher,
                 shortUrlService
         );
+    }
+
+    @Test
+    void 예약시간이_과거이면_발송요청을_저장하지_않는다() {
+        SendPrepareRequestDTO request = new SendPrepareRequestDTO();
+        request.setDraftId("draft-1");
+        request.setContent("예약 발송 본문");
+        request.setPriorities(List.of("SMS"));
+        request.setScheduledAt(LocalDateTime.now().minusMinutes(1));
+
+        assertThatThrownBy(() -> sendPreparationService.prepare(10L, request))
+                .isInstanceOf(BusinessException.class);
+
+        verify(sendPreparationMapper, never()).insertSendHistory(any(SendHistoryVO.class));
     }
 
     @Test
@@ -112,6 +130,21 @@ class SendPreparationServiceTest {
                         org.assertj.core.groups.Tuple.tuple(3L, 3)
                 );
 
+        ArgumentCaptor<SendTargetVO> targetCaptor = ArgumentCaptor.forClass(SendTargetVO.class);
+        verify(sendPreparationMapper, org.mockito.Mockito.times(2)).insertSendTarget(targetCaptor.capture());
+        assertThat(targetCaptor.getAllValues())
+                .extracting(SendTargetVO::getCustomerId, SendTargetVO::getFinalChannelId)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(100L, 1L),
+                        org.assertj.core.groups.Tuple.tuple(200L, 2L)
+                );
+        assertThat(targetCaptor.getAllValues())
+                .extracting(SendTargetVO::getUserUuid)
+                .allSatisfy(userUuid -> assertThat(userUuid)
+                        .isNotBlank()
+                        .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))
+                .doesNotContain("kakao-100");
+
         ArgumentCaptor<MessageTaskDto> taskCaptor = ArgumentCaptor.forClass(MessageTaskDto.class);
         verify(messageQueuePublisher, org.mockito.Mockito.times(2)).publish(taskCaptor.capture());
         assertThat(taskCaptor.getAllValues())
@@ -126,6 +159,9 @@ class SendPreparationServiceTest {
                         org.assertj.core.groups.Tuple.tuple("쿠폰 보기", "http://localhost:8080/r/purchase100", "http://localhost:8080/u/unsub100"),
                         org.assertj.core.groups.Tuple.tuple("쿠폰 보기", "http://localhost:8080/r/purchase200", "http://localhost:8080/u/unsub200")
                 );
+        assertThat(taskCaptor.getAllValues())
+                .extracting(MessageTaskDto::getKakaoUserKey)
+                .containsExactly("kakao-100", null);
 
         assertThat(response.getSendHistoryId()).isEqualTo(900L);
         assertThat(response.getTotalRequestedCount()).isEqualTo(2);

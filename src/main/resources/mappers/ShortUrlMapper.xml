@@ -15,12 +15,12 @@
             <include refid="Common.auditColumns"/>
         ) VALUES (
             #{id},
-            #{originalUrl},
+            #{originalUrl,jdbcType=VARCHAR},
             #{sendTargetId},
             0,
             NULL,
-            #{isConverted},
-            #{purpose},
+            #{isConverted,jdbcType=NUMERIC},
+            #{purpose,jdbcType=VARCHAR},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -40,6 +40,54 @@
           AND NVL(is_deleted, 0) = 0
     </select>
 
+    <select id="findClickTargetById" resultType="ShortUrlTargetVO">
+        SELECT
+            su.id AS short_url_id,
+            su.original_url,
+            su.purpose,
+            su.send_target_id,
+            st.send_history_id,
+            st.customer_id,
+            st.user_uuid,
+            st.final_channel_id AS channel_id,
+            ch.channel_type,
+            c.name AS customer_name,
+            c.phone
+        FROM short_url su
+        JOIN send_target st
+          ON st.id = su.send_target_id
+         AND NVL(st.is_deleted, 0) = 0
+        JOIN customer c
+          ON c.id = st.customer_id
+         AND NVL(c.is_deleted, 0) = 0
+        LEFT JOIN channel ch
+          ON ch.id = st.final_channel_id
+         AND NVL(ch.is_deleted, 0) = 0
+        WHERE su.id = #{id}
+          AND NVL(su.is_deleted, 0) = 0
+    </select>
+
+    <select id="findTargetBySendTargetId" resultType="ShortUrlTargetVO">
+        SELECT
+            st.id AS send_target_id,
+            st.send_history_id,
+            st.customer_id,
+            st.user_uuid,
+            st.final_channel_id AS channel_id,
+            ch.channel_type,
+            c.name AS customer_name,
+            c.phone
+        FROM send_target st
+        JOIN customer c
+          ON c.id = st.customer_id
+         AND NVL(c.is_deleted, 0) = 0
+        LEFT JOIN channel ch
+          ON ch.id = st.final_channel_id
+         AND NVL(ch.is_deleted, 0) = 0
+        WHERE st.id = #{sendTargetId}
+          AND NVL(st.is_deleted, 0) = 0
+    </select>
+
     <update id="markClicked">
         UPDATE short_url
         SET is_clicked = 1,
@@ -49,11 +97,197 @@
           AND NVL(is_deleted, 0) = 0
     </update>
 
+    <update id="markFirstClicked">
+        UPDATE short_url
+        SET is_clicked = 1,
+            clicked_at = SYSTIMESTAMP,
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{id}
+          AND NVL(is_clicked, 0) = 0
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
     <update id="markConverted">
         UPDATE short_url
         SET is_converted = 1,
             updated_at = SYSTIMESTAMP
         WHERE id = #{id}
           AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <update id="incrementChannelClickTargetCount">
+        MERGE INTO channel_stat target
+        USING (
+            SELECT #{channelId} AS channel_id
+            FROM dual
+        ) source
+        ON (
+            target.channel_id = source.channel_id
+            AND NVL(target.is_deleted, 0) = 0
+        )
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.click_target_count = NVL(target.click_target_count, 0) + 1,
+                target.updated_at = SYSTIMESTAMP,
+                target.updated_by = #{actorId}
+        WHEN NOT MATCHED THEN
+            INSERT (
+                click_target_count,
+                click_count,
+                conversion_target_count,
+                conversion_count,
+                consent_target_count,
+                consent_count,
+                channel_id,
+                <include refid="Common.auditColumns"/>
+            ) VALUES (
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                source.channel_id,
+                SYSTIMESTAMP, SYSTIMESTAMP, #{actorId}, #{actorId}, 0
+            )
+    </update>
+
+    <update id="incrementChannelClickCount">
+        MERGE INTO channel_stat target
+        USING (
+            SELECT #{channelId} AS channel_id
+            FROM dual
+        ) source
+        ON (
+            target.channel_id = source.channel_id
+            AND NVL(target.is_deleted, 0) = 0
+        )
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.click_count = NVL(target.click_count, 0) + 1,
+                target.updated_at = SYSTIMESTAMP,
+                target.updated_by = #{actorId}
+        WHEN NOT MATCHED THEN
+            INSERT (
+                click_target_count,
+                click_count,
+                conversion_target_count,
+                conversion_count,
+                consent_target_count,
+                consent_count,
+                channel_id,
+                <include refid="Common.auditColumns"/>
+            ) VALUES (
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                source.channel_id,
+                SYSTIMESTAMP, SYSTIMESTAMP, #{actorId}, #{actorId}, 0
+            )
+    </update>
+
+    <update id="incrementHourlyClickCount">
+        MERGE INTO click_stat target
+        USING (
+            SELECT TRUNC(SYSDATE) AS stat_date,
+                   #{channelId} AS channel_id
+            FROM dual
+        ) source
+        ON (
+            target.stat_date = source.stat_date
+            AND target.channel_id = source.channel_id
+            AND NVL(target.is_deleted, 0) = 0
+        )
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.hour_00 = NVL(target.hour_00, 0) + CASE WHEN #{hour} = 0 THEN 1 ELSE 0 END,
+                target.hour_01 = NVL(target.hour_01, 0) + CASE WHEN #{hour} = 1 THEN 1 ELSE 0 END,
+                target.hour_02 = NVL(target.hour_02, 0) + CASE WHEN #{hour} = 2 THEN 1 ELSE 0 END,
+                target.hour_03 = NVL(target.hour_03, 0) + CASE WHEN #{hour} = 3 THEN 1 ELSE 0 END,
+                target.hour_04 = NVL(target.hour_04, 0) + CASE WHEN #{hour} = 4 THEN 1 ELSE 0 END,
+                target.hour_05 = NVL(target.hour_05, 0) + CASE WHEN #{hour} = 5 THEN 1 ELSE 0 END,
+                target.hour_06 = NVL(target.hour_06, 0) + CASE WHEN #{hour} = 6 THEN 1 ELSE 0 END,
+                target.hour_07 = NVL(target.hour_07, 0) + CASE WHEN #{hour} = 7 THEN 1 ELSE 0 END,
+                target.hour_08 = NVL(target.hour_08, 0) + CASE WHEN #{hour} = 8 THEN 1 ELSE 0 END,
+                target.hour_09 = NVL(target.hour_09, 0) + CASE WHEN #{hour} = 9 THEN 1 ELSE 0 END,
+                target.hour_10 = NVL(target.hour_10, 0) + CASE WHEN #{hour} = 10 THEN 1 ELSE 0 END,
+                target.hour_11 = NVL(target.hour_11, 0) + CASE WHEN #{hour} = 11 THEN 1 ELSE 0 END,
+                target.hour_12 = NVL(target.hour_12, 0) + CASE WHEN #{hour} = 12 THEN 1 ELSE 0 END,
+                target.hour_13 = NVL(target.hour_13, 0) + CASE WHEN #{hour} = 13 THEN 1 ELSE 0 END,
+                target.hour_14 = NVL(target.hour_14, 0) + CASE WHEN #{hour} = 14 THEN 1 ELSE 0 END,
+                target.hour_15 = NVL(target.hour_15, 0) + CASE WHEN #{hour} = 15 THEN 1 ELSE 0 END,
+                target.hour_16 = NVL(target.hour_16, 0) + CASE WHEN #{hour} = 16 THEN 1 ELSE 0 END,
+                target.hour_17 = NVL(target.hour_17, 0) + CASE WHEN #{hour} = 17 THEN 1 ELSE 0 END,
+                target.hour_18 = NVL(target.hour_18, 0) + CASE WHEN #{hour} = 18 THEN 1 ELSE 0 END,
+                target.hour_19 = NVL(target.hour_19, 0) + CASE WHEN #{hour} = 19 THEN 1 ELSE 0 END,
+                target.hour_20 = NVL(target.hour_20, 0) + CASE WHEN #{hour} = 20 THEN 1 ELSE 0 END,
+                target.hour_21 = NVL(target.hour_21, 0) + CASE WHEN #{hour} = 21 THEN 1 ELSE 0 END,
+                target.hour_22 = NVL(target.hour_22, 0) + CASE WHEN #{hour} = 22 THEN 1 ELSE 0 END,
+                target.hour_23 = NVL(target.hour_23, 0) + CASE WHEN #{hour} = 23 THEN 1 ELSE 0 END,
+                target.updated_at = SYSTIMESTAMP,
+                target.updated_by = #{actorId}
+        WHEN NOT MATCHED THEN
+            INSERT (
+                id,
+                stat_date,
+                channel_id,
+                hour_00,
+                hour_01,
+                hour_02,
+                hour_03,
+                hour_04,
+                hour_05,
+                hour_06,
+                hour_07,
+                hour_08,
+                hour_09,
+                hour_10,
+                hour_11,
+                hour_12,
+                hour_13,
+                hour_14,
+                hour_15,
+                hour_16,
+                hour_17,
+                hour_18,
+                hour_19,
+                hour_20,
+                hour_21,
+                hour_22,
+                hour_23,
+                <include refid="Common.auditColumns"/>
+            ) VALUES (
+                CLICK_STAT_SEQ.NEXTVAL,
+                source.stat_date,
+                source.channel_id,
+                CASE WHEN #{hour} = 0 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 1 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 2 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 3 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 4 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 5 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 6 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 7 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 8 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 9 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 10 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 11 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 12 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 13 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 14 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 15 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 16 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 17 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 18 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 19 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 20 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 21 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 22 THEN 1 ELSE 0 END,
+                CASE WHEN #{hour} = 23 THEN 1 ELSE 0 END,
+                SYSTIMESTAMP, SYSTIMESTAMP, #{actorId}, #{actorId}, 0
+            )
     </update>
 </mapper>

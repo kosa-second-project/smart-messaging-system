@@ -44,11 +44,41 @@ public final class SmsMessageTypeResolver {
         return byteCount;
     }
 
+    public static String buildMessageText(
+            String content,
+            String purpose,
+            String actionButtonName,
+            String actionUrl,
+            String unsubscribeUrl
+    ) {
+        StringBuilder text = new StringBuilder(content == null ? "" : content.trim());
+        if (!isBlank(actionUrl)) {
+            text.append("\n\n")
+                    .append(isBlank(actionButtonName) ? "자세히 보기" : actionButtonName.trim())
+                    .append("\n")
+                    .append(actionUrl.trim());
+        }
+        if (isAdvertising(purpose) && !isBlank(unsubscribeUrl)) {
+            text.append("\n\n수신거부를 원하시면 아래 링크를 눌러주세요.\n")
+                    .append(unsubscribeUrl.trim());
+        }
+        return text.toString();
+    }
+
     private static String normalize(String channelType) {
         if (channelType == null) {
             return "SMS";
         }
         String normalized = channelType.trim().toUpperCase(Locale.ROOT);
         return "LMS".equals(normalized) ? "LMS" : "SMS";
+    }
+
+    private static boolean isAdvertising(String purpose) {
+        String normalized = purpose == null ? "" : purpose.trim().toUpperCase(Locale.ROOT);
+        return "AD".equals(normalized);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

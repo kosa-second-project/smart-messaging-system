@@ -10,45 +10,38 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SendPreparationMapperXmlTest {
+class CustomerMapperXmlTest {
 
-    private static final String RESOURCE = "mappers/SendPreparationMapper.xml";
+    private static final String RESOURCE = "mappers/CustomerMapper.xml";
 
     @Test
-    void 발송준비_매퍼XML을_파싱하고_기존테이블_INSERT를_등록한다() throws Exception {
+    void 고객매퍼XML을_파싱하고_테스트고객_관련_쿼리를_등록한다() throws Exception {
         Configuration configuration = new Configuration();
         configuration.getTypeAliasRegistry().registerAliases("com.example.smartmessaging.dto");
 
         parseMapper(configuration, "mappers/common-mapper.xml");
         parseMapper(configuration, RESOURCE);
 
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.findRecipientCandidatesByCustomerIds"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistory"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistoryRouting"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendTarget"
-        )).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.findByPhone")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.insertTestCustomer")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.updateTestCustomer")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.upsertChannelConsent")).isTrue();
     }
 
     @Test
-    void 새테이블을_만들지_않고_기존_발송이력_대상_라우팅_테이블만_사용한다() throws Exception {
+    void 테스트고객_동의정보는_기존_고객_동의_테이블에_MERGE한다() throws Exception {
         String mapperXml;
         try (InputStream inputStream = Resources.getResourceAsStream(RESOURCE)) {
             mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
 
         assertThat(mapperXml)
-                .contains("INSERT INTO send_history",
-                        "#{templateId,jdbcType=NUMERIC}",
-                        "INSERT INTO send_history_routing",
-                        "INSERT INTO send_target",
-                        "FROM customer_channel_consent")
+                .contains("MERGE INTO customer_channel_consent",
+                        "WHEN MATCHED THEN",
+                        "WHEN NOT MATCHED THEN",
+                        "INSERT INTO customer",
+                        "birth_date",
+                        "#{birthDate,jdbcType=DATE}")
                 .doesNotContain("CREATE TABLE")
                 .doesNotContain("ALTER TABLE");
     }

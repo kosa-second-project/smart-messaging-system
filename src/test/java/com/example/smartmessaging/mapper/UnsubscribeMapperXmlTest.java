@@ -10,12 +10,12 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SendPreparationMapperXmlTest {
+class UnsubscribeMapperXmlTest {
 
-    private static final String RESOURCE = "mappers/SendPreparationMapper.xml";
+    private static final String RESOURCE = "mappers/UnsubscribeMapper.xml";
 
     @Test
-    void 발송준비_매퍼XML을_파싱하고_기존테이블_INSERT를_등록한다() throws Exception {
+    void 수신거부_매퍼XML을_파싱하고_중복방지_INSERT를_등록한다() throws Exception {
         Configuration configuration = new Configuration();
         configuration.getTypeAliasRegistry().registerAliases("com.example.smartmessaging.dto");
 
@@ -23,32 +23,20 @@ class SendPreparationMapperXmlTest {
         parseMapper(configuration, RESOURCE);
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.findRecipientCandidatesByCustomerIds"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistory"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistoryRouting"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendTarget"
+                "com.example.smartmessaging.mapper.UnsubscribeMapper.insertRejectHistoryIfAbsent"
         )).isTrue();
     }
 
     @Test
-    void 새테이블을_만들지_않고_기존_발송이력_대상_라우팅_테이블만_사용한다() throws Exception {
+    void 수신거부_이력은_NOT_EXISTS로_중복_삽입을_방지한다() throws Exception {
         String mapperXml;
         try (InputStream inputStream = Resources.getResourceAsStream(RESOURCE)) {
             mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
 
         assertThat(mapperXml)
-                .contains("INSERT INTO send_history",
-                        "#{templateId,jdbcType=NUMERIC}",
-                        "INSERT INTO send_history_routing",
-                        "INSERT INTO send_target",
-                        "FROM customer_channel_consent")
+                .contains("INSERT INTO reject_history")
+                .contains("WHERE NOT EXISTS")
                 .doesNotContain("CREATE TABLE")
                 .doesNotContain("ALTER TABLE");
     }

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 @Service
@@ -22,7 +23,7 @@ import java.util.Locale;
 public class ShortUrlService {
 
     private static final String CODE_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int CODE_LENGTH = 18;
+    private static final int CODE_LENGTH = 8;
     private static final int MAX_GENERATE_ATTEMPTS = 5;
     private static final Long SYSTEM_ACTOR_ID = 1L;
 
@@ -33,6 +34,9 @@ public class ShortUrlService {
     @Value("${app.base-url:http://localhost:8080}")
     private String appBaseUrl;
 
+    @Value("${app.short-url-base-url:${app.base-url:http://localhost:8080}}")
+    private String shortUrlBaseUrl;
+
     @Transactional
     public String createTrackedUrl(Long sendTargetId, String originalUrl, ShortUrlPurpose purpose) {
         ShortUrlPurpose resolvedPurpose = purpose == null ? ShortUrlPurpose.CLICK : purpose;
@@ -41,7 +45,7 @@ public class ShortUrlService {
 
         String code = createShortUrlRow(sendTargetId, resolvedOriginalUrl, resolvedPurpose);
         String path = resolvedPurpose == ShortUrlPurpose.UNSUBSCRIBE ? "/u/" : "/r/";
-        return appBaseUrl + path + code;
+        return shortUrlBaseUrl + path + code;
     }
 
     public ShortUrlVO getExisting(String code) {
@@ -54,13 +58,20 @@ public class ShortUrlService {
 
     @Transactional
     public String markClickAndResolveRedirect(String code) {
-        ShortUrlVO shortUrl = getExisting(code);
-        ShortUrlPurpose purpose = ShortUrlPurpose.from(shortUrl.getPurpose());
+        ShortUrlTargetVO target = shortUrlMapper.findClickTargetById(code);
+        if (target == null) {
+            throw new BusinessException("유효하지 않은 링크입니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+        ShortUrlPurpose purpose = ShortUrlPurpose.from(target.getPurpose());
         if (!purpose.countsAsClickRate()) {
             throw new BusinessException("클릭 추적 링크가 아닙니다.", ErrorCode.INVALID_INPUT_VALUE);
         }
-        shortUrlMapper.markClicked(code);
-        return shortUrl.getOriginalUrl();
+
+        boolean firstClick = shortUrlMapper.markFirstClicked(code) > 0;
+        if (firstClick) {
+            recordClickStats(target);
+        }
+        return appendTrackingParameters(target.getOriginalUrl(), target);
     }
 
     public ShortUrlTargetVO getUnsubscribeTarget(String code) {
@@ -81,9 +92,7 @@ public class ShortUrlService {
         shortUrlMapper.markClicked(code);
         unsubscribeMapper.blockCustomerAds(target.getCustomerId(), SYSTEM_ACTOR_ID);
         unsubscribeMapper.revokeSmsConsent(target.getCustomerId(), SYSTEM_ACTOR_ID);
-        if (unsubscribeMapper.countRejectHistory(target.getCustomerId()) == 0) {
-            unsubscribeMapper.insertRejectHistory(target.getCustomerId(), SYSTEM_ACTOR_ID);
-        }
+        unsubscribeMapper.insertRejectHistoryIfAbsent(target.getCustomerId(), SYSTEM_ACTOR_ID);
         return target;
     }
 
@@ -100,6 +109,7 @@ public class ShortUrlService {
             row.setUpdatedBy(SYSTEM_ACTOR_ID);
             try {
                 shortUrlMapper.insertShortUrl(row);
+                recordClickTargetStats(sendTargetId, purpose);
                 return code;
             } catch (DuplicateKeyException duplicateKeyException) {
                 if (i == MAX_GENERATE_ATTEMPTS - 1) {
@@ -108,6 +118,36 @@ public class ShortUrlService {
             }
         }
         throw new BusinessException("추적 링크 생성에 실패했습니다.", ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private void recordClickTargetStats(Long sendTargetId, ShortUrlPurpose purpose) {
+        if (!purpose.countsAsClickRate()) {
+            return;
+        }
+        ShortUrlTargetVO target = shortUrlMapper.findTargetBySendTargetId(sendTargetId);
+        if (target == null || target.getChannelId() == null) {
+            return;
+        }
+        shortUrlMapper.incrementChannelClickTargetCount(target.getChannelId(), SYSTEM_ACTOR_ID);
+    }
+
+    private void recordClickStats(ShortUrlTargetVO target) {
+        if (target.getChannelId() == null) {
+            return;
+        }
+        shortUrlMapper.incrementChannelClickCount(target.getChannelId(), SYSTEM_ACTOR_ID);
+        shortUrlMapper.incrementHourlyClickCount(target.getChannelId(), LocalDateTime.now().getHour(), SYSTEM_ACTOR_ID);
+    }
+
+    private String appendTrackingParameters(String originalUrl, ShortUrlTargetVO target) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(originalUrl);
+        if (target.getUserUuid() != null && !target.getUserUuid().isBlank()) {
+            builder.queryParam("userUuid", target.getUserUuid());
+        }
+        if (target.getChannelId() != null) {
+            builder.queryParam("channelId", target.getChannelId());
+        }
+        return builder.build().toUriString();
     }
 
     private String generateCode() {

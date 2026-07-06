@@ -10,5 +10,7 @@ import java.util.List;
 public class KakaoFeedMessageRequest {
     private String title;
     private String description;
+    private String linkButtonName;
+    private String linkUrl;
     private List<String> targetUuids;
 }

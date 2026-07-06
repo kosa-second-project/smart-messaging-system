@@ -56,5 +56,23 @@ public interface CustomerMapper {
      * ID 목록으로 고객 정보를 조회합니다.
      */
     List<CustomerVO> findByIds(@Param("ids") List<Long> ids);
+
+    CustomerVO findByPhone(@Param("phone") String phone);
+
+    int insertTestCustomer(CustomerVO customer);
+
+    int updateTestCustomer(CustomerVO customer);
+
+    int upsertChannelConsent(
+            @Param("customerId") Long customerId,
+            @Param("channelType") String channelType,
+            @Param("actorId") Long actorId
+    );
+
+    int upsertTestCustomerTag(
+            @Param("customerId") Long customerId,
+            @Param("tagId") Long tagId,
+            @Param("actorId") Long actorId
+    );
 }
 

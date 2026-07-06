@@ -18,12 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -154,6 +156,9 @@ public class SendPreparationService {
                 || request.getPriorities().isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
+        if (request.getScheduledAt() != null && request.getScheduledAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
     }
 
     private List<SendRecipientCandidateVO> findRecipientCandidates(List<Long> customerIds) {
@@ -263,5 +268,9 @@ public class SendPreparationService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String createTrackingUserUuid() {
+        return UUID.randomUUID().toString();
     }
 }

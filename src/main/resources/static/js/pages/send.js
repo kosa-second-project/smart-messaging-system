@@ -157,6 +157,8 @@ const SendPage = {
             // MPA 상태 유지를 위해 draftId를 세션스토리지에 저장하고 다음 단계로 이동
             sessionStorage.setItem("draftId", this.state.draftId || '');
             sessionStorage.setItem("draftTotalCount", String(this.state.draftTotalCount));
+            this.clearMessageDraftSession();
+            sessionStorage.setItem("messageEntrySource", "recipients");
 
             this.isNavigatingInternal = true;
             window.location.href = "/send/message";
@@ -278,6 +280,12 @@ const SendPage = {
     clearSendSession: function () {
         sessionStorage.removeItem("draftId");
         sessionStorage.removeItem("draftTotalCount");
+        this.clearMessageDraftSession();
+        this.state.draftId = null;
+        this.state.draftTotalCount = 0;
+    },
+
+    clearMessageDraftSession: function () {
         sessionStorage.removeItem("messageTitle");
         sessionStorage.removeItem("messageContent");
         sessionStorage.removeItem("messagePurpose");
@@ -287,8 +295,7 @@ const SendPage = {
         sessionStorage.removeItem("linkPurpose");
         sessionStorage.removeItem("selectedTemplateTitle");
         sessionStorage.removeItem("selectedTemplateContent");
-        this.state.draftId = null;
-        this.state.draftTotalCount = 0;
+        sessionStorage.removeItem("messageEntrySource");
     },
 
     // 이전 단계 이동 처리
@@ -299,6 +306,7 @@ const SendPage = {
             window.location.href = "/send/recipients";
         } else if (current === 3) {
             this.isNavigatingInternal = true;
+            sessionStorage.setItem("messageEntrySource", "review");
             window.location.href = "/send/message";
         }
     },

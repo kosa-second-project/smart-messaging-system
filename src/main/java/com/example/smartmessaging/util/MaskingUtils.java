@@ -22,7 +22,10 @@ public class MaskingUtils {
             String suffix = cleaned.substring(len - 4);
             return prefix + "-***-" + suffix;
         }
-        return phone;
+        if (cleaned.isEmpty()) {
+            return "***";
+        }
+        return "*".repeat(cleaned.length());
     }
 
     /**
