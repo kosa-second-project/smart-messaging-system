@@ -36,6 +36,7 @@ function bindTemplateEvents() {
 
     ["templateTitle", "templateContent"].forEach(id => {
         document.getElementById(id).addEventListener("input", function() {
+            templateIsAiGenerated = false;
             renderFormPreview();
             invalidateTemplateReview();
         });

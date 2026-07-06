@@ -88,4 +88,23 @@ class TemplatePageSourceTest {
                 .contains("display: flex",
                         "flex-wrap: wrap");
     }
+
+    @Test
+    void AI_추천_적용_후_사용자가_문구를_수정하면_AI_생성_상태를_해제한다() throws Exception {
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+        String inputListener = script.substring(
+                script.indexOf("[\"templateTitle\", \"templateContent\"].forEach"),
+                script.indexOf("document.getElementById(\"templateCategory\")")
+        );
+        String applySuggestion = script.substring(
+                script.indexOf("function applyTemplateSuggestion"),
+                script.indexOf("function reviewTemplate")
+        );
+
+        assertThat(inputListener).contains("templateIsAiGenerated = false");
+        assertThat(applySuggestion).contains("templateIsAiGenerated = true");
+    }
 }

@@ -494,7 +494,7 @@
     width: 1rem;
     height: 1rem;
     margin-right: 0.375rem;
-    border: 1px solid currentColor;
+    border: 1px solid currentcolor;
     border-radius: 50%;
     font-size: 0.625rem;
 }
