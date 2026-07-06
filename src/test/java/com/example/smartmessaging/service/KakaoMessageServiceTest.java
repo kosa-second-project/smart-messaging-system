@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 
+import com.example.smartmessaging.service.impl.KakaoMessageServiceImpl;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class KakaoMessageServiceTest {
 
-    private final KakaoMessageService kakaoMessageService = new KakaoMessageService(
+    private final KakaoMessageService kakaoMessageService = new KakaoMessageServiceImpl(
             new RestTemplateBuilder(),
             new ObjectMapper()
     );

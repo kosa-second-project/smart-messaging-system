@@ -45,7 +45,7 @@ class SendPreparationMapperXmlTest {
 
         assertThat(mapperXml)
                 .contains("INSERT INTO send_history",
-                        "#{templateId,jdbcType=NUMERIC}",
+                        "#{templateId, jdbcType=BIGINT}",
                         "INSERT INTO send_history_routing",
                         "INSERT INTO send_target",
                         "FROM customer_channel_consent")

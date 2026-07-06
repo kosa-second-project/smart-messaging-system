@@ -8,17 +8,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 모킹 메시지 발송 서비스 구현체
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MockMessageSender implements MessageSender {
+public class MockMessageSenderImpl implements MessageSender {
 
     private final HistoryMapper historyMapper;
 
     @Override
     @Transactional
     public void send(MessageQueueDto message) {
-        // 1. 채널별 가상 발송 로그 출력
         String channel = message.getChannelType() != null ? message.getChannelType().toUpperCase() : "SMS";
         String recipient = message.getRecipientNo();
         String title = message.getTitle() != null ? message.getTitle() : "제목 없음";
@@ -39,7 +41,6 @@ public class MockMessageSender implements MessageSender {
                 break;
         }
 
-        // 2. 가상 발송 지연시간 모사 (실제 네트워크 전송 시간 흉내 - 10ms ~ 50ms 랜덤)
         try {
             long latency = (long) (Math.random() * 40) + 10;
             Thread.sleep(latency);
@@ -47,7 +48,6 @@ public class MockMessageSender implements MessageSender {
             Thread.currentThread().interrupt();
         }
 
-        // 3. DB (send_target) 발송 완료 상태 업데이트 및 마스터(send_history) 성공 카운트 및 상태 연동
         if (message.getSendTargetId() != null) {
             historyMapper.updateSendTargetStatus(message.getSendTargetId(), "SUCCEEDED");
         }

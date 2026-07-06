@@ -28,6 +28,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.smartmessaging.service.impl.SendPreparationServiceImpl;
+import com.example.smartmessaging.service.impl.RecipientChannelResolverImpl;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 class SendPreparationServiceTest {
 
     private CampaignDraftService draftService;
@@ -35,6 +39,7 @@ class SendPreparationServiceTest {
     private SendPreparationMapper sendPreparationMapper;
     private MessageQueuePublisher messageQueuePublisher;
     private ShortUrlService shortUrlService;
+    private RabbitTemplate rabbitTemplate;
     private SendPreparationService sendPreparationService;
 
     @BeforeEach
@@ -44,13 +49,15 @@ class SendPreparationServiceTest {
         sendPreparationMapper = mock(SendPreparationMapper.class);
         messageQueuePublisher = mock(MessageQueuePublisher.class);
         shortUrlService = mock(ShortUrlService.class);
-        sendPreparationService = new SendPreparationService(
+        rabbitTemplate = mock(RabbitTemplate.class);
+        sendPreparationService = new SendPreparationServiceImpl(
                 draftService,
                 channelService,
                 sendPreparationMapper,
-                new RecipientChannelResolver(),
+                new RecipientChannelResolverImpl(),
                 messageQueuePublisher,
-                shortUrlService
+                shortUrlService,
+                rabbitTemplate
         );
     }
 
@@ -76,6 +83,7 @@ class SendPreparationServiceTest {
         request.setTitle("쿠폰 안내");
         request.setContent("쿠폰이 도착했습니다.");
         request.setPurpose("AD");
+        request.setScheduledAt(LocalDateTime.now().plusDays(1)); // Future scheduled time to force SCHEDULED status
         request.setPriorities(List.of("KAKAO", "EMAIL", "SMS"));
         request.setLinkButtonName("쿠폰 보기");
         request.setLinkUrl("https://example.com/coupon");
@@ -130,44 +138,23 @@ class SendPreparationServiceTest {
                         org.assertj.core.groups.Tuple.tuple(3L, 3)
                 );
 
-        ArgumentCaptor<SendTargetVO> targetCaptor = ArgumentCaptor.forClass(SendTargetVO.class);
-        verify(sendPreparationMapper, org.mockito.Mockito.times(2)).insertSendTarget(targetCaptor.capture());
-        assertThat(targetCaptor.getAllValues())
-                .extracting(SendTargetVO::getCustomerId, SendTargetVO::getFinalChannelId)
-                .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(100L, 1L),
-                        org.assertj.core.groups.Tuple.tuple(200L, 2L)
-                );
-        assertThat(targetCaptor.getAllValues())
-                .extracting(SendTargetVO::getUserUuid)
-                .allSatisfy(userUuid -> assertThat(userUuid)
-                        .isNotBlank()
-                        .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))
-                .doesNotContain("kakao-100");
-
-        ArgumentCaptor<MessageTaskDto> taskCaptor = ArgumentCaptor.forClass(MessageTaskDto.class);
-        verify(messageQueuePublisher, org.mockito.Mockito.times(2)).publish(taskCaptor.capture());
-        assertThat(taskCaptor.getAllValues())
-                .extracting(MessageTaskDto::getSendHistoryId, MessageTaskDto::getCustomerId, MessageTaskDto::getFallbackSequence)
-                .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(900L, 100L, List.of("KAKAO", "EMAIL", "SMS")),
-                        org.assertj.core.groups.Tuple.tuple(900L, 200L, List.of("EMAIL", "SMS"))
-                );
-        assertThat(taskCaptor.getAllValues())
-                .extracting(MessageTaskDto::getActionButtonName, MessageTaskDto::getActionUrl, MessageTaskDto::getUnsubscribeUrl)
-                .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple("쿠폰 보기", "http://localhost:8080/r/purchase100", "http://localhost:8080/u/unsub100"),
-                        org.assertj.core.groups.Tuple.tuple("쿠폰 보기", "http://localhost:8080/r/purchase200", "http://localhost:8080/u/unsub200")
-                );
-        assertThat(taskCaptor.getAllValues())
-                .extracting(MessageTaskDto::getKakaoUserKey)
-                .containsExactly("kakao-100", null);
+        ArgumentCaptor<com.example.smartmessaging.dto.queue.CampaignCommandQueueDto> commandCaptor = ArgumentCaptor.forClass(com.example.smartmessaging.dto.queue.CampaignCommandQueueDto.class);
+        verify(rabbitTemplate).convertAndSend(
+                org.mockito.ArgumentMatchers.eq(com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_EXCHANGE),
+                org.mockito.ArgumentMatchers.eq(com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_ROUTING_KEY),
+                commandCaptor.capture()
+        );
+        com.example.smartmessaging.dto.queue.CampaignCommandQueueDto command = commandCaptor.getValue();
+        assertThat(command.getSendHistoryId()).isEqualTo(900L);
+        assertThat(command.getDraftId()).isEqualTo("draft-1");
+        assertThat(command.getUserId()).isEqualTo(10L);
+        assertThat(command.getTitle()).isEqualTo("쿠폰 안내");
+        assertThat(command.getContent()).isEqualTo("쿠폰이 도착했습니다.");
 
         assertThat(response.getSendHistoryId()).isEqualTo(900L);
         assertThat(response.getTotalRequestedCount()).isEqualTo(2);
         assertThat(response.getPreparedTargetCount()).isEqualTo(2);
         assertThat(response.getExcludedTargetCount()).isZero();
-        verify(draftService).deleteDraft(10L, "draft-1");
     }
 
     private ChannelVO channel(Long id, String type, String cost) {

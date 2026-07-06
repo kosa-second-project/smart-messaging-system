@@ -8,11 +8,13 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.example.smartmessaging.service.impl.RecipientChannelResolverImpl;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RecipientChannelResolverTest {
 
-    private final RecipientChannelResolver resolver = new RecipientChannelResolver();
+    private final RecipientChannelResolver resolver = new RecipientChannelResolverImpl();
 
     @Test
     void 고객별_동의와_연락처가_있는_채널만_사용자_우선순위대로_계획한다() {

@@ -151,7 +151,7 @@
             st.customer_id AS customerId,
             c.phone AS phoneNumber,
             c.email AS email,
-            c.kakao_user_key AS kakaoUserKey,
+            NULL AS kakaoUserKey,
             sh.title AS title,
             sh.content AS content,
             sh.purpose AS purpose
