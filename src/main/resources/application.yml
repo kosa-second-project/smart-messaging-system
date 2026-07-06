@@ -48,3 +48,20 @@ logging:
 
 server:
   port: 8080
+
+app:
+  dummy-send:
+    enabled: false
+
+aws:
+  ses:
+    enabled: false
+    region: ap-northeast-2
+    from-email: ""
+    from-name: "Smart Messaging"
+
+solapi:
+  enabled: false
+  api-key: ${SOLAPI_API_KEY:}
+  api-secret: ${SOLAPI_API_SECRET:}
+  from-number: ${SOLAPI_FROM_NUMBER:}

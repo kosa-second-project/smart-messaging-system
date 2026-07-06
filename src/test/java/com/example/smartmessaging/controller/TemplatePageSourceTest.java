@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TemplatePageSourceTest {
 
     @Test
-    void 상세_렌더링은_DB응답_필드를_보여주고_목_미리보기를_사용하지_않는다() throws Exception {
+    void 상세_렌더링은_DB응답_필드로_메시지_미리보기를_구성한다() throws Exception {
         String script = Files.readString(
                 Path.of("src/main/resources/static/js/pages/templates.js"),
                 StandardCharsets.UTF_8
@@ -25,10 +25,10 @@ class TemplatePageSourceTest {
                 .contains("item.id",
                         "item.createdAt",
                         "item.updatedAt",
-                        "item.content");
+                        "item.content",
+                        "renderMessagePreview");
         assertThat(detailFunction)
-                .doesNotContain("renderMessagePreview",
-                        "010-0000-0000",
+                .doesNotContain("010-0000-0000",
                         "Gmail");
     }
 

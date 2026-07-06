@@ -134,8 +134,25 @@
 
 .bubble-title {
     font-weight: bold;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-size: 14px;
+}
+
+.bubble-text {
+    white-space: pre-wrap;
+}
+
+.bubble-link-area,
+.bubble-unsubscribe {
+    color: #2b4cff;
+    font-size: 12px;
+    margin-top: 10px;
+    padding-top: 8px;
+    white-space: pre-wrap;
+}
+
+.bubble-unsubscribe {
+    color: #444;
 }
 
 /* 1. 카카오톡 특화 스타일 */

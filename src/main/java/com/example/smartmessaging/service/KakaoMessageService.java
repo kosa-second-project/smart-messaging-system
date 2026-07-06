@@ -80,36 +80,85 @@ public class KakaoMessageService {
     }
 
     /**
+     * 카카오 사용자 프로필 정보를 조회하여 닉네임을 반환합니다.
+     */
+    public String getMyProfileNickname(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    "https://kapi.kakao.com/v2/user/me",
+                    HttpMethod.GET,
+                    request,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            Map<String, Object> body = response.getBody();
+            if (body != null && body.containsKey("properties")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> properties = (Map<String, Object>) body.get("properties");
+                if (properties != null && properties.containsKey("nickname")) {
+                    return (String) properties.get("nickname");
+                }
+            }
+            return "나";
+        } catch (Exception e) {
+            log.error("Failed to fetch Kakao user profile", e);
+            return "나";
+        }
+    }
+
+    /**
      * 카카오톡 친구들에게 피드(Feed) 템플릿 메시지를 발송합니다.
      */
     public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description) {
+        return sendFeedMessage(accessToken, receiverUuids, title, description, null);
+    }
+
+    public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description, String actionUrl) {
         if (receiverUuids == null || receiverUuids.isEmpty()) {
             return false;
         }
 
         String safeTitle = title != null ? title : "";
         String safeDescription = description != null ? description : "";
+        String linkUrl = resolveTemplateLink(actionUrl);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
 
-        Map<String, Object> templateObject = Map.of(
-                "object_type", "text",
-                "text", safeTitle + "\n\n" + safeDescription,
-                "link", Map.of(
-                        "web_url", appBaseUrl,
-                        "mobile_web_url", appBaseUrl
-                )
-        );
-
         boolean hasSuccess = false;
 
         try {
-            String templateJson = objectMapper.writeValueAsString(templateObject);
+            // 친구 목록을 가져와서 uuid별 닉네임 매핑을 빌드합니다.
+            List<KakaoFriendElement> friends = getKakaoFriends(accessToken);
+            Map<String, String> uuidToNickname = friends.stream()
+                    .filter(f -> f.getUuid() != null && f.getProfileNickname() != null)
+                    .collect(java.util.stream.Collectors.toMap(
+                            KakaoFriendElement::getUuid,
+                            KakaoFriendElement::getProfileNickname,
+                            (v1, v2) -> v1
+                    ));
 
             for (String uuid : receiverUuids) {
                 try {
+                    // 수신자별 이름 치환
+                    String nickname = uuidToNickname.getOrDefault(uuid, "고객");
+                    String personalizedTitle = safeTitle.replace("#{고객명}", nickname);
+                    String personalizedDescription = safeDescription.replace("#{고객명}", nickname);
+
+                    Map<String, Object> templateObject = Map.of(
+                            "object_type", "text",
+                            "text", personalizedTitle + "\n\n" + personalizedDescription,
+                            "button_title", "자세히 보기",
+                            "link", Map.of(
+                                    "web_url", linkUrl,
+                                    "mobile_web_url", linkUrl
+                            )
+                    );
+
+                    String templateJson = objectMapper.writeValueAsString(templateObject);
+
                     // 단일 uuid를 포함하는 리스트로 JSON 생성
                     String singleUuidJson = objectMapper.writeValueAsString(List.of(uuid));
 
@@ -129,7 +178,6 @@ public class KakaoMessageService {
                     hasSuccess = true;
                 } catch (Exception e) {
                     log.error("Kakao API send message error for uuid: {}", uuid, e);
-                    // 실패한 건이 있어도 다음 uuid 발송을 위해 계속 진행합니다.
                 }
             }
 
@@ -139,9 +187,12 @@ public class KakaoMessageService {
 
             return true;
 
-        } catch (JsonProcessingException e) {
-            log.error("JSON parsing error", e);
-            throw new KakaoApiException("메시지 포맷 변환에 실패했습니다.", e);
+        } catch (Exception e) {
+            log.error("Kakao message sending process error", e);
+            if (e instanceof KakaoApiException) {
+                throw (KakaoApiException) e;
+            }
+            throw new KakaoApiException("카카오 메시지 발송 중 오류가 발생했습니다.", e);
         }
     }
 
@@ -149,19 +200,30 @@ public class KakaoMessageService {
      * 카카오톡 나에게 기본 템플릿(피드) 메시지를 발송합니다.
      */
     public boolean sendMemoMessage(String accessToken, String title, String description) {
+        return sendMemoMessage(accessToken, title, description, null);
+    }
+
+    public boolean sendMemoMessage(String accessToken, String title, String description, String actionUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
 
         String safeTitle = title != null ? title : "알림";
         String safeDescription = description != null ? description : "";
+        String linkUrl = resolveTemplateLink(actionUrl);
+
+        // 내 프로필 닉네임 가져와서 #{고객명} 치환
+        String myNickname = getMyProfileNickname(accessToken);
+        String personalizedTitle = safeTitle.replace("#{고객명}", myNickname);
+        String personalizedDescription = safeDescription.replace("#{고객명}", myNickname);
 
         Map<String, Object> templateObject = Map.of(
                 "object_type", "text",
-                "text", safeTitle + "\n\n" + safeDescription,
+                "text", personalizedTitle + "\n\n" + personalizedDescription,
+                "button_title", "자세히 보기",
                 "link", Map.of(
-                        "web_url", appBaseUrl,
-                        "mobile_web_url", appBaseUrl
+                        "web_url", linkUrl,
+                        "mobile_web_url", linkUrl
                 )
         );
 
@@ -205,5 +267,12 @@ public class KakaoMessageService {
                 .toList();
                 
         return sendFeedMessage(accessToken, targetUuids, title, description);
+    }
+
+    private String resolveTemplateLink(String actionUrl) {
+        if (actionUrl == null || actionUrl.isBlank()) {
+            return appBaseUrl;
+        }
+        return actionUrl.trim();
     }
 }
