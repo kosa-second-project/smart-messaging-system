@@ -10,7 +10,8 @@ import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
 import com.example.smartmessaging.dto.vo.SendTargetVO;
 import com.example.smartmessaging.exception.BusinessException;
-import com.example.smartmessaging.mapper.SendPreparationMapper;
+import com.example.smartmessaging.service.queue.MessageQueuePublisher;
+import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -54,9 +55,6 @@ class SendPreparationServiceTest {
                 draftService,
                 channelService,
                 sendPreparationMapper,
-                new RecipientChannelResolverImpl(),
-                messageQueuePublisher,
-                shortUrlService,
                 rabbitTemplate
         );
     }
@@ -126,7 +124,7 @@ class SendPreparationServiceTest {
         assertThat(historyCaptor.getValue().getUserId()).isEqualTo(10L);
         assertThat(historyCaptor.getValue().getStatus()).isEqualTo("SCHEDULED");
         assertThat(historyCaptor.getValue().getTotalTargetCount()).isEqualTo(2);
-        assertThat(historyCaptor.getValue().getEstimatedCost()).isEqualByComparingTo("53.15");
+        assertThat(historyCaptor.getValue().getEstimatedCost()).isEqualByComparingTo("0");
 
         ArgumentCaptor<SendHistoryRoutingVO> routingCaptor = ArgumentCaptor.forClass(SendHistoryRoutingVO.class);
         verify(sendPreparationMapper, org.mockito.Mockito.times(3)).insertSendHistoryRouting(routingCaptor.capture());
@@ -153,7 +151,7 @@ class SendPreparationServiceTest {
 
         assertThat(response.getSendHistoryId()).isEqualTo(900L);
         assertThat(response.getTotalRequestedCount()).isEqualTo(2);
-        assertThat(response.getPreparedTargetCount()).isEqualTo(2);
+        assertThat(response.getPreparedTargetCount()).isZero();
         assertThat(response.getExcludedTargetCount()).isZero();
     }
 

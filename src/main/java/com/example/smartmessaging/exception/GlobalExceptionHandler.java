@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -95,6 +96,21 @@ public class GlobalExceptionHandler {
     }
 
     // 2. 일반 웹 화면(Thymeleaf) 요청 도중 발생한 기타 예외 처리
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException e) {
+        log.warn("Validation failed: {}", e.getMessage());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("message", e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getField() + "은(는) " + error.getDefaultMessage())
+                .orElse("요청 값이 올바르지 않습니다."));
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
     @ExceptionHandler(Exception.class)
     public String handleWebException(Exception e, Model model) {
         log.error("Web Request Exception: ", e);

@@ -1,4 +1,4 @@
-package com.example.smartmessaging.mapper;
+package com.example.smartmessaging.service.repository;
 
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
 import com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO;
@@ -7,6 +7,7 @@ import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
+import com.example.smartmessaging.dto.vo.SendAttemptVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -24,11 +25,9 @@ public interface HistoryMapper {
     List<HistoryFilterOptionDTO> findTagOptions();
     List<String> findPurposeOptions();
 
-    /**
-     * 발송 대상(send_target)의 최종 상태를 업데이트합니다.
-     */
     void updateSendTargetStatus(@Param("sendTargetId") Long sendTargetId, @Param("status") String status);
-
+    void insertSendAttempt(SendAttemptVO attempt);
+    int countUnfinishedTargets(@Param("sendHistoryId") Long sendHistoryId);
     void incrementSuccessCount(@Param("sendHistoryId") Long sendHistoryId);
     void incrementFailCount(@Param("sendHistoryId") Long sendHistoryId);
     void updateHistoryStatus(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.smartmessaging.mapper.SendMapper">
+<mapper namespace="com.example.smartmessaging.service.repository.SendMapper">
 
     <!-- 1. 발송 마스터 이력 적재 -->
     <insert id="insertSendHistory" parameterType="SendHistoryVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">

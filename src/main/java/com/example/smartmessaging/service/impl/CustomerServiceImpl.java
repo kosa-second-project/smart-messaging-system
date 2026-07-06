@@ -4,7 +4,7 @@ import com.example.smartmessaging.dto.request.CustomerSearchDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.*;
 import com.example.smartmessaging.dto.vo.CustomerVO;
-import com.example.smartmessaging.mapper.CustomerMapper;
+import com.example.smartmessaging.service.repository.CustomerMapper;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.CustomerService;
 import lombok.RequiredArgsConstructor;

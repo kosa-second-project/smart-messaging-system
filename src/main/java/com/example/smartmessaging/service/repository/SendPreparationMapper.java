@@ -1,4 +1,4 @@
-package com.example.smartmessaging.mapper;
+package com.example.smartmessaging.service.repository;
 
 import com.example.smartmessaging.dto.vo.SendHistoryRoutingVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
@@ -23,6 +23,8 @@ public interface SendPreparationMapper {
 
     void updateHistoryStatus(@Param("id") Long id, @Param("status") String status);
 
+    void updateHistoryTotalTargetCount(@Param("id") Long id, @Param("totalTargetCount") int totalTargetCount);
+
     List<SendHistoryVO> findPendingReservedCampaigns(@Param("now") java.time.LocalDateTime now);
 
     List<Long> findRoutingChannelIdsByHistoryId(@Param("sendHistoryId") Long sendHistoryId);
@@ -31,3 +33,4 @@ public interface SendPreparationMapper {
 
     List<com.example.smartmessaging.dto.request.MessageTaskDto> selectReservedSendTasks(@Param("sendHistoryId") Long sendHistoryId);
 }
+

@@ -163,9 +163,20 @@ const SendPage = {
             this.isNavigatingInternal = true;
             window.location.href = "/send/message";
         } else if (current === 2) {
-            // 메시지 작성 화면: 입력값 세션 저장
-            sessionStorage.setItem("messageTitle", $("#messageTitle").val() || "");
-            sessionStorage.setItem("messageContent", $("#messageContent").val() || "");
+            const messageTitle = ($("#messageTitle").val() || "").trim();
+            const messageContent = ($("#messageContent").val() || "").trim();
+            if (!messageTitle) {
+                alert("\uBA54\uC2DC\uC9C0 \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+                $("#messageTitle").focus();
+                return;
+            }
+            if (!messageContent) {
+                alert("\uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+                $("#messageContent").focus();
+                return;
+            }
+            sessionStorage.setItem("messageTitle", messageTitle);
+            sessionStorage.setItem("messageContent", messageContent);
             sessionStorage.setItem("messagePurpose", $(".purpose-btn.active").data("val") || "INFO");
             sessionStorage.setItem("messagePriorities", JSON.stringify(this.getCurrentChannelPriorities()));
             sessionStorage.setItem("linkButtonName", $("#linkButtonName").val() || "");

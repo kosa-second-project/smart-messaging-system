@@ -19,7 +19,8 @@ public class MessageTaskDto {
     private Long sendTargetId;       // 고객별 발송 대상 ID
     private Long templateId;         // 템플릿 ID
     private Long campaignId;         // 캠페인 ID
-    private Long customerId;         // 수신 고객 ID
+    private Long customerId;
+    private Long userId;         // 발송 요청 사용자 ID
     private String phoneNumber;      // 수신자 번호 (카카오, SMS용)
     private String email;            // 수신자 이메일
     private String kakaoUserKey;     // 카카오 외부 식별자(있는 경우)

@@ -28,22 +28,22 @@ class HistoryMapperXmlTest {
         }
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.HistoryMapper.findHistories"
+                "com.example.smartmessaging.service.repository.HistoryMapper.findHistories"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.HistoryMapper.countHistories"
+                "com.example.smartmessaging.service.repository.HistoryMapper.countHistories"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.HistoryMapper.findHistoryDetailById"
+                "com.example.smartmessaging.service.repository.HistoryMapper.findHistoryDetailById"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.HistoryMapper.findAttemptFlowsByHistoryId"
+                "com.example.smartmessaging.service.repository.HistoryMapper.findAttemptFlowsByHistoryId"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.HistoryMapper.findStatusOptions"
+                "com.example.smartmessaging.service.repository.HistoryMapper.findStatusOptions"
         )).isFalse();
         assertThat(configuration.getSqlFragments())
-                .containsKey("com.example.smartmessaging.mapper.HistoryMapper.successRateExpression");
+                .containsKey("com.example.smartmessaging.service.repository.HistoryMapper.successRateExpression");
     }
 
     @Test

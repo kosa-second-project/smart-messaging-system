@@ -1,4 +1,4 @@
-package com.example.smartmessaging.mapper;
+package com.example.smartmessaging.service.repository;
 
 import com.example.smartmessaging.dto.vo.AuthoritiesVO;
 import com.example.smartmessaging.dto.vo.UsersVO;

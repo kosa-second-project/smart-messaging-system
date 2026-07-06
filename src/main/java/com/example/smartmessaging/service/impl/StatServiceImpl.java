@@ -13,7 +13,7 @@ import com.example.smartmessaging.dto.vo.CustomerChannelConsentVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
-import com.example.smartmessaging.mapper.StatMapper;
+import com.example.smartmessaging.service.repository.StatMapper;
 import com.example.smartmessaging.service.StatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

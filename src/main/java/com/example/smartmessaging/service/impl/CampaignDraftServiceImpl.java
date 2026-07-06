@@ -13,7 +13,7 @@ import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
-import com.example.smartmessaging.mapper.SendPreparationMapper;
+import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.RecipientChannelResolver;

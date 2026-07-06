@@ -1,13 +1,12 @@
-// static/js/pages/send-review.js - 캡처 이미지 디자인 및 동작을 완벽히 구현한 JS
-
 const MessageReviewer = {
     state: {
         title: "",
         content: "",
+        purpose: "INFO",
         totalCount: 0,
         draftId: null,
-        routingChannelIds: [2, 1], // 기본값: 2=카카오톡, 1=SMS
-        scheduleMode: "IMMEDIATE", // IMMEDIATE 또는 RESERVED
+        routingChannelIds: [],
+        scheduleMode: "IMMEDIATE",
         selectedDate: "",
         selectedTime: "",
         routingChannels: []
@@ -20,12 +19,12 @@ const MessageReviewer = {
         this.customizeActionBar();
     },
 
-    // 1. 세션 데이터 로딩
     loadSessionData: function () {
         this.state.title = sessionStorage.getItem("messageTitle") || "";
         this.state.content = sessionStorage.getItem("messageContent") || "";
+        this.state.purpose = sessionStorage.getItem("messagePurpose") || (this.state.content.includes("(\uAD11\uACE0)") ? "AD" : "INFO");
         this.state.draftId = sessionStorage.getItem("draftId") || null;
-        this.state.totalCount = parseInt(sessionStorage.getItem("draftTotalCount") || "0");
+        this.state.totalCount = parseInt(sessionStorage.getItem("draftTotalCount") || "0", 10);
 
         const channelStr = sessionStorage.getItem("routingChannelIds");
         if (channelStr) {
@@ -41,75 +40,86 @@ const MessageReviewer = {
             try {
                 this.state.routingChannels = JSON.parse(routingChannelsStr);
             } catch (e) {
-                console.error("Failed to parse routingChannels from session", e);
+                console.error("Failed to parse routingChannels", e);
             }
         }
     },
 
-    // 2. 비용 계산 대시보드 동적 렌더링
     renderCostDashboard: function () {
-        // A. 대상 인원
-        $("#cardTargetCount").text(this.state.totalCount.toLocaleString() + "명");
+        $("#cardTargetCount").text((this.state.totalCount || 0).toLocaleString() + "명");
+        $("#cardAdBlocked").text(this.state.purpose === "AD" ? "광고성" : "정보성");
+        $("#cardSendCost").text("계산 중");
+        $("#cardSavedCost").text("-");
+        $("#cardSavedCostFormula").text("검토 단계 예상치");
+        this.renderChannels({});
+        this.loadEstimateCost();
+    },
 
-        // B. 광고 여부 (본문 내 '(광고)'가 있는지 판단)
-        const isAd = this.state.content.includes("(광고)");
-        $("#cardAdBlocked").text(isAd ? "📢 광고성" : "ℹ️ 정보성");
+    loadEstimateCost: function () {
+        if (!this.state.draftId) {
+            return;
+        }
 
-        // C. 채널 배지 목록
+        const self = this;
+        $.ajax({
+            url: `/api/campaigns/draft/${this.state.draftId}/estimate-cost`,
+            type: "GET",
+            data: { priorities: this.getPriorityNames() },
+            traditional: true,
+            success: function (res) {
+                const distribution = self.normalizeDistribution(res.channelDistribution || {});
+                const validCount = Number(res.totalValidRecipients || 0);
+                const estimatedCost = Number(res.totalEstimatedCost || 0);
+
+                const baselineCost = self.calculateBaselineCost(validCount);
+                const savedCost = Math.max(0, baselineCost - estimatedCost);
+
+                $("#cardTargetCount").text(validCount.toLocaleString() + "명");
+                $("#cardSendCost").text(self.formatWon(estimatedCost));
+                $("#cardSavedCost").text(self.formatWon(savedCost));
+                $("#cardSavedCostFormula").text(`${self.formatWon(baselineCost)} - ${self.formatWon(estimatedCost)}`);
+                self.renderChannels(distribution);
+            },
+            error: function (err) {
+                console.error("estimate-cost failed", err);
+                $("#cardSendCost").text("계산 실패");
+            }
+        });
+    },
+
+    renderChannels: function (distribution) {
         const $channelList = $("#cardChannels");
         $channelList.empty();
 
-        const numberCircles = ["❶", "❷", "❸", "❹"];
-
-        // 세션에 보관된 채널 오브젝트 리스트 사용, 없으면 가상 디폴트 매핑
         const channelsToRender = (this.state.routingChannels && this.state.routingChannels.length > 0)
             ? this.state.routingChannels
-            : [
-                { id: 2, channelType: "카카오톡", costPerMsg: 7.0 },
-                { id: 1, channelType: "문자메시지(sms/lms)", costPerMsg: 10.0 }
-            ];
+            : this.getPriorityNames().map(name => ({ channelType: name }));
 
-        channelsToRender.forEach((ch, index) => {
-            const numIcon = numberCircles[index] || `${index + 1}`;
-            // 문자메시지의 경우 가시성을 위해 타입 이름 단축 치환
-            let chName = ch.channelType || `채널 ${ch.id}`;
-            if (chName.includes("문자메시지") || chName.toLowerCase() === "sms") {
-                chName = "문자메시지";
-            }
-            
-            const badgeHtml = `
+        channelsToRender.forEach((channel, index) => {
+            const normalized = this.normalizeChannelType(channel.originalType || channel.channelType);
+            const count = distribution[normalized];
+            const countText = Number.isFinite(count) ? ` ${count.toLocaleString()}명` : "";
+            $channelList.append(`
                 <div class="channel-badge-item" style="margin-right: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-                    <span class="channel-number-circle">${index + 1}</span> ${chName}
+                    <span class="channel-number-circle">${index + 1}</span> ${this.getChannelLabel(normalized)}${countText}
                 </div>
-            `;
-            $channelList.append(badgeHtml);
+            `);
         });
 
-        // D. 발송 비용 & 절감액 계산 (실제 드래그앤드랍 반영 동적 연산)
-        const primaryChannel = channelsToRender[0] || { costPerMsg: 10.0 };
-        const primaryUnit = parseFloat(primaryChannel.costPerMsg || 10.0);
-
-        // 예상 비용 = 총원 * 1순위 단가
-        const sendCost = this.state.totalCount * primaryUnit;
-        $("#cardSendCost").text(sendCost.toLocaleString() + "원");
-
-        // 기준 비용 (기본 SMS 문자 단가 기준인 10원, 혹은 1순위가 문자(SMS)보다 비싸면 그에 맞춰 보정)
-        const baseUnit = Math.max(10, primaryUnit);
-        const baseCost = this.state.totalCount * baseUnit;
-
-        // 예상 절감액 = 기준 비용 - 예상 비용 (0보다 작으면 0원으로 보정)
-        const savedCost = Math.max(0, baseCost - sendCost);
-        $("#cardSavedCost").text(savedCost.toLocaleString() + "원");
-        
-        // 상세 계산 공식 텍스트
-        $("#cardSavedCostFormula").text(`${baseCost.toLocaleString()}원 - ${sendCost.toLocaleString()}원`);
+        Object.entries(distribution).forEach(([channelType, count]) => {
+            if (channelType === "UNASSIGNED" && count > 0) {
+                $channelList.append(`
+                    <div class="channel-badge-item" style="margin-right: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        <span class="channel-number-circle">-</span> 발송불가 ${count.toLocaleString()}명
+                    </div>
+                `);
+            }
+        });
     },
 
-    // 3. 페이지 내 버튼 이벤트 바인딩
     bindEvents: function () {
         const self = this;
 
-        // 즉시/예약 발송 탭 전환
         $(".method-tab-btn").on("click", function () {
             $(".method-tab-btn").removeClass("active");
             $(this).addClass("active");
@@ -119,8 +129,7 @@ const MessageReviewer = {
 
             if (self.state.scheduleMode === "RESERVED") {
                 $detailArea.addClass("active");
-                // 날짜와 시간 인풋 초기화
-                self.setDateTimeToNowPlus(30); // 기본 30분 뒤
+                self.setDateTimeToNowPlus(30);
             } else {
                 $detailArea.removeClass("active");
                 self.state.selectedDate = "";
@@ -128,16 +137,12 @@ const MessageReviewer = {
             }
         });
 
-        // 퀵 시간 선택 단축 버튼 클릭
         $(".quick-time-btn").on("click", function () {
             $(".quick-time-btn").removeClass("active");
             $(this).addClass("active");
-
-            const timeMode = $(this).data("time");
-            self.setQuickTime(timeMode);
+            self.setQuickTime($(this).data("time"));
         });
 
-        // 사용자가 날짜/시간 직접 변경 시 퀵 단축 버튼 해제
         $("#inputDate, #inputTime").on("change", function () {
             $(".quick-time-btn").removeClass("active");
             self.state.selectedDate = $("#inputDate").val();
@@ -145,23 +150,21 @@ const MessageReviewer = {
         });
     },
 
-    // 4. 하단 공통 액션바 커스터마이징 (텍스트를 '발송 요청'으로 변경)
     customizeActionBar: function () {
         const self = this;
         const $nextBtn = $("#btnNextStep");
 
         if ($nextBtn.length > 0) {
-            $nextBtn.html("✈️ 발송 요청")
-                    .removeClass("ds-button--success")
-                    .css({
-                        "background-color": "#10B981", // 초록색
-                        "color": "#FFFFFF",
-                        "border": "none",
-                        "box-shadow": "0 2px 8px rgba(16, 185, 129, 0.25)"
-                    });
+            $nextBtn.html("발송 요청")
+                .removeClass("ds-button--success")
+                .css({
+                    "background-color": "#10B981",
+                    "color": "#FFFFFF",
+                    "border": "none",
+                    "box-shadow": "0 2px 8px rgba(16, 185, 129, 0.25)"
+                });
         }
 
-        // send.js의 스텝 이동 함수를 오버라이드하여 우리의 발송 함수 호출하도록 지정
         if (typeof SendPage !== "undefined") {
             SendPage.handleNextStep = function () {
                 self.handleFinalSend();
@@ -169,41 +172,31 @@ const MessageReviewer = {
         }
     },
 
-    // 5. 퀵 예약 날짜/시간 세팅 헬퍼
     setDateTimeToNowPlus: function (minutes) {
         const dateObj = new Date();
         dateObj.setMinutes(dateObj.getMinutes() + minutes);
-
-        const yyyy = dateObj.getFullYear();
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        const hh = String(dateObj.getHours()).padStart(2, '0');
-        const min = String(dateObj.getMinutes()).padStart(2, '0');
-
-        this.state.selectedDate = `${yyyy}-${mm}-${dd}`;
-        this.state.selectedTime = `${hh}:${min}`;
-
-        $("#inputDate").val(this.state.selectedDate);
-        $("#inputTime").val(this.state.selectedTime);
+        this.applyDateTime(dateObj);
     },
 
-    // 퀵 선택 시 날짜/시간 변환
     setQuickTime: function (mode) {
-        const now = new Date();
+        const dateObj = new Date();
         if (mode === "today-10") {
-            now.setHours(10, 0, 0, 0);
+            dateObj.setHours(10, 0, 0, 0);
         } else if (mode === "today-14") {
-            now.setHours(14, 0, 0, 0);
+            dateObj.setHours(14, 0, 0, 0);
         } else if (mode === "tomorrow-9") {
-            now.setDate(now.getDate() + 1);
-            now.setHours(9, 0, 0, 0);
+            dateObj.setDate(dateObj.getDate() + 1);
+            dateObj.setHours(9, 0, 0, 0);
         }
+        this.applyDateTime(dateObj);
+    },
 
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
+    applyDateTime: function (dateObj) {
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const dd = String(dateObj.getDate()).padStart(2, "0");
+        const hh = String(dateObj.getHours()).padStart(2, "0");
+        const min = String(dateObj.getMinutes()).padStart(2, "0");
 
         this.state.selectedDate = `${yyyy}-${mm}-${dd}`;
         this.state.selectedTime = `${hh}:${min}`;
@@ -212,10 +205,21 @@ const MessageReviewer = {
         $("#inputTime").val(this.state.selectedTime);
     },
 
-    // 6. 최종 발송 수행
     handleFinalSend: function () {
         if (this.state.totalCount === 0) {
-            alert("⚠️ 발송 대상 수신자가 없습니다. 1단계에서 대상을 지정해주세요.");
+            alert("\uBC1C\uC1A1 \uB300\uC0C1 \uC218\uC2E0\uC790\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. 1\uB2E8\uACC4\uC5D0\uC11C \uB300\uC0C1\uC744 \uC9C0\uC815\uD574\uC8FC\uC138\uC694.");
+            return;
+        }
+        this.state.title = (this.state.title || sessionStorage.getItem("messageTitle") || "").trim();
+        this.state.content = (this.state.content || sessionStorage.getItem("messageContent") || "").trim();
+        if (!this.state.title) {
+            alert("\uBA54\uC2DC\uC9C0 \uC81C\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA54\uC2DC\uC9C0 \uC791\uC131 \uB2E8\uACC4\uC5D0\uC11C \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+            window.location.href = "/send/message";
+            return;
+        }
+        if (!this.state.content) {
+            alert("\uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA54\uC2DC\uC9C0 \uC791\uC131 \uB2E8\uACC4\uC5D0\uC11C \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+            window.location.href = "/send/message";
             return;
         }
 
@@ -224,109 +228,145 @@ const MessageReviewer = {
             const dateVal = $("#inputDate").val();
             const timeVal = $("#inputTime").val();
             if (!dateVal || !timeVal) {
-                alert("⚠️ 예약 발송 날짜와 시간을 입력해 주세요.");
+                alert("\uC608\uC57D \uBC1C\uC1A1 \uB0A0\uC9DC\uC640 \uC2DC\uAC04\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
                 return;
             }
 
-            // 브라우저의 시간대에 맞추어 ISO 포맷 생성
             const targetDt = new Date(`${dateVal}T${timeVal}`);
-            const now = new Date();
-            if (targetDt <= new Date(now.getTime() + 1 * 60 * 1000)) {
-                alert("⚠️ 예약 발송은 현재 시각 기준 최소 2분 이후부터 설정이 가능합니다.");
+            if (targetDt <= new Date(Date.now() + 60 * 1000)) {
+                alert("\uC608\uC57D \uBC1C\uC1A1\uC740 \uD604\uC7AC \uC2DC\uAC01 \uAE30\uC900 \uCD5C\uC18C 2\uBD84 \uC774\uD6C4\uBD80\uD130 \uC124\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
                 return;
             }
             scheduledAtStr = targetDt.toISOString();
         }
 
-        if (confirm(`📢 총 ${this.state.totalCount.toLocaleString()} 명에게 메시지 일괄 발송을 시작하시겠습니까?`)) {
-            const self = this;
-            const $nextBtn = $("#btnNextStep");
-            $nextBtn.prop("disabled", true).text("처리 중...");
-
-            // URL 추출 및 DTO 매핑
-            const urlMatches = this.state.content.match(/https?:\/\/[^\s]+/);
-            const originalUrl = urlMatches ? urlMatches[0] : null;
-
-            // 2단계에서 저장한 routingChannels 배열 파싱
-            const channelNames = (this.state.routingChannels && this.state.routingChannels.length > 0)
-                ? this.state.routingChannels.map(c => {
-                    const name = c.channelType || "";
-                    if (name.includes("문자") || name.toLowerCase() === "sms") return "SMS";
-                    if (name.includes("카카오") || name.toLowerCase() === "kakao") return "KAKAO";
-                    return name.toUpperCase();
-                  })
-                : ["KAKAO", "SMS"];
-
-            // SendPrepareRequestDTO 바인딩 규격
-            const payload = {
-                draftId: this.state.draftId,
-                templateId: null,
-                title: this.state.title,
-                content: this.state.content,
-                purpose: this.state.content.includes("(광고)") ? "AD" : "INFO",
-                priorities: channelNames,
-                linkButtonName: originalUrl ? "자세히 보기" : null,
-                linkUrl: originalUrl,
-                linkPurpose: originalUrl ? "CLICK" : null,
-                scheduledAt: scheduledAtStr
-            };
-
-            $.ajax({
-                url: '/api/send-requests',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                success: function (res) {
-                    alert("✈️ 발송 요청이 정상적으로 처리되었습니다.\n발송 현황은 대시보드 및 통계 메뉴에서 확인하실 수 있습니다.");
-                    self.clearSessionAndDraft();
-                },
-                error: function (err) {
-                    const msg = err.responseJSON ? err.responseJSON.message : "발송 중 오류가 발생했습니다.";
-                    alert("❌ 발송 실패: " + msg);
-                    $nextBtn.prop("disabled", false).html("✈️ 발송 요청");
-                }
-            });
+        if (!confirm(`\uCD1D ${this.state.totalCount.toLocaleString()}\uBA85\uC5D0\uAC8C \uBA54\uC2DC\uC9C0 \uBC1C\uC1A1\uC744 \uC694\uCCAD\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`)) {
+            return;
         }
+
+        const $nextBtn = $("#btnNextStep");
+        $nextBtn.prop("disabled", true).text("\uCC98\uB9AC \uC911...");
+
+        const urlMatches = this.state.content.match(/https?:\/\/[^\s]+/);
+        const originalUrl = urlMatches ? urlMatches[0] : null;
+
+        const payload = {
+            draftId: this.state.draftId,
+            templateId: null,
+            title: this.state.title,
+            content: this.state.content,
+            purpose: this.state.purpose,
+            priorities: this.getPriorityNames(),
+            linkButtonName: originalUrl ? "\uC790\uC138\uD788 \uBCF4\uAE30" : null,
+            linkUrl: originalUrl,
+            linkPurpose: originalUrl ? "CLICK" : null,
+            scheduledAt: scheduledAtStr
+        };
+
+        const self = this;
+        $.ajax({
+            url: "/api/send-requests",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload),
+            success: function () {
+                alert("\uBC1C\uC1A1 \uC694\uCCAD\uC774 \uC811\uC218\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uBC1C\uC1A1 \uD604\uD669\uC740 \uB300\uC2DC\uBCF4\uB4DC \uBC0F \uD1B5\uACC4 \uBA54\uB274\uC5D0\uC11C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
+                self.clearSessionAndDraft();
+            },
+            error: function (err) {
+                const msg = err.responseJSON ? err.responseJSON.message : "발송 중 오류가 발생했습니다.";
+                alert("\uBC1C\uC1A1 \uC2E4\uD328: " + msg);
+                $nextBtn.prop("disabled", false).html("발송 요청");
+            }
+        });
     },
 
-    // 7. 세션 클리어 후 복귀
     clearSessionAndDraft: function () {
         const draftId = this.state.draftId;
-        
-        // 이탈 방지 얼럿창 강제 해제 (캡처링 단계에서 전파 전격 차단)
-        window.addEventListener("beforeunload", function (e) {
-            e.stopImmediatePropagation();
-        }, true);
-
-        // 부모 레이아웃의 send.js 이탈 방지 조건 강제 해제
-        if (typeof SendPage !== 'undefined') {
+        if (typeof SendPage !== "undefined") {
             SendPage.isNavigatingInternal = true;
             if (SendPage.state) {
                 SendPage.state.draftId = null;
             }
         }
-        
+
+        [
+            "draftId",
+            "draftTotalCount",
+            "messageTitle",
+            "messageContent",
+            "messagePurpose",
+            "selectedKakaoFriendsUuids",
+            "routingChannelIds",
+            "routingChannels"
+        ].forEach(key => sessionStorage.removeItem(key));
+
         if (draftId) {
-            sessionStorage.removeItem("draftId");
-            sessionStorage.removeItem("draftTotalCount");
-            sessionStorage.removeItem("messageTitle");
-            sessionStorage.removeItem("messageContent");
-            sessionStorage.removeItem("selectedKakaoFriendsUuids");
-            sessionStorage.removeItem("routingChannelIds");
-            
             $.ajax({
-                url: '/api/campaigns/draft/' + draftId,
-                type: 'DELETE',
-                success: function () {
-                    window.location.href = "/send";
-                },
-                error: function () {
+                url: "/api/campaigns/draft/" + draftId,
+                type: "DELETE",
+                complete: function () {
                     window.location.href = "/send";
                 }
             });
         } else {
             window.location.href = "/send";
         }
+    },
+
+    getPriorityNames: function () {
+        if (this.state.routingChannels && this.state.routingChannels.length > 0) {
+            return this.state.routingChannels.map(channel => this.normalizeChannelType(channel.originalType || channel.channelType));
+        }
+        return ["KAKAO", "SMS"];
+    },
+
+    normalizeDistribution: function (distribution) {
+        const normalized = {};
+        Object.entries(distribution || {}).forEach(([channelType, count]) => {
+            const key = this.normalizeChannelType(channelType);
+            normalized[key] = (normalized[key] || 0) + Number(count || 0);
+        });
+        return normalized;
+    },
+
+    normalizeChannelType: function (channelType) {
+        const normalized = (channelType || "").trim().toUpperCase();
+        if (normalized.includes("문자") || normalized.includes("SMS")) {
+            return "SMS";
+        }
+        if (normalized.startsWith("KAKAO") || normalized.includes("카카오")) {
+            return "KAKAO";
+        }
+        if (normalized.includes("EMAIL") || normalized.includes("이메일")) {
+            return "EMAIL";
+        }
+        if (normalized.includes("LMS")) {
+            return "LMS";
+        }
+        return normalized || "SMS";
+    },
+
+    getChannelLabel: function (channelType) {
+        const normalized = this.normalizeChannelType(channelType);
+        if (normalized === "KAKAO") return "카카오톡";
+        if (normalized === "EMAIL") return "이메일";
+        if (normalized === "LMS") return "LMS";
+        if (normalized === "SMS") return "SMS";
+        if (normalized === "UNASSIGNED") return "발송불가";
+        return normalized;
+    },
+
+    calculateBaselineCost: function (validCount) {
+        const unitCosts = (this.state.routingChannels || [])
+            .map(channel => Number(channel.costPerMsg || channel.cost || 0))
+            .filter(cost => Number.isFinite(cost) && cost > 0);
+        const baselineUnitCost = unitCosts.length > 0 ? Math.max(...unitCosts) : 0;
+        return Number(validCount || 0) * baselineUnitCost;
+    },
+
+    formatWon: function (amount) {
+        return Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 3 }) + "원";
     }
 };
 
