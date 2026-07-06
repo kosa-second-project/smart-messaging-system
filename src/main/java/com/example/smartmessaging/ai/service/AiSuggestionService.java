@@ -29,10 +29,9 @@ public class AiSuggestionService {
 
     private static final int MAX_ATTEMPTS = 3;
     private static final int MAX_RESULTS = 3;
-    // 기존 RuleValidationService가 프로젝트 표준으로 인정하는 변수와 동일하게 유지한다.
-    private static final List<String> DEFAULT_AVAILABLE_VARIABLES = List.of(
-            "#{고객명}", "#{주문번호}", "#{쿠폰명}"
-    );
+    private static final String CUSTOMER_NAME_VARIABLE = "#{고객명}";
+    // AI 추천 문구는 고객별 치환이 보장된 고객명 변수만 사용한다.
+    private static final List<String> DEFAULT_AVAILABLE_VARIABLES = List.of(CUSTOMER_NAME_VARIABLE);
     private static final Set<String> SUPPORTED_VARIABLES = Set.copyOf(DEFAULT_AVAILABLE_VARIABLES);
 
     private static final String AD_MESSAGE_TYPE_RULES = """

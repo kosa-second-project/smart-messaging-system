@@ -12,6 +12,8 @@ import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -100,11 +102,11 @@ class AiSuggestionServiceTest {
     }
 
     @Test
-    void availableVariables가_없으면_기본_3종을_프롬프트와_검증에_사용한다() {
+    void availableVariables가_없으면_고객명만_프롬프트와_검증에_사용한다() {
         AiSuggestionRequest request = request(MessageType.INFO);
         request.setAvailableVariables(null);
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
-                response(new AiSuggestionItem("배송 안내", "#{고객명}님, #{주문번호} 주문이 출고되었습니다."))
+                response(new AiSuggestionItem("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
         );
 
         AiSuggestionResponse result = service.suggest(request);
@@ -112,7 +114,26 @@ class AiSuggestionServiceTest {
         assertThat(result.getSuggestions()).hasSize(1);
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(geminiSuggestionClient).generate(promptCaptor.capture());
-        assertThat(promptCaptor.getValue()).contains("#{고객명}", "#{주문번호}", "#{쿠폰명}");
+        assertThat(promptCaptor.getValue())
+                .contains("허용 변수: [#{고객명}]")
+                .doesNotContain("#{주문번호}", "#{쿠폰명}");
+    }
+
+    @Test
+    void 주문번호와_쿠폰명으로_생성된_후보는_제외한다() {
+        AiSuggestionRequest request = request(MessageType.INFO);
+        when(geminiSuggestionClient.generate(anyString())).thenReturn(response(
+                new AiSuggestionItem("주문 안내", "#{주문번호} 주문을 확인해 주세요."),
+                new AiSuggestionItem("쿠폰 안내", "#{쿠폰명}을 확인해 주세요."),
+                new AiSuggestionItem("배송 안내", "#{고객명}님, 배송이 시작되었습니다.")
+        ));
+
+        AiSuggestionResponse result = service.suggest(request);
+
+        assertThat(result.getSuggestions())
+                .extracting(AiSuggestionItem::getTitle)
+                .containsExactly("배송 안내");
+        verify(geminiSuggestionClient, times(1)).generate(anyString());
     }
 
     @Test
@@ -147,10 +168,11 @@ class AiSuggestionServiceTest {
         assertThat(promptCaptor.getValue()).contains("허용 변수: [#{고객명}]");
     }
 
-    @Test
-    void 프로젝트가_지원하지_않는_변수는_400으로_거부한다() {
+    @ParameterizedTest
+    @ValueSource(strings = {"#{주문번호}", "#{쿠폰명}", "#{만료일}"})
+    void AI_추천이_지원하지_않는_변수는_400으로_거부한다(String variable) {
         AiSuggestionRequest request = request(MessageType.INFO);
-        request.setAvailableVariables(List.of("#{만료일}"));
+        request.setAvailableVariables(List.of(variable));
 
         assertThatExceptionOfType(BusinessException.class)
                 .isThrownBy(() -> service.suggest(request))

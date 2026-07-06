@@ -12,7 +12,7 @@ let templateOptions = {
     purposes: []
 };
 
-const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}", "#{주문번호}", "#{쿠폰명}"];
+const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}"];
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();

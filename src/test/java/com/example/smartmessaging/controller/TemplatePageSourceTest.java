@@ -107,4 +107,16 @@ class TemplatePageSourceTest {
         assertThat(inputListener).contains("templateIsAiGenerated = false");
         assertThat(applySuggestion).contains("templateIsAiGenerated = true");
     }
+
+    @Test
+    void AI_추천_요청은_고객명_변수만_허용한다() throws Exception {
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(script)
+                .contains("const TEMPLATE_AVAILABLE_VARIABLES = [\"#{고객명}\"]")
+                .doesNotContain("const TEMPLATE_AVAILABLE_VARIABLES = [\"#{고객명}\", \"#{주문번호}\", \"#{쿠폰명}\"]");
+    }
 }
