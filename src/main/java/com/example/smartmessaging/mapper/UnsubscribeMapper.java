@@ -12,6 +12,8 @@ public interface UnsubscribeMapper {
 
     int insertRejectHistory(@Param("customerId") Long customerId, @Param("createdBy") Long createdBy);
 
+    int insertRejectHistoryIfAbsent(@Param("customerId") Long customerId, @Param("createdBy") Long createdBy);
+
     int blockCustomerAds(@Param("customerId") Long customerId, @Param("updatedBy") Long updatedBy);
 
     int revokeSmsConsent(@Param("customerId") Long customerId, @Param("updatedBy") Long updatedBy);

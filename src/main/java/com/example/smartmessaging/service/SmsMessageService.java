@@ -2,6 +2,7 @@ package com.example.smartmessaging.service;
 
 import com.example.smartmessaging.dto.vo.SendResult;
 import com.example.smartmessaging.util.MaskingUtils;
+import com.example.smartmessaging.util.SmsMessageTypeResolver;
 import com.solapi.sdk.message.exception.SolapiMessageNotReceivedException;
 import com.solapi.sdk.message.model.Message;
 import com.solapi.sdk.message.model.MessageType;
@@ -81,7 +82,7 @@ public class SmsMessageService {
             return SendResult.fail(normalizedChannel, "MISSING_UNSUBSCRIBE_URL", "광고성 문자에는 수신거부 링크가 필요합니다.");
         }
 
-        String messageText = buildMessageText(content, purpose, actionButtonName, actionUrl, unsubscribeUrl);
+        String messageText = SmsMessageTypeResolver.buildMessageText(content, purpose, actionButtonName, actionUrl, unsubscribeUrl);
 
         try {
             Message message = new Message();
@@ -140,21 +141,6 @@ public class SmsMessageService {
 
     private boolean isValidRecipientPhoneNumber(String phoneNumber) {
         return phoneNumber != null && phoneNumber.matches("\\d{10,11}");
-    }
-
-    private String buildMessageText(String content, String purpose, String actionButtonName, String actionUrl, String unsubscribeUrl) {
-        StringBuilder text = new StringBuilder(content.trim());
-        if (!isBlank(actionUrl)) {
-            text.append("\n\n")
-                    .append(isBlank(actionButtonName) ? "자세히 보기" : actionButtonName.trim())
-                    .append("\n")
-                    .append(actionUrl.trim());
-        }
-        if (isAdvertising(purpose)) {
-            text.append("\n\n수신거부를 원하시면 아래 링크를 눌러주세요.\n")
-                    .append(unsubscribeUrl.trim());
-        }
-        return text.toString();
     }
 
     private boolean isAdvertising(String purpose) {

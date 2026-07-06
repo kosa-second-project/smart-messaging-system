@@ -33,10 +33,10 @@ function loadCostStats(state) {
             costSavings: "#analysisSecondaryChart"
         }, {
             costComparison: {
-                yFormatter: formatWon
+                yFormatter: StatsRenderer.formatWon
             },
             costSavings: {
-                yFormatter: formatWon
+                yFormatter: StatsRenderer.formatWon
             }
         });
     });
@@ -52,6 +52,3 @@ function renderCostChartTitles(charts) {
     $("#analysisSecondaryMeta").text("");
 }
 
-function formatWon(value) {
-    return `${Math.round(value).toLocaleString()}원`;
-}

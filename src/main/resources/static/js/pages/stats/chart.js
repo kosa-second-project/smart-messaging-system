@@ -3,6 +3,10 @@ const StatsChart = (function() {
     const fontFamily = '"Pretendard Variable", "Pretendard", "Inter", sans-serif';
     const gridColor = "#F0F0F5";
     const labelColor = "#6B6B80";
+    const chartAnimation = {
+        duration: 800,
+        easing: "easeOutQuart"
+    };
 
     function render(canvas, config) {
         if (!canvas || typeof Chart === "undefined") {
@@ -45,7 +49,7 @@ const StatsChart = (function() {
         return {
             responsive: true,
             maintainAspectRatio: false,
-            animation: false,
+            animation: chartAnimation,
             plugins: {
                 legend: {
                     display: options.legend !== false,
@@ -122,7 +126,7 @@ const StatsChart = (function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false,
+                animation: chartAnimation,
                 indexAxis: "y",
                 plugins: {
                     legend: { display: false },
@@ -189,7 +193,7 @@ const StatsChart = (function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false,
+                animation: chartAnimation,
                 cutout: options.cutout || "62%",
                 plugins: {
                     legend: {

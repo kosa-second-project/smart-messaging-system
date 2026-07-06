@@ -146,6 +146,16 @@ const StatsRenderer = (function() {
         });
     }
 
+    function formatWon(value) {
+        const numericValue = Number(value) || 0;
+        const fractionDigits = Number.isInteger(numericValue) ? 0 : 1;
+
+        return `${numericValue.toLocaleString(undefined, {
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits
+        })}\uC6D0`;
+    }
+
     function defaultPeriod(days) {
         const periodDays = Math.max(Number(days) || 1, 1);
         const end = getSelectableMaxDate();
@@ -346,6 +356,7 @@ const StatsRenderer = (function() {
     return {
         defaultPeriod,
         findById,
+        formatWon,
         getPeriod,
         periodLabel,
         renderCards,

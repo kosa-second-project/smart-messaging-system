@@ -30,6 +30,18 @@ spring:
           options:
             model: gemini-2.5-flash
 
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
+stats:
+  batch:
+    cron: "0 0 3 * * *"
+    zone: Asia/Seoul
+    system-user-id: 0
+
 # MyBatis 공통 설정
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml
@@ -46,7 +58,16 @@ logging:
 server:
   port: 8080
 
+openai:
+  moderation:
+    base-url: https://api.openai.com
+    api-key:
+    model: omni-moderation-latest
+    enabled: true
+
 app:
+  base-url: http://localhost:8080
+  short-url-base-url: https://kosa.kr
   dummy-send:
     enabled: false
 
@@ -62,10 +83,3 @@ solapi:
   api-key: ${SOLAPI_API_KEY:}
   api-secret: ${SOLAPI_API_SECRET:}
   from-number: ${SOLAPI_FROM_NUMBER:}
-
-openai:
-  moderation:
-    base-url: https://api.openai.com
-    api-key:
-    model: omni-moderation-latest
-    enabled: true

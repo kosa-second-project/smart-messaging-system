@@ -57,11 +57,8 @@ function renderCharts(charts) {
     const dailyChart = findChart(charts, "dailySendTrend");
 
     if (costChart) {
-        StatsChart.line(document.querySelector("#dashboardCostChart"), toRows(costChart), {
-            keys: datasetKeys(costChart),
-            labels: datasetKeys(costChart),
-            colors: ["#1843FA", "#EF4444"],
-            yFormatter: compactWon,
+        StatsRenderer.renderChart(document.querySelector("#dashboardCostChart"), costChart, {
+            yFormatter: StatsRenderer.formatWon,
             tooltipSuffix: "원"
         });
     }
@@ -209,22 +206,6 @@ function findChart(charts, chartId) {
     });
 }
 
-function datasetKeys(chart) {
-    return (chart.datasets || []).map(function(dataset) {
-        return dataset.label;
-    });
-}
-
-function toRows(chart) {
-    return (chart.labels || []).map(function(label, labelIndex) {
-        const row = { label };
-        (chart.datasets || []).forEach(function(dataset) {
-            row[dataset.label] = dataset.data?.[labelIndex] || 0;
-        });
-        return row;
-    });
-}
-
 function toChartEntries(chart) {
     const colors = ["#F7E600", "#1843FA", "#10B981", "#0EA5E9", "#8B5CF6", "#EF4444"];
     const dataset = chart?.datasets?.[0] || {};
@@ -263,10 +244,6 @@ function getQueueTotal(queueStatus) {
     return queueStatus.reduce(function(sum, item) {
         return sum + Number(item.count || 0);
     }, 0) || 1;
-}
-
-function compactWon(value) {
-    return `${Math.round(Number(value) / 10000).toLocaleString()}만`;
 }
 
 function escapeHtml(value) {
