@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,18 +33,17 @@ public class CampaignCommandConsumer {
     private final SendQueueRepository sendQueueRepository;
     private final RecipientChannelResolver recipientChannelResolver;
     private final MessageQueuePublisher messageQueuePublisher;
+    private final QueueFailureHandler queueFailureHandler;
+    private final TransactionTemplate transactionTemplate;
 
     @RabbitListener(queues = RabbitMQConfig.CAMPAIGN_COMMAND_QUEUE, containerFactory = "rabbitListenerContainerFactory")
-    @Transactional
     public void consume(CampaignCommandQueueDto command) {
         try {
-            prepareCampaign(command);
+            transactionTemplate.executeWithoutResult(status -> prepareCampaign(command));
         } catch (Exception e) {
             Long historyId = command == null ? null : command.getSendHistoryId();
             Long userId = command == null ? null : command.getUserId();
-            if (historyId != null) {
-                sendQueueRepository.updateSendHistoryStatus(historyId, "FAILED", userId);
-            }
+            queueFailureHandler.markCampaignFailed(historyId, userId, "CAMPAIGN_COMMAND_CONSUME_FAILED");
             log.error("Campaign command failed. historyId={}", historyId, e);
             throw new AmqpRejectAndDontRequeueException("Campaign command failed", e);
         }
@@ -80,7 +79,7 @@ public class CampaignCommandConsumer {
             sendQueueRepository.insertSendTarget(target);
 
             if (plan.isSendable() && !delayed) {
-                messageQueuePublisher.publishMessageSendAfterCommit(MessageQueueDto.builder()
+                MessageQueueDto message = MessageQueueDto.builder()
                         .sendHistoryId(command.getSendHistoryId())
                         .sendTargetId(target.getId())
                         .customerId(plan.getCustomerId())
@@ -90,7 +89,10 @@ public class CampaignCommandConsumer {
                         .linkUrl(command.getLinkUrl())
                         .advertising(Boolean.TRUE.equals(command.getAdvertising()))
                         .channelSequence(plan.getChannelSequence())
-                        .build());
+                        .build();
+                messageQueuePublisher.publishMessageSendAfterCommit(
+                        message,
+                        e -> queueFailureHandler.markMessageFailed(message, "MESSAGE_SEND_PUBLISH_FAILED"));
             }
         }
 

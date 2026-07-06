@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,14 +31,16 @@ public class MessageConsumer {
     private final SendQueueRepository sendQueueRepository;
     private final MessageSender messageSender;
     private final RecipientChannelResolver recipientChannelResolver;
+    private final QueueFailureHandler queueFailureHandler;
+    private final TransactionTemplate transactionTemplate;
 
     @RabbitListener(queues = RabbitMQConfig.MESSAGE_SEND_QUEUE, containerFactory = "rabbitListenerContainerFactory")
-    @Transactional
     public void consume(MessageQueueDto message) {
         try {
-            sendMessage(message);
+            transactionTemplate.executeWithoutResult(status -> sendMessage(message));
         } catch (Exception e) {
             Long targetId = message == null ? null : message.getSendTargetId();
+            queueFailureHandler.markMessageFailed(message, "MESSAGE_CONSUME_FAILED");
             log.error("Message send failed by system exception. targetId={}", targetId, e);
             throw new AmqpRejectAndDontRequeueException("Message send failed by system exception", e);
         }
@@ -56,8 +58,9 @@ public class MessageConsumer {
         Map<Long, SendRecipientCandidateVO> byChannelId = candidates.stream()
                 .collect(Collectors.toMap(SendRecipientCandidateVO::getChannelId, Function.identity(), (left, right) -> left));
 
+        List<Long> channelSequence = message.getChannelSequence() == null ? List.of() : message.getChannelSequence();
         int attemptOrder = 1;
-        for (Long channelId : message.getChannelSequence()) {
+        for (Long channelId : channelSequence) {
             SendRecipientCandidateVO candidate = byChannelId.get(channelId);
             MessageSendResult result = tryChannel(message, candidate);
             recordAttempt(message, channelId, attemptOrder, result);
