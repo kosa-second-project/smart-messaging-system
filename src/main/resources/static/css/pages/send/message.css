@@ -233,6 +233,9 @@
 /* 입력 영역 */
 .input-section {
     /* margin-bottom removed */
+    overflow: visible;
+    position: relative;
+    z-index: 30;
 }
 
 .textarea-wrapper {
@@ -317,7 +320,7 @@
     right: 0;
     top: calc(100% + 0.5rem);
     width: min(420px, 82vw);
-    z-index: 40;
+    z-index: 120;
 }
 
 .link-settings-wrapper.is-open {
@@ -398,6 +401,7 @@
     }
 
     #btnToggleLinkSettings,
+    #btnSendTestMessage,
     #btnSaveTemplate {
         justify-content: center;
         width: 100%;

@@ -51,7 +51,7 @@
             scheduled_at,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{templateId},
+            #{templateId,jdbcType=NUMERIC},
             #{userId},
             #{title},
             #{content},
@@ -63,7 +63,7 @@
             #{estimatedCost},
             #{estimatedSaving},
             #{actualCost},
-            #{scheduledAt},
+            #{scheduledAt,jdbcType=TIMESTAMP},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -97,7 +97,7 @@
             #{finalChannelId},
             #{status},
             #{cost},
-            #{userUuid},
+            #{userUuid,jdbcType=VARCHAR},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>

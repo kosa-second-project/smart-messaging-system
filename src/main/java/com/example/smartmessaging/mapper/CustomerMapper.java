@@ -51,4 +51,22 @@ public interface CustomerMapper {
      * 반환값: [{CUSTOMER_ID: 1, TAG_NAME: "남자"}, ...]
      */
     List<Map<String, Object>> findTagsByCustomerIds(@Param("customerIds") List<Long> customerIds);
+
+    CustomerVO findByPhone(@Param("phone") String phone);
+
+    int insertTestCustomer(CustomerVO customer);
+
+    int updateTestCustomer(CustomerVO customer);
+
+    int upsertChannelConsent(
+            @Param("customerId") Long customerId,
+            @Param("channelType") String channelType,
+            @Param("actorId") Long actorId
+    );
+
+    int upsertTestCustomerTag(
+            @Param("customerId") Long customerId,
+            @Param("tagId") Long tagId,
+            @Param("actorId") Long actorId
+    );
 }

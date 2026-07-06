@@ -415,6 +415,131 @@
         AND ctm.is_deleted = 0
         AND t.is_deleted   = 0
     </select>
+
+    <select id="findByPhone" resultType="CustomerVO">
+        SELECT
+            id,
+            phone,
+            name,
+            email,
+            customer_type AS customerType,
+            is_ad_blocked AS isAdBlocked,
+            last_active_at AS lastActiveAt,
+            joined_at AS joinedAt,
+            birth_date AS birthDate,
+            gender
+        FROM customer
+        WHERE phone = #{phone}
+          AND NVL(is_deleted, 0) = 0
+        FETCH FIRST 1 ROW ONLY
+    </select>
+
+    <insert id="insertTestCustomer" parameterType="CustomerVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO customer (
+            phone,
+            name,
+            email,
+            customer_type,
+            is_ad_blocked,
+            last_active_at,
+            joined_at,
+            birth_date,
+            gender,
+            <include refid="Common.auditColumns"/>
+        ) VALUES (
+            #{phone},
+            #{name},
+            #{email},
+            'NORMAL',
+            0,
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{birthDate,jdbcType=DATE},
+            #{gender},
+            <include refid="Common.auditInsertValues"/>
+        )
+    </insert>
+
+    <update id="updateTestCustomer" parameterType="CustomerVO">
+        UPDATE customer
+        SET name = #{name},
+            email = #{email},
+            is_ad_blocked = 0,
+            last_active_at = SYSTIMESTAMP,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        WHERE id = #{id}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <insert id="upsertChannelConsent">
+        MERGE INTO customer_channel_consent target
+        USING (
+            SELECT
+                #{customerId} AS customer_id,
+                id AS channel_id
+            FROM channel
+            WHERE channel_type = #{channelType}
+              AND NVL(is_deleted, 0) = 0
+            FETCH FIRST 1 ROW ONLY
+        ) source
+        ON (
+            target.customer_id = source.customer_id
+            AND target.channel_id = source.channel_id
+            AND NVL(target.is_deleted, 0) = 0
+        )
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.is_consented = 1,
+                target.updated_at = SYSTIMESTAMP,
+                target.updated_by = #{actorId}
+        WHEN NOT MATCHED THEN
+            INSERT (
+                customer_id,
+                channel_id,
+                is_consented,
+                created_at,
+                updated_at,
+                created_by,
+                updated_by,
+                is_deleted
+            ) VALUES (
+                source.customer_id,
+                source.channel_id,
+                1,
+                SYSTIMESTAMP,
+                SYSTIMESTAMP,
+                #{actorId},
+                #{actorId},
+                0
+            )
+    </insert>
+
+    <insert id="upsertTestCustomerTag">
+        MERGE INTO customer_tag_mapping target
+        USING (SELECT #{customerId} AS customer_id, #{tagId} AS tag_id FROM dual) source
+        ON (
+            target.customer_id = source.customer_id
+            AND target.tag_id = source.tag_id
+            AND NVL(target.is_deleted, 0) = 0
+        )
+        WHEN NOT MATCHED THEN
+            INSERT (
+                customer_id,
+                tag_id,
+                created_at,
+                updated_at,
+                created_by,
+                updated_by,
+                is_deleted
+            ) VALUES (
+                source.customer_id,
+                source.tag_id,
+                SYSTIMESTAMP,
+                SYSTIMESTAMP,
+                #{actorId},
+                #{actorId},
+                0
+            )
+    </insert>
 </mapper>
-
-

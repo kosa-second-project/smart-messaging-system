@@ -10,45 +10,37 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SendPreparationMapperXmlTest {
+class ShortUrlMapperXmlTest {
 
-    private static final String RESOURCE = "mappers/SendPreparationMapper.xml";
+    private static final String RESOURCE = "mappers/ShortUrlMapper.xml";
 
     @Test
-    void 발송준비_매퍼XML을_파싱하고_기존테이블_INSERT를_등록한다() throws Exception {
+    void 단축URL_매퍼XML을_파싱하고_클릭추적_쿼리를_등록한다() throws Exception {
         Configuration configuration = new Configuration();
         configuration.getTypeAliasRegistry().registerAliases("com.example.smartmessaging.dto");
 
         parseMapper(configuration, "mappers/common-mapper.xml");
         parseMapper(configuration, RESOURCE);
 
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.findRecipientCandidatesByCustomerIds"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistory"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistoryRouting"
-        )).isTrue();
-        assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendTarget"
-        )).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.findClickTargetById")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.markFirstClicked")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.incrementChannelClickCount")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.incrementHourlyClickCount")).isTrue();
     }
 
     @Test
-    void 새테이블을_만들지_않고_기존_발송이력_대상_라우팅_테이블만_사용한다() throws Exception {
+    void 클릭추적은_sendTarget과_채널통계_테이블을_사용한다() throws Exception {
         String mapperXml;
         try (InputStream inputStream = Resources.getResourceAsStream(RESOURCE)) {
             mapperXml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
 
         assertThat(mapperXml)
-                .contains("INSERT INTO send_history",
-                        "#{templateId,jdbcType=NUMERIC}",
-                        "INSERT INTO send_history_routing",
-                        "INSERT INTO send_target",
-                        "FROM customer_channel_consent")
+                .contains("JOIN send_target st",
+                        "st.user_uuid",
+                        "st.final_channel_id AS channel_id",
+                        "MERGE INTO channel_stat",
+                        "MERGE INTO click_stat")
                 .doesNotContain("CREATE TABLE")
                 .doesNotContain("ALTER TABLE");
     }
