@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
+    private static final int DASHBOARD_TREND_DAYS = 7;
     private static final DateTimeFormatter DATE_LABEL_FORMATTER = DateTimeFormatter.ofPattern("M/d");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DecimalFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
@@ -142,7 +143,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private StatChartResponse buildCostComparisonChart(List<MessageStatVO> stats) {
-        List<MessageStatVO> sorted = latest(sortMessageStats(stats), 6);
+        List<MessageStatVO> sorted = latest(sortMessageStats(stats), DASHBOARD_TREND_DAYS);
         return StatChartResponse.builder()
                 .chartId("costComparison")
                 .title("비용 비교 현황")
@@ -175,7 +176,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private StatChartResponse buildDailySendTrendChart(List<MessageStatVO> stats) {
-        List<MessageStatVO> sorted = latest(sortMessageStats(stats), 7);
+        List<MessageStatVO> sorted = latest(sortMessageStats(stats), DASHBOARD_TREND_DAYS);
         return StatChartResponse.builder()
                 .chartId("dailySendTrend")
                 .title("일별 발송 추이")
