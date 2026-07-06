@@ -7,7 +7,6 @@ import com.example.smartmessaging.dto.vo.SendResult;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.MessageRouterService;
 import com.example.smartmessaging.service.repository.HistoryMapper;
-import com.example.smartmessaging.service.repository.SendRealRecipientWhitelistMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,12 +18,11 @@ import java.util.Locale;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WhitelistMessageSenderImpl implements MessageSender {
+public class CustomerMessageSenderImpl implements MessageSender {
 
     private final HistoryMapper historyMapper;
     private final ChannelService channelService;
     private final MessageRouterService messageRouterService;
-    private final SendRealRecipientWhitelistMapper whitelistMapper;
 
     @Override
     @Transactional
@@ -45,13 +43,7 @@ public class WhitelistMessageSenderImpl implements MessageSender {
                 continue;
             }
 
-            boolean realSendAllowed = whitelistMapper.existsActiveRecipient(
-                    task.getPhoneNumber(),
-                    task.getEmail(),
-                    channelId
-            );
-
-            if (!realSendAllowed) {
+            if (!isRealCustomer(task)) {
                 saveMockSuccess(task, step + 1, channelId, channelType);
                 return;
             }
@@ -72,7 +64,7 @@ public class WhitelistMessageSenderImpl implements MessageSender {
                 return;
             }
 
-            log.warn("[WhitelistMessageSender] real send failed. fallback continues. messageId={}, targetId={}, channel={}, error={}",
+            log.warn("[CustomerMessageSender] real send failed. fallback continues. messageId={}, targetId={}, channel={}, error={}",
                     task.getMessageId(), task.getSendTargetId(), channelType, result.getErrorCode());
         }
 
@@ -83,13 +75,13 @@ public class WhitelistMessageSenderImpl implements MessageSender {
 
     private SendResult sendReal(MessageTaskDto task, int step, String channelType) {
         task.setCurrentStep(step);
-        log.info("[WhitelistMessageSender] real send messageId={}, targetId={}, customerId={}, channel={}",
+        log.info("[CustomerMessageSender] real send messageId={}, targetId={}, customerId={}, channel={}",
                 task.getMessageId(), task.getSendTargetId(), task.getCustomerId(), channelType);
         return messageRouterService.send(task);
     }
 
     private void saveMockSuccess(MessageTaskDto task, int attemptOrder, Long channelId, String channelType) {
-        log.info("[WhitelistMessageSender] mock send messageId={}, targetId={}, customerId={}, channel={}, recipient={}",
+        log.info("[CustomerMessageSender] mock send messageId={}, targetId={}, customerId={}, channel={}, recipient={}",
                 task.getMessageId(), task.getSendTargetId(), task.getCustomerId(), channelType, selectRecipient(task, channelType));
 
         saveAttempt(task, attemptOrder, channelId, true, "MOCK-" + task.getMessageId());
@@ -141,6 +133,10 @@ public class WhitelistMessageSenderImpl implements MessageSender {
             return task.getKakaoUserKey() != null ? task.getKakaoUserKey() : task.getPhoneNumber();
         }
         return task.getPhoneNumber();
+    }
+
+    private boolean isRealCustomer(MessageTaskDto task) {
+        return !Boolean.FALSE.equals(task.getIsRealCustomer());
     }
 
     private String normalizeChannelType(String channelType) {

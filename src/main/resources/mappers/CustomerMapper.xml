@@ -372,7 +372,7 @@
     <!-- 1. 고객 목록 조회 (검색어 + 태그 복수 필터 + 커서 페이징) -->
     <select id="findBySearch" parameterType="CustomerSearchRequest" resultType="CustomerVO">
         SELECT id, phone, name, email,
-               customer_type, is_ad_blocked, last_active_at, joined_at
+               customer_type, is_real_customer, is_ad_blocked, last_active_at, joined_at
         FROM   customer
         <where>
             <include refid="commonWhereConditions"/>
@@ -434,6 +434,7 @@
             name,
             email,
             customer_type AS customerType,
+            is_real_customer AS isRealCustomer,
             is_ad_blocked AS isAdBlocked,
             last_active_at AS lastActiveAt,
             joined_at AS joinedAt,
@@ -451,6 +452,7 @@
             name,
             email,
             customer_type,
+            is_real_customer,
             is_ad_blocked,
             last_active_at,
             joined_at,
@@ -462,6 +464,7 @@
             #{name},
             #{email},
             'NORMAL',
+            <choose><when test="isRealCustomer == null or isRealCustomer">1</when><otherwise>0</otherwise></choose>,
             0,
             SYSTIMESTAMP,
             SYSTIMESTAMP,
@@ -475,6 +478,7 @@
         UPDATE customer
         SET name = #{name},
             email = #{email},
+            is_real_customer = <choose><when test="isRealCustomer == null or isRealCustomer">1</when><otherwise>0</otherwise></choose>,
             is_ad_blocked = 0,
             last_active_at = SYSTIMESTAMP,
             updated_at = SYSTIMESTAMP,

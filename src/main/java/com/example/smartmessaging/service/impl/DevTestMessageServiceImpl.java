@@ -80,7 +80,7 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
         ChannelVO kakaoChannel = findChannel(activeChannels, "KAKAO").orElse(null);
 
         ChannelSend sms = skipped("SMS", "카카오 테스트 발송에서는 SMS를 보내지 않습니다.");
-        ChannelSend email = skipped("EMAIL", "카카오 테스트 발송에서는 이메일을 보내지 않습니다.");
+        ChannelSend email = sendEmail(history, customer, emailChannel, title, content, buttonName, request.getLinkUrl(), linkPurpose);
         ChannelSend kakao = sendKakao(history, customer, kakaoChannel, kakaoAccessToken, title, content, buttonName, request.getLinkUrl(), linkPurpose);
 
         return DevTestSendResponse.builder()
@@ -104,6 +104,7 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
                     .phone(normalizePhone(testPhone))
                     .name(customerName)
                     .email(testEmail)
+                    .isRealCustomer(false)
                     .birthDate(LocalDate.of(2000, 1, 1))
                     .gender("M")
                     .build();
@@ -113,6 +114,7 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
         } else {
             customer.setName(customerName);
             customer.setEmail(testEmail);
+            customer.setIsRealCustomer(false);
             customer.setUpdatedBy(SYSTEM_ACTOR_ID);
             customerMapper.updateTestCustomer(customer);
         }

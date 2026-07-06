@@ -87,7 +87,9 @@ public class CampaignScheduler {
                     published++;
                 }
 
-                sendPreparationMapper.updateHistoryStatus(campaign.getId(), published == 0 ? "SENT" : "SENDING");
+                if (published == 0) {
+                    sendPreparationMapper.updateHistoryStatus(campaign.getId(), "SENT");
+                }
                 log.info("[CampaignScheduler] reserved campaign published sendHistoryId={}, published={}", campaign.getId(), published);
             } catch (Exception e) {
                 log.error("[CampaignScheduler] reserved campaign failed sendHistoryId={}", campaign.getId(), e);
@@ -138,6 +140,7 @@ public class CampaignScheduler {
                 .templateId(campaign.getTemplateId())
                 .campaignId(campaign.getId())
                 .customerId(plan.getCustomerId())
+                .isRealCustomer(plan.getRecipient().getIsRealCustomer())
                 .userId(campaign.getUserId())
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())

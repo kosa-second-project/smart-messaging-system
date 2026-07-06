@@ -6,6 +6,7 @@
     <select id="findRecipientCandidatesByCustomerIds" resultType="SendRecipientCandidateVO">
         SELECT
             c.id AS customer_id,
+            NVL(c.is_real_customer, 1) AS isRealCustomer,
             c.phone AS phone,
             c.email AS email,
             NULL AS kakao_user_key,
@@ -156,6 +157,7 @@
             sh.template_id AS templateId,
             sh.id AS campaignId,
             st.customer_id AS customerId,
+            NVL(c.is_real_customer, 1) AS isRealCustomer,
             c.phone AS phoneNumber,
             c.email AS email,
             NULL AS kakaoUserKey,

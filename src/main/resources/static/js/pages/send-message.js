@@ -26,7 +26,6 @@ const MessageComposer = {
         this.loadChannels();
         this.bindEvents();
         // 1?④퀎?먯꽌 媛?몄삩 珥???????뚮뜑留?
-        $("#totalTargetCount").text(SendPage.state.draftTotalCount || 0);
         const shouldRestoreMessageDraft = sessionStorage.getItem("messageEntrySource") === "review";
         if (shouldRestoreMessageDraft) {
             $("#messageTitle").val(sessionStorage.getItem("messageTitle") || "");

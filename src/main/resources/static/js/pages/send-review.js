@@ -301,17 +301,7 @@ const MessageReviewer = {
             "routingChannels"
         ].forEach(key => sessionStorage.removeItem(key));
 
-        if (draftId) {
-            $.ajax({
-                url: "/api/campaigns/draft/" + draftId,
-                type: "DELETE",
-                complete: function () {
-                    window.location.href = "/send";
-                }
-            });
-        } else {
-            window.location.href = "/send";
-        }
+        window.location.href = "/send";
     },
 
     getPriorityNames: function () {

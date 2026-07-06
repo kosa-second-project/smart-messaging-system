@@ -20,6 +20,7 @@ public class MessageTaskDto {
     private Long templateId;         // 템플릿 ID
     private Long campaignId;         // 캠페인 ID
     private Long customerId;
+    private Boolean isRealCustomer;
     private Long userId;         // 발송 요청 사용자 ID
     private String phoneNumber;      // 수신자 번호 (카카오, SMS용)
     private String email;            // 수신자 이메일

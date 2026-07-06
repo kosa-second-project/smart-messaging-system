@@ -95,9 +95,6 @@ public class CampaignCommandConsumer {
                 }
             }
 
-            if (!isScheduled) {
-                sendPreparationMapper.updateHistoryStatus(command.getSendHistoryId(), "SENDING");
-            }
             draftService.deleteDraft(command.getUserId(), command.getDraftId());
 
             log.info("[CampaignCommandConsumer] done sendHistoryId={}, targets={}, published={}",
@@ -152,6 +149,7 @@ public class CampaignCommandConsumer {
                 .templateId(command.getTemplateId())
                 .campaignId(command.getSendHistoryId())
                 .customerId(plan.getCustomerId())
+                .isRealCustomer(plan.getRecipient().getIsRealCustomer())
                 .userId(command.getUserId())
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())

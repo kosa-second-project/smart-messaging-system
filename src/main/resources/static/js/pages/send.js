@@ -268,24 +268,9 @@ const SendPage = {
 
     // 발송 완료 또는 초기화 시 세션/Draft 정리 헬퍼
     clearSessionAndDraft: function () {
-        const draftId = this.state.draftId;
         this.isNavigatingInternal = true;
-        if (draftId) {
-            this.clearSendSession();
-            // API 호출로 Redis Draft 비우기
-            $.ajax({
-                url: '/api/campaigns/draft/' + draftId,
-                type: 'DELETE',
-                success: function () {
-                    window.location.href = "/send/recipients";
-                },
-                error: function () {
-                    window.location.href = "/send/recipients";
-                }
-            });
-        } else {
-            window.location.href = "/send/recipients";
-        }
+        this.clearSendSession();
+        window.location.href = "/send/recipients";
     },
 
     clearSendSession: function () {

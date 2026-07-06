@@ -70,6 +70,7 @@ public class SendQueueServiceImpl implements SendQueueService {
                     .sendHistoryId(history.getId())
                     .sendTargetId(target.getId())
                     .customerId(null)
+                    .isRealCustomer(true)
                     .userId(userId)
                     .kakaoUserKey(uuid)
                     .title(request.getTitle())

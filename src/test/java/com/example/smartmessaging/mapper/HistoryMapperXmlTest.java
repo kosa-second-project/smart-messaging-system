@@ -17,15 +17,8 @@ class HistoryMapperXmlTest {
         Configuration configuration = new Configuration();
         String resource = "mappers/HistoryMapper.xml";
 
-        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
-            XMLMapperBuilder mapperParser = new XMLMapperBuilder(
-                    inputStream,
-                    configuration,
-                    resource,
-                    configuration.getSqlFragments()
-            );
-            mapperParser.parse();
-        }
+        parseMapper(configuration, "mappers/common-mapper.xml");
+        parseMapper(configuration, resource);
 
         assertThat(configuration.hasStatement(
                 "com.example.smartmessaging.service.repository.HistoryMapper.findHistories"
@@ -103,5 +96,17 @@ class HistoryMapperXmlTest {
                         "ORDER BY shr.priority_order ASC")
                 .doesNotContain("GROUP BY sa.attempt_order")
                 .doesNotContain("fail_reason");
+    }
+
+    private void parseMapper(Configuration configuration, String resource) throws Exception {
+        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+            XMLMapperBuilder mapperParser = new XMLMapperBuilder(
+                    inputStream,
+                    configuration,
+                    resource,
+                    configuration.getSqlFragments()
+            );
+            mapperParser.parse();
+        }
     }
 }
