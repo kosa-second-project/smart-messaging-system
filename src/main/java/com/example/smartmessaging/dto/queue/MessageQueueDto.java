@@ -14,6 +14,7 @@ import java.io.Serializable;
 public class MessageQueueDto implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    private Long sendHistoryId; // send_history 테이블의 PK (마스터 상태 업데이트용)
     private Long sendTargetId;  // send_target 테이블의 PK (상태 업데이트용)
     private Long customerId;    // 고객 ID
     private String recipientNo; // 수신 번호 (또는 이메일)

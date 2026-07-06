@@ -37,6 +37,7 @@ public class SendPreparationService {
     private final RecipientChannelResolver recipientChannelResolver;
     private final MessageQueuePublisher messageQueuePublisher;
     private final ShortUrlService shortUrlService;
+    private final org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
 
     @Transactional
     public SendPrepareResponseDTO prepare(Long userId, SendPrepareRequestDTO request) {
@@ -64,20 +65,44 @@ public class SendPreparationService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // 1. 발송 예약 시각 결정 및 법적 규제 시간대(야간 21시~08시 광고 금지) 보정
+        java.time.LocalDateTime scheduledTime = request.getScheduledAt();
+        boolean isScheduled = (scheduledTime != null);
+        
+        if (scheduledTime == null) {
+            scheduledTime = java.time.LocalDateTime.now();
+        }
+
+        // 목적이 광고성("AD" 또는 "ADVERTISEMENT")인 경우 야간 발송 제한 적용
+        String normalizedPurpose = normalizePurpose(request.getPurpose());
+        if ("AD".equalsIgnoreCase(normalizedPurpose) || "ADVERTISEMENT".equalsIgnoreCase(normalizedPurpose)) {
+            int hour = scheduledTime.getHour();
+            if (hour >= 21 || hour < 8) {
+                isScheduled = true; // 야간 차단 시간대에 걸리면 강제 예약 상태로 보정
+                if (hour >= 21) {
+                    scheduledTime = scheduledTime.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
+                } else {
+                    scheduledTime = scheduledTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
+                }
+            }
+        }
+
+        String historyStatus = isScheduled ? "SCHEDULED" : "SENDING";
+
         SendHistoryVO history = SendHistoryVO.builder()
                 .templateId(request.getTemplateId())
                 .userId(userId)
                 .title(request.getTitle().trim())
                 .content(request.getContent().trim())
-                .purpose(normalizePurpose(request.getPurpose()))
-                .status("SCHEDULED")
+                .purpose(normalizedPurpose)
+                .status(historyStatus)
                 .totalTargetCount(plans.size())
                 .successCount(0)
                 .failCount(0)
                 .estimatedCost(estimatedCost)
                 .estimatedSaving(BigDecimal.ZERO)
                 .actualCost(BigDecimal.ZERO)
-                .scheduledAt(request.getScheduledAt())
+                .scheduledAt(scheduledTime)
                 .build();
         sendPreparationMapper.insertSendHistory(history);
 
@@ -91,31 +116,30 @@ public class SendPreparationService {
             sendPreparationMapper.insertSendHistoryRouting(routing);
         }
 
-        int published = 0;
-        for (RecipientSendPlan plan : plans) {
-            SendTargetVO target = SendTargetVO.builder()
-                    .sendHistoryId(history.getId())
-                    .customerId(plan.getCustomerId())
-                    .finalChannelId(plan.getFirstChannelId())
-                    .status("PENDING")
-                    .cost(plan.getEstimatedCost())
-                    .userUuid(plan.getRecipient().getKakaoUserKey())
-                    .build();
-            sendPreparationMapper.insertSendTarget(target);
+        // 4. 비동기 백그라운드 처리를 위한 초경량 캠페인 명령 생성 및 Enqueue (예약 건도 즉시 대상자 적재를 위해 무조건 발행)
+        com.example.smartmessaging.dto.queue.CampaignCommandQueueDto command = com.example.smartmessaging.dto.queue.CampaignCommandQueueDto.builder()
+                .sendHistoryId(history.getId())
+                .draftId(request.getDraftId())
+                .userId(userId)
+                .title(request.getTitle())
+                .content(request.getContent())
+                .purpose(request.getPurpose())
+                .templateId(request.getTemplateId())
+                .routingChannelIds(routingChannels.stream().map(ChannelVO::getId).toList())
+                .build();
 
-            MessageTaskDto task = buildTask(history, target, plan, request);
-            messageQueuePublisher.publish(task);
-            published++;
-        }
-
-        draftService.deleteDraft(userId, request.getDraftId());
+        rabbitTemplate.convertAndSend(
+                com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_EXCHANGE,
+                com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_ROUTING_KEY,
+                command
+        );
 
         return SendPrepareResponseDTO.builder()
                 .sendHistoryId(history.getId())
                 .totalRequestedCount(customerIds.size())
                 .preparedTargetCount(plans.size())
                 .excludedTargetCount(customerIds.size() - plans.size())
-                .publishedMessageCount(published)
+                .publishedMessageCount(plans.size())
                 .estimatedCost(estimatedCost)
                 .build();
     }

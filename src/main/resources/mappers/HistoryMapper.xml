@@ -228,4 +228,28 @@
         WHERE id = #{sendTargetId}
           AND is_deleted = 0
     </update>
+
+    <update id="incrementSuccessCount">
+        UPDATE send_history
+        SET success_count = success_count + 1,
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendHistoryId}
+          AND is_deleted = 0
+    </update>
+
+    <update id="incrementFailCount">
+        UPDATE send_history
+        SET fail_count = fail_count + 1,
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendHistoryId}
+          AND is_deleted = 0
+    </update>
+
+    <update id="updateHistoryStatus">
+        UPDATE send_history
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendHistoryId}
+          AND is_deleted = 0
+    </update>
 </mapper>

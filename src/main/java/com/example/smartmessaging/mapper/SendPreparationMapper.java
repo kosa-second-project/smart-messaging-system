@@ -18,4 +18,16 @@ public interface SendPreparationMapper {
     int insertSendHistoryRouting(SendHistoryRoutingVO routing);
 
     int insertSendTarget(SendTargetVO target);
+
+    SendHistoryVO selectSendHistoryById(@Param("id") Long id);
+
+    void updateHistoryStatus(@Param("id") Long id, @Param("status") String status);
+
+    List<SendHistoryVO> findPendingReservedCampaigns(@Param("now") java.time.LocalDateTime now);
+
+    List<Long> findRoutingChannelIdsByHistoryId(@Param("sendHistoryId") Long sendHistoryId);
+
+    List<SendTargetVO> selectPendingTargetsByHistoryId(@Param("sendHistoryId") Long sendHistoryId);
+
+    List<com.example.smartmessaging.dto.request.MessageTaskDto> selectReservedSendTasks(@Param("sendHistoryId") Long sendHistoryId);
 }

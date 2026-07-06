@@ -365,7 +365,9 @@ const MessageComposer = {
 
         // 제목 입력 실시간 미리보기 동기화
         $("#messageTitle").on("input", function () {
-            const title = $(this).val() || "메시지 제목";
+            const rawVal = $(this).val() || "";
+            sessionStorage.setItem("messageTitle", rawVal);
+            const title = rawVal || "메시지 제목";
             $("#previewSmsTitle").text(title);
             $("#previewKakaoTitle").text(title);
             $("#previewEmailTitle").text(title);
@@ -374,7 +376,8 @@ const MessageComposer = {
 
         // 텍스트 바이트 수 계산 및 미리보기 화면 텍스트 동기화
         $("#messageContent").on("input", function () {
-            const actualText = $(this).val();
+            const actualText = $(this).val() || "";
+            sessionStorage.setItem("messageContent", actualText);
 
             self.updatePreviewContent();
             self.updateMessageMetrics();

@@ -47,9 +47,13 @@ public class MockMessageSender implements MessageSender {
             Thread.currentThread().interrupt();
         }
 
-        // 3. DB (send_target) 발송 완료 상태 업데이트
+        // 3. DB (send_target) 발송 완료 상태 업데이트 및 마스터(send_history) 성공 카운트 및 상태 연동
         if (message.getSendTargetId() != null) {
             historyMapper.updateSendTargetStatus(message.getSendTargetId(), "SUCCEEDED");
+        }
+        if (message.getSendHistoryId() != null) {
+            historyMapper.incrementSuccessCount(message.getSendHistoryId());
+            historyMapper.updateHistoryStatus(message.getSendHistoryId(), "COMPLETED");
         }
     }
 

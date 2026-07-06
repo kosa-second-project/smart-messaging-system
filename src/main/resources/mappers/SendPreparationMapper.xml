@@ -51,19 +51,19 @@
             scheduled_at,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{templateId},
-            #{userId},
-            #{title},
-            #{content},
-            #{purpose},
-            #{status},
-            #{totalTargetCount},
-            #{successCount},
-            #{failCount},
-            #{estimatedCost},
-            #{estimatedSaving},
-            #{actualCost},
-            #{scheduledAt},
+            #{templateId, jdbcType=BIGINT},
+            #{userId, jdbcType=BIGINT},
+            #{title, jdbcType=VARCHAR},
+            #{content, jdbcType=VARCHAR},
+            #{purpose, jdbcType=VARCHAR},
+            #{status, jdbcType=VARCHAR},
+            #{totalTargetCount, jdbcType=INTEGER},
+            #{successCount, jdbcType=INTEGER},
+            #{failCount, jdbcType=INTEGER},
+            #{estimatedCost, jdbcType=DECIMAL},
+            #{estimatedSaving, jdbcType=DECIMAL},
+            #{actualCost, jdbcType=DECIMAL},
+            #{scheduledAt, jdbcType=TIMESTAMP},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -75,9 +75,9 @@
             priority_order,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{sendHistoryId},
-            #{channelId},
-            #{priorityOrder},
+            #{sendHistoryId, jdbcType=BIGINT},
+            #{channelId, jdbcType=BIGINT},
+            #{priorityOrder, jdbcType=INTEGER},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -92,13 +92,75 @@
             user_uuid,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{sendHistoryId},
-            #{customerId},
-            #{finalChannelId},
-            #{status},
-            #{cost},
-            #{userUuid},
+            #{sendHistoryId, jdbcType=BIGINT},
+            #{customerId, jdbcType=BIGINT},
+            #{finalChannelId, jdbcType=BIGINT},
+            #{status, jdbcType=VARCHAR},
+            #{cost, jdbcType=DECIMAL},
+            #{userUuid, jdbcType=VARCHAR},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
+
+    <select id="selectSendHistoryById" resultType="com.example.smartmessaging.dto.vo.SendHistoryVO">
+        SELECT *
+        FROM send_history
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </select>
+
+    <update id="updateHistoryStatus">
+        UPDATE send_history
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </update>
+
+    <select id="findPendingReservedCampaigns" resultType="com.example.smartmessaging.dto.vo.SendHistoryVO">
+        SELECT *
+        FROM send_history
+        WHERE status = 'SCHEDULED'
+          AND scheduled_at <![CDATA[<=]]> #{now}
+          AND is_deleted = 0
+    </select>
+
+    <select id="findRoutingChannelIdsByHistoryId" resultType="long">
+        SELECT channel_id
+        FROM send_history_routing
+        WHERE send_history_id = #{sendHistoryId}
+          AND is_deleted = 0
+        ORDER BY priority_order ASC
+    </select>
+
+    <select id="selectPendingTargetsByHistoryId" resultType="com.example.smartmessaging.dto.vo.SendTargetVO">
+        SELECT *
+        FROM send_target
+        WHERE send_history_id = #{sendHistoryId}
+          AND status = 'PENDING'
+          AND is_deleted = 0
+    </select>
+
+    <select id="selectReservedSendTasks" resultType="com.example.smartmessaging.dto.request.MessageTaskDto">
+        SELECT
+            'send-' || sh.id || '-' || st.id AS messageId,
+            sh.id AS sendHistoryId,
+            st.id AS sendTargetId,
+            sh.template_id AS templateId,
+            sh.id AS campaignId,
+            st.customer_id AS customerId,
+            c.phone AS phoneNumber,
+            c.email AS email,
+            c.kakao_user_key AS kakaoUserKey,
+            sh.title AS title,
+            sh.content AS content,
+            sh.purpose AS purpose
+        FROM send_target st
+        JOIN send_history sh ON sh.id = st.send_history_id
+        JOIN customer c ON c.id = st.customer_id
+        WHERE st.send_history_id = #{sendHistoryId}
+          AND st.status = 'PENDING'
+          AND st.is_deleted = 0
+          AND sh.is_deleted = 0
+    </select>
 </mapper>

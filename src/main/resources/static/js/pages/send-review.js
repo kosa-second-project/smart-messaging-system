@@ -243,31 +243,41 @@ const MessageReviewer = {
             const $nextBtn = $("#btnNextStep");
             $nextBtn.prop("disabled", true).text("처리 중...");
 
-            // URL 추출
+            // URL 추출 및 DTO 매핑
             const urlMatches = this.state.content.match(/https?:\/\/[^\s]+/);
             const originalUrl = urlMatches ? urlMatches[0] : null;
 
-            // 통합 대량 발송 API 호출 (MessageSendRequestDTO 규격 연동)
+            // 2단계에서 저장한 routingChannels 배열 파싱
+            const channelNames = (this.state.routingChannels && this.state.routingChannels.length > 0)
+                ? this.state.routingChannels.map(c => {
+                    const name = c.channelType || "";
+                    if (name.includes("문자") || name.toLowerCase() === "sms") return "SMS";
+                    if (name.includes("카카오") || name.toLowerCase() === "kakao") return "KAKAO";
+                    return name.toUpperCase();
+                  })
+                : ["KAKAO", "SMS"];
+
+            // SendPrepareRequestDTO 바인딩 규격
             const payload = {
+                draftId: this.state.draftId,
+                templateId: null,
                 title: this.state.title,
                 content: this.state.content,
-                originalUrl: originalUrl,
-                isUrlIncluded: !!originalUrl,
-                scheduledAt: scheduledAtStr,
-                draftId: this.state.draftId, // 바디로 통합 전송
                 purpose: this.state.content.includes("(광고)") ? "AD" : "INFO",
-                templateId: null,
-                targetCustomerIds: null, // Redis의 draftId를 통해 백엔드에서 일괄 발송 처리
-                routingChannelIds: this.state.routingChannelIds
+                priorities: channelNames,
+                linkButtonName: originalUrl ? "자세히 보기" : null,
+                linkUrl: originalUrl,
+                linkPurpose: originalUrl ? "CLICK" : null,
+                scheduledAt: scheduledAtStr
             };
 
             $.ajax({
-                url: '/api/send/campaign',
+                url: '/api/send-requests',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(payload),
                 success: function (res) {
-                    alert("🎉 발송 요청이 성공적으로 대기열 큐에 등록되었습니다.");
+                    alert("✈️ 발송 요청이 정상적으로 처리되었습니다.\n발송 현황은 대시보드 및 통계 메뉴에서 확인하실 수 있습니다.");
                     self.clearSessionAndDraft();
                 },
                 error: function (err) {
@@ -282,6 +292,20 @@ const MessageReviewer = {
     // 7. 세션 클리어 후 복귀
     clearSessionAndDraft: function () {
         const draftId = this.state.draftId;
+        
+        // 이탈 방지 얼럿창 강제 해제 (캡처링 단계에서 전파 전격 차단)
+        window.addEventListener("beforeunload", function (e) {
+            e.stopImmediatePropagation();
+        }, true);
+
+        // 부모 레이아웃의 send.js 이탈 방지 조건 강제 해제
+        if (typeof SendPage !== 'undefined') {
+            SendPage.isNavigatingInternal = true;
+            if (SendPage.state) {
+                SendPage.state.draftId = null;
+            }
+        }
+        
         if (draftId) {
             sessionStorage.removeItem("draftId");
             sessionStorage.removeItem("draftTotalCount");
@@ -294,14 +318,14 @@ const MessageReviewer = {
                 url: '/api/campaigns/draft/' + draftId,
                 type: 'DELETE',
                 success: function () {
-                    window.location.href = "/send/recipients";
+                    window.location.href = "/send";
                 },
                 error: function () {
-                    window.location.href = "/send/recipients";
+                    window.location.href = "/send";
                 }
             });
         } else {
-            window.location.href = "/send/recipients";
+            window.location.href = "/send";
         }
     }
 };
