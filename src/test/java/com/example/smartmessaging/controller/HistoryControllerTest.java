@@ -59,13 +59,20 @@ class HistoryControllerTest {
 
     @Test
     void 전송기록_상세를_JSON으로_반환한다() throws Exception {
-        HistoryDetailResponseDTO detail = new HistoryDetailResponseDTO();
-        detail.setSendHistoryId(11L);
-        detail.setTitle("배송 완료 안내");
-        detail.setPurpose("INFO");
-        detail.setStatus("SENT");
-        detail.setChannels(List.of("SMS"));
-        detail.setTags(List.of("배송 완료자"));
+        HistoryDetailResponseDTO detail = new HistoryDetailResponseDTO(
+                11L,
+                "배송 완료 안내",
+                null,
+                null,
+                "INFO",
+                "SENT",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        ).withChannels(List.of("SMS")).withTags(List.of("배송 완료자"));
         when(historyService.getHistoryDetail(11L)).thenReturn(detail);
 
         mockMvc.perform(get("/history/11").accept(MediaType.APPLICATION_JSON))

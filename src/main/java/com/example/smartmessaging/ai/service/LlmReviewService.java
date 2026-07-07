@@ -1,10 +1,10 @@
 package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.GeminiReviewClient;
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.request.LlmReviewRequest;
-import com.example.smartmessaging.ai.dto.response.LlmReviewResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.request.LlmReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.LlmReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.ExistingIssueReviewResult;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.IssueSource;
@@ -58,22 +58,22 @@ public class LlmReviewService {
     private final GeminiReviewClient geminiReviewClient;
     private final ObjectMapper objectMapper;
 
-    public ReviewResult review(AiReviewRequest request, List<ValidationIssue> existingIssues) {
-        String userPrompt = serialize(LlmReviewRequest.from(request, existingIssues));
-        LlmReviewResponse response = geminiReviewClient.review(SYSTEM_PROMPT, userPrompt);
+    public ReviewResult review(AiReviewRequestDTO request, List<ValidationIssueResponseDTO> existingIssues) {
+        String userPrompt = serialize(LlmReviewRequestDTO.from(request, existingIssues));
+        LlmReviewResponseDTO response = geminiReviewClient.review(SYSTEM_PROMPT, userPrompt);
         if (response == null) {
             throw new IllegalStateException("Empty LLM review response");
         }
 
-        List<ValidationIssue> reviewedIssues = applyExistingIssueReviews(
+        List<ValidationIssueResponseDTO> reviewedIssues = applyExistingIssueReviews(
                 existingIssues,
-                response.getReviewedExistingIssues()
+                response.reviewedExistingIssues()
         );
-        List<ValidationIssue> newIssues = normalizeNewIssues(response.getNewIssues());
-        return new ReviewResult(reviewedIssues, newIssues, textOrNull(response.getSuggestedRewrite()));
+        List<ValidationIssueResponseDTO> newIssues = normalizeNewIssues(response.newIssues());
+        return new ReviewResult(reviewedIssues, newIssues, textOrNull(response.suggestedRewrite()));
     }
 
-    private String serialize(LlmReviewRequest request) {
+    private String serialize(LlmReviewRequestDTO request) {
         try {
             return objectMapper.writeValueAsString(request);
         } catch (JsonProcessingException exception) {
@@ -81,16 +81,16 @@ public class LlmReviewService {
         }
     }
 
-    private List<ValidationIssue> applyExistingIssueReviews(
-            List<ValidationIssue> existingIssues,
-            List<LlmReviewResponse.ReviewedExistingIssue> reviews
+    private List<ValidationIssueResponseDTO> applyExistingIssueReviews(
+            List<ValidationIssueResponseDTO> existingIssues,
+            List<LlmReviewResponseDTO.ReviewedExistingIssue> reviews
     ) {
         if (reviews == null || reviews.isEmpty()) {
             return List.copyOf(existingIssues);
         }
 
         Map<ExistingIssueKey, ReviewDecision> decisions = new LinkedHashMap<>();
-        for (LlmReviewResponse.ReviewedExistingIssue review : reviews) {
+        for (LlmReviewResponseDTO.ReviewedExistingIssue review : reviews) {
             ReviewDecision decision = toDecision(review);
             if (decision != null) {
                 decisions.putIfAbsent(new ExistingIssueKey(decision.source(), decision.ruleId()), decision);
@@ -99,21 +99,21 @@ public class LlmReviewService {
 
         return existingIssues.stream()
                 .map(issue -> applyDecision(issue, decisions.get(
-                        new ExistingIssueKey(issue.getSource(), issue.getRuleId())
+                        new ExistingIssueKey(issue.source(), issue.ruleId())
                 )))
                 .toList();
     }
 
-    private ReviewDecision toDecision(LlmReviewResponse.ReviewedExistingIssue review) {
+    private ReviewDecision toDecision(LlmReviewResponseDTO.ReviewedExistingIssue review) {
         if (review == null) {
             return null;
         }
-        IssueSource source = parseEnum(IssueSource.class, review.getSource());
+        IssueSource source = parseEnum(IssueSource.class, review.source());
         ExistingIssueReviewResult result = parseEnum(
                 ExistingIssueReviewResult.class,
-                review.getReviewResult()
+                review.reviewResult()
         );
-        String ruleId = textOrNull(review.getRuleId());
+        String ruleId = textOrNull(review.ruleId());
         if (!isReviewable(source, ruleId) || result == null) {
             return null;
         }
@@ -121,8 +121,8 @@ public class LlmReviewService {
                 source,
                 ruleId,
                 result,
-                textOrNull(review.getReason()),
-                textOrNull(review.getSuggestion())
+                textOrNull(review.reason()),
+                textOrNull(review.suggestion())
         );
     }
 
@@ -131,31 +131,31 @@ public class LlmReviewService {
                 || (source == IssueSource.OPENAI_MODERATION && AI_SAFETY_DETECTED.equals(ruleId));
     }
 
-    private ValidationIssue applyDecision(ValidationIssue issue, ReviewDecision decision) {
+    private ValidationIssueResponseDTO applyDecision(ValidationIssueResponseDTO issue, ReviewDecision decision) {
         if (decision == null) {
             return issue;
         }
 
-        IssueSeverity severity = issue.getSeverity();
+        IssueSeverity severity = issue.severity();
         if (decision.result() == ExistingIssueReviewResult.POSSIBLE_FALSE_POSITIVE) {
             severity = lowerSeverity(severity);
         }
 
-        List<String> detail = new ArrayList<>(issue.getDetail());
+        List<String> detail = new ArrayList<>(issue.detail());
         detail.add("llmReviewResult=" + decision.result().name());
         if (decision.reason() != null) {
             detail.add("llmReason=" + decision.reason());
         }
 
-        return new ValidationIssue(
-                issue.getRuleId(),
-                issue.getSource(),
+        return new ValidationIssueResponseDTO(
+                issue.ruleId(),
+                issue.source(),
                 severity,
-                ValidationIssue.statusOf(severity),
-                issue.getField(),
-                issue.getMessage(),
-                issue.getTargetText(),
-                decision.suggestion() == null ? issue.getSuggestion() : decision.suggestion(),
+                ValidationIssueResponseDTO.statusOf(severity),
+                issue.field(),
+                issue.message(),
+                issue.targetText(),
+                decision.suggestion() == null ? issue.suggestion() : decision.suggestion(),
                 detail
         );
     }
@@ -167,22 +167,22 @@ public class LlmReviewService {
         return severity == IssueSeverity.HIGH ? IssueSeverity.MEDIUM : IssueSeverity.LOW;
     }
 
-    private List<ValidationIssue> normalizeNewIssues(List<LlmReviewResponse.NewIssue> candidates) {
+    private List<ValidationIssueResponseDTO> normalizeNewIssues(List<LlmReviewResponseDTO.NewIssue> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
 
-        List<ValidationIssue> normalized = new ArrayList<>();
+        List<ValidationIssueResponseDTO> normalized = new ArrayList<>();
         Set<NewIssueKey> seen = new LinkedHashSet<>();
-        for (LlmReviewResponse.NewIssue candidate : candidates) {
-            ValidationIssue issue = normalizeNewIssue(candidate);
+        for (LlmReviewResponseDTO.NewIssue candidate : candidates) {
+            ValidationIssueResponseDTO issue = normalizeNewIssue(candidate);
             if (issue == null) {
                 continue;
             }
             NewIssueKey key = new NewIssueKey(
-                    issue.getRuleId(),
-                    issue.getField(),
-                    issue.getTargetText()
+                    issue.ruleId(),
+                    issue.field(),
+                    issue.targetText()
             );
             if (seen.add(key)) {
                 normalized.add(issue);
@@ -191,18 +191,18 @@ public class LlmReviewService {
         return List.copyOf(normalized);
     }
 
-    private ValidationIssue normalizeNewIssue(LlmReviewResponse.NewIssue candidate) {
+    private ValidationIssueResponseDTO normalizeNewIssue(LlmReviewResponseDTO.NewIssue candidate) {
         if (candidate == null) {
             return null;
         }
-        String ruleId = textOrNull(candidate.getRuleId());
-        String message = textOrNull(candidate.getMessage());
+        String ruleId = textOrNull(candidate.ruleId());
+        String message = textOrNull(candidate.message());
         IssueSeverity defaultSeverity = ALLOWED_RULES.get(ruleId);
         if (defaultSeverity == null || message == null) {
             return null;
         }
 
-        IssueSeverity requestedSeverity = parseEnum(IssueSeverity.class, candidate.getRiskLevel());
+        IssueSeverity requestedSeverity = parseEnum(IssueSeverity.class, candidate.riskLevel());
         IssueSeverity severity = requestedSeverity == null
                 ? defaultSeverity
                 : maxSeverity(defaultSeverity, requestedSeverity);
@@ -210,20 +210,20 @@ public class LlmReviewService {
             severity = IssueSeverity.MEDIUM;
         }
 
-        String field = textOrNull(candidate.getField());
+        String field = textOrNull(candidate.field());
         if (!"title".equals(field) && !"content".equals(field)) {
             field = "content";
         }
 
-        return new ValidationIssue(
+        return new ValidationIssueResponseDTO(
                 ruleId,
                 IssueSource.LLM_REVIEW,
                 severity,
-                ValidationIssue.statusOf(severity),
+                ValidationIssueResponseDTO.statusOf(severity),
                 field,
                 message,
-                textOrNull(candidate.getTargetText()),
-                textOrNull(candidate.getSuggestion()),
+                textOrNull(candidate.targetText()),
+                textOrNull(candidate.suggestion()),
                 List.of()
         );
     }
@@ -249,8 +249,8 @@ public class LlmReviewService {
     }
 
     public record ReviewResult(
-            List<ValidationIssue> existingIssues,
-            List<ValidationIssue> newIssues,
+            List<ValidationIssueResponseDTO> existingIssues,
+            List<ValidationIssueResponseDTO> newIssues,
             String suggestedRewrite
     ) {
     }

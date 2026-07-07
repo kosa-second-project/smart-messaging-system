@@ -1,8 +1,8 @@
 package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.ProfanityFilterClient;
-import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ public class ProfanityValidationService {
 
     private final ProfanityFilterClient profanityFilterClient;
 
-    public List<ValidationIssue> validate(String content) {
+    public List<ValidationIssueResponseDTO> validate(String content) {
         try {
             return profanityFilterClient.filter(content)
                     .map(this::toIssues)
@@ -33,18 +33,18 @@ public class ProfanityValidationService {
         }
     }
 
-    private List<ValidationIssue> toIssues(ProfanityFilterResponse response) {
+    private List<ValidationIssueResponseDTO> toIssues(ProfanityFilterResponseDTO response) {
         // 이 API는 HTTP 200으로 오류를 반환할 수 있으므로 body의 status.code를 기준으로 판단한다.
         if (!isSuccessful(response)) {
-            Integer statusCode = response.getStatus() == null ? null : response.getStatus().getCode();
+            Integer statusCode = response.status() == null ? null : response.status().code();
             log.warn("욕설 필터 API가 비정상 상태 코드를 반환하여 검사 결과를 제외합니다. statusCode={}", statusCode);
             return List.of();
         }
 
-        List<String> detectedWords = response.getDetected() == null
+        List<String> detectedWords = response.detected() == null
                 ? List.of()
-                : response.getDetected().stream()
-                        .map(ProfanityFilterResponse.DetectedWord::getFilteredWord)
+                : response.detected().stream()
+                        .map(ProfanityFilterResponseDTO.DetectedWord::filteredWord)
                         .filter(StringUtils::hasText)
                         .distinct()
                         .toList();
@@ -53,7 +53,7 @@ public class ProfanityValidationService {
             return List.of();
         }
 
-        return List.of(new ValidationIssue(
+        return List.of(new ValidationIssueResponseDTO(
                 PROFANITY_DETECTED,
                 IssueSeverity.HIGH,
                 "본문에 부적절한 표현이 포함되어 있습니다.",
@@ -62,10 +62,10 @@ public class ProfanityValidationService {
         ));
     }
 
-    private boolean isSuccessful(ProfanityFilterResponse response) {
+    private boolean isSuccessful(ProfanityFilterResponseDTO response) {
         return response != null
-                && response.getStatus() != null
-                && response.getStatus().getCode() != null
-                && response.getStatus().getCode() == SUCCESS_CODE;
+                && response.status() != null
+                && response.status().code() != null
+                && response.status().code() == SUCCESS_CODE;
     }
 }

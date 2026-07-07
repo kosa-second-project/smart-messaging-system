@@ -2,8 +2,8 @@ package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.OpenAiModerationClient;
 import com.example.smartmessaging.ai.client.OpenAiModerationException;
-import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ public class OpenAiModerationValidationService {
 
     private final OpenAiModerationClient openAiModerationClient;
 
-    public List<ValidationIssue> validate(String content) {
+    public List<ValidationIssueResponseDTO> validate(String content) {
         try {
             return toIssues(openAiModerationClient.moderate(content), content);
         } catch (OpenAiModerationException exception) {
@@ -43,24 +43,24 @@ public class OpenAiModerationValidationService {
         }
     }
 
-    private List<ValidationIssue> toIssues(OpenAiModerationResponse response, String content) {
-        if (response.getResults() == null || response.getResults().isEmpty()) {
+    private List<ValidationIssueResponseDTO> toIssues(OpenAiModerationResponseDTO response, String content) {
+        if (response.results() == null || response.results().isEmpty()) {
             return unavailableIssue(PARSING_ERROR);
         }
 
-        OpenAiModerationResponse.Result result = response.getResults().get(0);
-        if (result == null || result.getFlagged() == null) {
+        OpenAiModerationResponseDTO.Result result = response.results().get(0);
+        if (result == null || result.flagged() == null) {
             return unavailableIssue(PARSING_ERROR);
         }
-        if (!Boolean.TRUE.equals(result.getFlagged())) {
+        if (!Boolean.TRUE.equals(result.flagged())) {
             return List.of();
         }
 
-        List<String> categories = trueCategories(result.getCategories());
+        List<String> categories = trueCategories(result.categories());
         String targetText = categories.isEmpty() ? content : String.join(", ", categories);
 
         // 모델의 flagged 결과는 정책상 자동 차단하지 않고 MEDIUM 경고로만 병합한다.
-        return List.of(new ValidationIssue(
+        return List.of(new ValidationIssueResponseDTO(
                 AI_SAFETY_DETECTED,
                 IssueSeverity.MEDIUM,
                 "OpenAI Moderation 검사에서 유해 가능 표현이 감지되었습니다.",
@@ -70,19 +70,19 @@ public class OpenAiModerationValidationService {
         ));
     }
 
-    private List<ValidationIssue> unavailableIssue(OpenAiModerationException.FailureType failureType) {
+    private List<ValidationIssueResponseDTO> unavailableIssue(OpenAiModerationException.FailureType failureType) {
         return unavailableIssue(new OpenAiModerationException(failureType));
     }
 
-    private List<ValidationIssue> unavailableIssue(OpenAiModerationException exception) {
+    private List<ValidationIssueResponseDTO> unavailableIssue(OpenAiModerationException exception) {
         logUnavailable(exception);
         return createUnavailableIssue(exception.getFailureType());
     }
 
-    private List<ValidationIssue> createUnavailableIssue(
+    private List<ValidationIssueResponseDTO> createUnavailableIssue(
             OpenAiModerationException.FailureType failureType
     ) {
-        return List.of(new ValidationIssue(
+        return List.of(new ValidationIssueResponseDTO(
                 MODERATION_UNAVAILABLE,
                 IssueSeverity.MEDIUM,
                 "OpenAI Moderation 검사를 완료하지 못했습니다. 잠시 후 다시 시도해주세요.",
@@ -105,25 +105,25 @@ public class OpenAiModerationValidationService {
         );
     }
 
-    private List<String> trueCategories(OpenAiModerationResponse.Categories categories) {
+    private List<String> trueCategories(OpenAiModerationResponseDTO.Categories categories) {
         if (categories == null) {
             return List.of();
         }
 
         List<String> detected = new ArrayList<>();
-        addIfTrue(detected, "harassment", categories.getHarassment());
-        addIfTrue(detected, "harassment/threatening", categories.getHarassmentThreatening());
-        addIfTrue(detected, "hate", categories.getHate());
-        addIfTrue(detected, "hate/threatening", categories.getHateThreatening());
-        addIfTrue(detected, "illicit", categories.getIllicit());
-        addIfTrue(detected, "illicit/violent", categories.getIllicitViolent());
-        addIfTrue(detected, "self-harm", categories.getSelfHarm());
-        addIfTrue(detected, "self-harm/intent", categories.getSelfHarmIntent());
-        addIfTrue(detected, "self-harm/instructions", categories.getSelfHarmInstructions());
-        addIfTrue(detected, "sexual", categories.getSexual());
-        addIfTrue(detected, "sexual/minors", categories.getSexualMinors());
-        addIfTrue(detected, "violence", categories.getViolence());
-        addIfTrue(detected, "violence/graphic", categories.getViolenceGraphic());
+        addIfTrue(detected, "harassment", categories.harassment());
+        addIfTrue(detected, "harassment/threatening", categories.harassmentThreatening());
+        addIfTrue(detected, "hate", categories.hate());
+        addIfTrue(detected, "hate/threatening", categories.hateThreatening());
+        addIfTrue(detected, "illicit", categories.illicit());
+        addIfTrue(detected, "illicit/violent", categories.illicitViolent());
+        addIfTrue(detected, "self-harm", categories.selfHarm());
+        addIfTrue(detected, "self-harm/intent", categories.selfHarmIntent());
+        addIfTrue(detected, "self-harm/instructions", categories.selfHarmInstructions());
+        addIfTrue(detected, "sexual", categories.sexual());
+        addIfTrue(detected, "sexual/minors", categories.sexualMinors());
+        addIfTrue(detected, "violence", categories.violence());
+        addIfTrue(detected, "violence/graphic", categories.violenceGraphic());
         return List.copyOf(detected);
     }
 

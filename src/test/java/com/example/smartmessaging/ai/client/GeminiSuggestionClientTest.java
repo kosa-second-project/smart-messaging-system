@@ -1,6 +1,6 @@
 package com.example.smartmessaging.ai.client;
 
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +19,7 @@ class GeminiSuggestionClientTest {
 
     @Test
     void 코드블록과_설명이_있는_JSON을_파싱한다() {
-        AiSuggestionResponse response = client.parseResponse("""
+        AiSuggestionResponseDTO response = client.parseResponse("""
                 아래는 추천 결과입니다.
                 ```json
                 {"suggestions":[{"title":"안내","content":"본문"}]}
@@ -27,9 +27,9 @@ class GeminiSuggestionClientTest {
                 이상입니다.
                 """);
 
-        assertThat(response.getSuggestions()).hasSize(1);
-        assertThat(response.getSuggestions().get(0).getTitle()).isEqualTo("안내");
-        assertThat(response.getSuggestions().get(0).getContent()).isEqualTo("본문");
+        assertThat(response.suggestions()).hasSize(1);
+        assertThat(response.suggestions().get(0).title()).isEqualTo("안내");
+        assertThat(response.suggestions().get(0).content()).isEqualTo("본문");
     }
 
     @Test
@@ -42,11 +42,9 @@ class GeminiSuggestionClientTest {
     }
 
     @Test
-    void suggestions_배열이_없으면_파싱_실패로_처리한다() {
-        assertThatExceptionOfType(BusinessException.class)
-                .isThrownBy(() -> client.parseResponse("{\"result\":[]}"))
-                .satisfies(exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EXTERNAL_API_ERROR)
-                );
+    void suggestions_배열이_없으면_빈_리스트로_보정한다() {
+        AiSuggestionResponseDTO response = client.parseResponse("{\"result\":[]}");
+
+        assertThat(response.suggestions()).isEmpty();
     }
 }

@@ -1,6 +1,6 @@
 package com.example.smartmessaging.ai.client;
 
-import com.example.smartmessaging.ai.dto.response.LlmReviewResponse;
+import com.example.smartmessaging.ai.dto.response.LlmReviewResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,7 +27,7 @@ public class GeminiReviewClient {
         this.objectMapper = objectMapper;
     }
 
-    public LlmReviewResponse review(String systemPrompt, String userPrompt) {
+    public LlmReviewResponseDTO review(String systemPrompt, String userPrompt) {
         try {
             String content = chatClient.prompt()
                     .system(systemPrompt)
@@ -44,13 +44,13 @@ public class GeminiReviewClient {
         }
     }
 
-    LlmReviewResponse parseResponse(String content) {
+    LlmReviewResponseDTO parseResponse(String content) {
         if (content == null || content.isBlank()) {
             throw externalApiException(new IllegalArgumentException("Empty Gemini response"));
         }
 
         try {
-            return objectMapper.readValue(extractFirstJsonObject(content), LlmReviewResponse.class);
+            return objectMapper.readValue(extractFirstJsonObject(content), LlmReviewResponseDTO.class);
         } catch (JsonProcessingException | IllegalArgumentException exception) {
             log.warn("Gemini review response parsing failed: exceptionType={}",
                     exception.getClass().getSimpleName());

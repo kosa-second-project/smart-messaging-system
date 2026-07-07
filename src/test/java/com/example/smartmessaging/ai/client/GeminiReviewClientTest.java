@@ -1,6 +1,6 @@
 package com.example.smartmessaging.ai.client;
 
-import com.example.smartmessaging.ai.dto.response.LlmReviewResponse;
+import com.example.smartmessaging.ai.dto.response.LlmReviewResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +19,7 @@ class GeminiReviewClientTest {
 
     @Test
     void 코드블록과_설명이_있는_첫_JSON_객체를_파싱한다() {
-        LlmReviewResponse response = client.parseResponse("""
+        LlmReviewResponseDTO response = client.parseResponse("""
                 검사 결과입니다.
                 ```json
                 {
@@ -36,17 +36,17 @@ class GeminiReviewClientTest {
                 뒤의 객체는 무시합니다. {"ignored":true}
                 """);
 
-        assertThat(response.getNewIssues()).hasSize(1);
-        assertThat(response.getNewIssues().get(0).getRuleId()).isEqualTo("CLARITY_ISSUE");
-        assertThat(response.getSuggestedRewrite()).isEqualTo("조건을 구체적으로 확인해 주세요.");
+        assertThat(response.newIssues()).hasSize(1);
+        assertThat(response.newIssues().get(0).ruleId()).isEqualTo("CLARITY_ISSUE");
+        assertThat(response.suggestedRewrite()).isEqualTo("조건을 구체적으로 확인해 주세요.");
     }
 
     @Test
     void 배열이_누락된_JSON도_파싱하고_서비스에서_빈_배열로_처리할_수_있다() {
-        LlmReviewResponse response = client.parseResponse("{\"suggestedRewrite\":null}");
+        LlmReviewResponseDTO response = client.parseResponse("{\"suggestedRewrite\":null}");
 
-        assertThat(response.getReviewedExistingIssues()).isNull();
-        assertThat(response.getNewIssues()).isNull();
+        assertThat(response.reviewedExistingIssues()).isNull();
+        assertThat(response.newIssues()).isNull();
     }
 
     @Test

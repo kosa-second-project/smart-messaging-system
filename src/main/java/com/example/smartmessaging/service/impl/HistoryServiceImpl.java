@@ -32,25 +32,25 @@ public class HistoryServiceImpl implements HistoryService {
     // 검색 조건을 기반으로 전송 기록 목록과 페이지 정보를 반환
     @Override
     public PageResponseDTO<HistoryListResponseDTO> getHistories(HistorySearchRequestDTO condition) {
-        condition.normalize();
+        condition = condition.normalized();
         long totalElements = historyMapper.countHistories(condition);
         int totalPages = totalElements == 0 ? 0
                 : (int) Math.ceil((double) totalElements / HistorySearchRequestDTO.PAGE_SIZE);
 
         // 요청 페이지가 실제 전체 페이지보다 클 경우 마지막 페이지로 가도록 함
         // url에 잘못된 값이 들어오는 것을 방지
-        if (totalPages > 0 && condition.getPage() > totalPages) {
-            condition.setPage(totalPages);
+        if (totalPages > 0 && condition.page() > totalPages) {
+            condition = condition.withPage(totalPages);
         }
 
         // 현재 페이지 목록 조회, 전체 개수 0일 경우 DB 조회하지 않고 빈 리스트로
         List<HistoryListResponseDTO> histories = totalElements == 0
                 ? Collections.emptyList()
                 : historyMapper.findHistories(condition);
-        attachChannelsAndTags(histories);
+        histories = attachChannelsAndTags(histories);
 
         // 페이지 응답 DTO로 감싸서 반환
-        return PageResponseDTO.of(histories, condition.getPage(), HistorySearchRequestDTO.PAGE_SIZE, totalElements);
+        return PageResponseDTO.of(histories, condition.page(), HistorySearchRequestDTO.PAGE_SIZE, totalElements);
     }
 
     @Override
@@ -61,13 +61,13 @@ public class HistoryServiceImpl implements HistoryService {
         }
 
         List<Long> historyIds = List.of(sendHistoryId);
-        detail.setChannels(historyMapper.findChannelsByHistoryIds(historyIds).stream()
-                .map(HistoryChannelResponseDTO::getChannelName)
+        detail = detail.withChannels(historyMapper.findChannelsByHistoryIds(historyIds).stream()
+                .map(HistoryChannelResponseDTO::channelName)
                 .toList());
-        detail.setTags(historyMapper.findTagsByHistoryIds(historyIds).stream()
-                .map(HistoryTagResponseDTO::getTagName)
+        detail = detail.withTags(historyMapper.findTagsByHistoryIds(historyIds).stream()
+                .map(HistoryTagResponseDTO::tagName)
                 .toList());
-        detail.setAttemptFlows(historyMapper.findAttemptFlowsByHistoryId(sendHistoryId));
+        detail = detail.withAttemptFlows(historyMapper.findAttemptFlowsByHistoryId(sendHistoryId));
         return detail;
     }
 
@@ -94,28 +94,29 @@ public class HistoryServiceImpl implements HistoryService {
     }
 
     // 전송기록 목록에 채널과 태그를 붙이는 메서드
-    private void attachChannelsAndTags(List<HistoryListResponseDTO> histories) {
+    private List<HistoryListResponseDTO> attachChannelsAndTags(List<HistoryListResponseDTO> histories) {
         if (histories.isEmpty()) { // 목록이 비어있을 경우 바로 종료
-            return;
+            return histories;
         }
 
         // 리스트에 있는 전송기록 id 목록 추출
-        List<Long> historyIds = histories.stream().map(HistoryListResponseDTO::getId).toList();
+        List<Long> historyIds = histories.stream().map(HistoryListResponseDTO::id).toList();
 
         // 전송 기록에 해당하는 채널 정보를 Map으로 묶음
         Map<Long, List<String>> channelsByHistoryId = historyMapper.findChannelsByHistoryIds(historyIds).stream()
-                .collect(Collectors.groupingBy(HistoryChannelResponseDTO::getSendHistoryId,
-                        Collectors.mapping(HistoryChannelResponseDTO::getChannelName, Collectors.toList())));
+                .collect(Collectors.groupingBy(HistoryChannelResponseDTO::sendHistoryId,
+                        Collectors.mapping(HistoryChannelResponseDTO::channelName, Collectors.toList())));
 
         // 전송 기록에 해당하는 태그 정보를 Map으로 묶음
         Map<Long, List<String>> tagsByHistoryId = historyMapper.findTagsByHistoryIds(historyIds).stream()
-                .collect(Collectors.groupingBy(HistoryTagResponseDTO::getSendHistoryId,
-                        Collectors.mapping(HistoryTagResponseDTO::getTagName, Collectors.toList())));
+                .collect(Collectors.groupingBy(HistoryTagResponseDTO::sendHistoryId,
+                        Collectors.mapping(HistoryTagResponseDTO::tagName, Collectors.toList())));
 
         // 각 히스토리에 채널/태그 세팅
-        histories.forEach(history -> {
-            history.setChannels(channelsByHistoryId.getOrDefault(history.getId(), Collections.emptyList()));
-            history.setTags(tagsByHistoryId.getOrDefault(history.getId(), Collections.emptyList()));
-        });
+        return histories.stream()
+                .map(history -> history
+                .withChannels(channelsByHistoryId.getOrDefault(history.id(), Collections.emptyList()))
+                .withTags(tagsByHistoryId.getOrDefault(history.id(), Collections.emptyList())))
+                .toList();
     }
 }

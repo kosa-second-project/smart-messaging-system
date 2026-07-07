@@ -21,12 +21,16 @@ public class HistoryController {
 
     @GetMapping("/history")
     public String history(@ModelAttribute("searchCondition") HistorySearchRequestDTO searchCondition, Model model) {
+        HistorySearchRequestDTO normalizedCondition = searchCondition.normalized();
+
         log.info("[HistoryController] 전송 기록 목록 조회 요청 - page: {}, sort: {}",
-                searchCondition.getPage(), searchCondition.getSort());
+                normalizedCondition.page(), normalizedCondition.sort());
+
         model.addAttribute("pageTitle", "전송 기록");
+        model.addAttribute("searchCondition", normalizedCondition);
 
         // 사용자가 선택한 검색 조건 searchCondition을 기반으로 전송 기록 목록과 페이지 정보를 조회
-        model.addAttribute("historyPage", historyService.getHistories(searchCondition));
+        model.addAttribute("historyPage", historyService.getHistories(normalizedCondition));
 
         // 검색 필터에 표시할 선택지 목록
         model.addAttribute("channels", historyService.getChannelOptions());
