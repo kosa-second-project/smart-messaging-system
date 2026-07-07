@@ -10,10 +10,12 @@ import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagPromptContext;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,7 +26,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiSuggestionService {
 
     private static final int MAX_ATTEMPTS = 3;
@@ -33,6 +34,12 @@ public class AiSuggestionService {
     // AI 추천 문구는 고객별 치환이 보장된 고객명 변수만 사용한다.
     private static final List<String> DEFAULT_AVAILABLE_VARIABLES = List.of(CUSTOMER_NAME_VARIABLE);
     private static final Set<String> SUPPORTED_VARIABLES = Set.copyOf(DEFAULT_AVAILABLE_VARIABLES);
+    private static final List<String> RAG_SUGGESTION_FOCUS = List.of(
+            "brandTone",
+            "sentenceStructure",
+            "benefitExpression",
+            "ctaExpression"
+    );
 
     private static final String SUGGESTION_PROMPT_TEMPLATE = """
             당신은 현대홈쇼핑 마케팅 메시지 문구 작성 전문가입니다.
@@ -56,6 +63,7 @@ public class AiSuggestionService {
             - 템플릿 변수는 허용 변수 목록에 있는 값만 정확한 '#{변수명}' 형식으로 사용하십시오.
             %s
             %s
+            %s
 
             [응답 형식]
             설명과 Markdown 코드 블록 없이 다음 형식의 JSON 객체만 반환하십시오.
@@ -65,15 +73,39 @@ public class AiSuggestionService {
 
     private final GeminiSuggestionClient geminiSuggestionClient;
     private final RuleValidationService ruleValidationService;
+    // 추천 프롬프트에 넣을 Hmall 브랜드톤 참고자료를 만들어 주는 전용 서비스입니다.
+    private final RagPromptContextService ragPromptContextService;
+
+    @Autowired
+    public AiSuggestionService(
+            GeminiSuggestionClient geminiSuggestionClient,
+            RuleValidationService ruleValidationService,
+            RagPromptContextService ragPromptContextService
+    ) {
+        this.geminiSuggestionClient = geminiSuggestionClient;
+        this.ruleValidationService = ruleValidationService;
+        this.ragPromptContextService = ragPromptContextService;
+    }
+
+    AiSuggestionService(
+            GeminiSuggestionClient geminiSuggestionClient,
+            RuleValidationService ruleValidationService
+    ) {
+        this(geminiSuggestionClient, ruleValidationService, null);
+    }
 
     public AiSuggestionResponseDTO suggest(AiSuggestionRequestDTO request) {
         validateRequiredFields(request);
         List<String> availableVariables = normalizeAvailableVariables(request.availableVariables());
         Set<String> previousFailureRuleIds = new LinkedHashSet<>();
+        // RAG 검색은 요청당 한 번만 수행하고, Gemini 재시도에는 같은 참고자료를 재사용합니다.
+        RagPromptContext ragContext = ragPromptContextService == null
+                ? RagPromptContext.empty()
+                : ragPromptContextService.buildSuggestionPromptContext(request);
 
         // 통과 후보가 하나라도 있으면 즉시 반환하고, 0개인 경우에만 최대 두 번 재시도한다.
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            String prompt = buildPrompt(request, availableVariables, previousFailureRuleIds);
+            String prompt = buildPrompt(request, availableVariables, previousFailureRuleIds, ragContext.promptText());
             AiSuggestionResponseDTO generated = geminiSuggestionClient.generate(prompt);
             List<AiSuggestionItemResponseDTO> candidates = generated.suggestions();
 
@@ -83,6 +115,14 @@ public class AiSuggestionService {
                     attempt,
                     candidates.size(),
                     candidates.size() - outcome.passedCount(),
+                    outcome.passedCount(),
+                    outcome.failureRuleIds()
+            );
+            log.info(
+                    "RAG-assisted suggestion completed: refs={}, focus={}, generatedCount={}, passedCount={}, failedRuleIds={}",
+                    ragContext.references(),
+                    RAG_SUGGESTION_FOCUS,
+                    candidates.size(),
                     outcome.passedCount(),
                     outcome.failureRuleIds()
             );
@@ -101,6 +141,16 @@ public class AiSuggestionService {
             AiSuggestionRequestDTO request,
             List<String> availableVariables,
             Set<String> previousFailureRuleIds
+    ) {
+        // 테스트와 기존 호출부는 RAG 없이도 프롬프트를 만들 수 있게 기존 시그니처를 유지합니다.
+        return buildPrompt(request, availableVariables, previousFailureRuleIds, "");
+    }
+
+    String buildPrompt(
+            AiSuggestionRequestDTO request,
+            List<String> availableVariables,
+            Set<String> previousFailureRuleIds,
+            String ragContext
     ) {
         String channelRules = channelRules(request.channels());
         String messageTypeRules = "";
@@ -126,7 +176,9 @@ public class AiSuggestionService {
                 availableVariables,
                 retryGuidance,
                 messageTypeRules,
-                channelRules
+                channelRules,
+                // RAG context 안에 참고자료 사용 규칙까지 포함되어 있어 템플릿 끝에 그대로 붙입니다.
+                ragContext == null ? "" : ragContext
         );
     }
 
