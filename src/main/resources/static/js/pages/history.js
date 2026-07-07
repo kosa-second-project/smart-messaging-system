@@ -215,7 +215,6 @@ $(function() {
         }
         tags.forEach(tag => appendBadge(container, tag, "history-tag-badge"));
     }
-
     // 대체 발송 흐름 렌더링
     function renderAttemptFlows(attemptFlows) {
         const container = document.getElementById("historyAttemptFlows");
@@ -229,31 +228,68 @@ $(function() {
             return;
         }
 
+        const grouped = new Map();
         attemptFlows.forEach(flow => {
+            const attemptOrder = flow.attemptOrder ?? "-";
+            if (!grouped.has(attemptOrder)) {
+                grouped.set(attemptOrder, []);
+            }
+            grouped.get(attemptOrder).push(flow);
+        });
+
+        grouped.forEach((flows, attemptOrder) => {
             const item = document.createElement("article");
             item.className = "history-attempt-flow";
 
             const order = document.createElement("span");
             order.className = "history-attempt-flow__order";
-            order.textContent = flow.attemptOrder ?? "-";
+            order.textContent = attemptOrder;
 
             const flowContent = document.createElement("div");
             flowContent.className = "history-attempt-flow__content";
+
             const title = document.createElement("strong");
-            title.textContent = `${flow.attemptOrder ?? "-"}차 ${flow.channelName || "-"}`;
-            const counts = document.createElement("div");
-            counts.className = "history-attempt-flow__counts";
-            counts.append(
-                createCount(`요청 ${formatNumber(flow.requestCount)}건`),
-                createCount(`성공 ${formatNumber(flow.successCount)}건`),
-                createCount(`실패 ${formatNumber(flow.failCount)}건`)
-            );
-            flowContent.append(title, counts);
+            title.textContent = `${attemptOrder}차 시도`;
+
+            const channelList = document.createElement("div");
+            channelList.className = "history-attempt-flow__table";
+
+            const headerRow = document.createElement("div");
+            headerRow.className = "history-attempt-flow__row history-attempt-flow__row--header";
+            ["채널", "요청", "성공", "실패"].forEach(label => {
+                const headerCell = document.createElement("span");
+                headerCell.className = "history-attempt-flow__cell";
+                headerCell.textContent = label;
+                headerRow.appendChild(headerCell);
+            });
+            channelList.appendChild(headerRow);
+
+            flows.forEach(flow => {
+                const channelRow = document.createElement("div");
+                channelRow.className = "history-attempt-flow__row";
+
+                const channelName = document.createElement("span");
+                channelName.className = "history-attempt-flow__cell history-attempt-flow__cell--channel";
+                channelName.textContent = flow.channelName || "-";
+
+                const requestCount = createCount(`${formatNumber(flow.requestCount)}건`);
+                requestCount.className = "history-attempt-flow__cell";
+
+                const successCount = createCount(`${formatNumber(flow.successCount)}건`);
+                successCount.className = "history-attempt-flow__cell history-attempt-flow__cell--success";
+
+                const failCount = createCount(`${formatNumber(flow.failCount)}건`);
+                failCount.className = "history-attempt-flow__cell history-attempt-flow__cell--fail";
+
+                channelRow.append(channelName, requestCount, successCount, failCount);
+                channelList.appendChild(channelRow);
+            });
+
+            flowContent.append(title, channelList);
             item.append(order, flowContent);
             container.appendChild(item);
         });
     }
-
     function appendBadge(container, label, extraClass) {
         const badge = document.createElement("span");
         badge.className = `ds-badge${extraClass ? ` ${extraClass}` : ""}`;

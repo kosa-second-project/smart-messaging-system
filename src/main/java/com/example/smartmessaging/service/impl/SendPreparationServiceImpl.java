@@ -53,9 +53,6 @@ public class SendPreparationServiceImpl implements SendPreparationService {
         if (routingChannels.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
-        if (containsKakaoChannel(routingChannels) && isBlank(kakaoAccessToken)) {
-            throw new BusinessException("카카오 연동 정보가 없습니다. 카카오 연동 후 다시 발송해주세요.", ErrorCode.INVALID_INPUT_VALUE);
-        }
 
         LocalDateTime scheduledTime = request.getScheduledAt();
         boolean isScheduled = scheduledTime != null;
@@ -166,12 +163,6 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .toList();
     }
 
-    private boolean containsKakaoChannel(List<ChannelVO> channels) {
-        return channels.stream()
-                .map(ChannelVO::getChannelType)
-                .map(this::normalizeChannelType)
-                .anyMatch("KAKAO"::equals);
-    }
     private String normalizePurpose(String purpose) {
         String normalized = purpose.trim().toUpperCase(Locale.ROOT);
         if ("INFORMATIONAL".equals(normalized)) {

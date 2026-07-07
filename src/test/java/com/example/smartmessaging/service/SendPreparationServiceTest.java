@@ -160,6 +160,42 @@ class SendPreparationServiceTest {
         assertThat(response.getExcludedTargetCount()).isZero();
     }
 
+    @Test
+    void prepareAllowsKakaoPriorityWithoutAccessToken() {
+        SendPrepareRequestDTO request = new SendPrepareRequestDTO();
+        request.setDraftId("draft-1");
+        request.setTemplateId(7L);
+        request.setTitle("Coupon notice");
+        request.setContent("Coupon body");
+        request.setPurpose("INFO");
+        request.setPriorities(List.of("KAKAO", "EMAIL"));
+
+        when(draftService.getDraftCustomerIds(10L, "draft-1")).thenReturn(List.of(100L, 200L));
+        when(channelService.getActiveChannels()).thenReturn(List.of(
+                channel(1L, "KAKAO", "53"),
+                channel(2L, "EMAIL", "0.15")
+        ));
+        doAnswer(invocation -> {
+            SendHistoryVO history = invocation.getArgument(0);
+            history.setId(901L);
+            return 1;
+        }).when(sendPreparationMapper).insertSendHistory(any(SendHistoryVO.class));
+
+        SendPrepareResponseDTO response = sendPreparationService.prepare(10L, request, null);
+
+        ArgumentCaptor<SendHistoryVO> historyCaptor = ArgumentCaptor.forClass(SendHistoryVO.class);
+        verify(sendPreparationMapper).insertSendHistory(historyCaptor.capture());
+        assertThat(historyCaptor.getValue().getKakaoAccessTokenEnc()).isNull();
+
+        ArgumentCaptor<com.example.smartmessaging.dto.queue.CampaignCommandQueueDto> commandCaptor = ArgumentCaptor.forClass(com.example.smartmessaging.dto.queue.CampaignCommandQueueDto.class);
+        verify(rabbitTemplate).convertAndSend(
+                org.mockito.ArgumentMatchers.eq(com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_EXCHANGE),
+                org.mockito.ArgumentMatchers.eq(com.example.smartmessaging.config.RabbitMQConfig.CAMP_COMMAND_ROUTING_KEY),
+                commandCaptor.capture()
+        );
+        assertThat(commandCaptor.getValue().getKakaoAccessToken()).isNull();
+        assertThat(response.getSendHistoryId()).isEqualTo(901L);
+    }
     private ChannelVO channel(Long id, String type, String cost) {
         return ChannelVO.builder()
                 .id(id)
