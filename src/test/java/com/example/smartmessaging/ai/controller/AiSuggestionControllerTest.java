@@ -1,7 +1,7 @@
 package com.example.smartmessaging.ai.controller;
 
-import com.example.smartmessaging.ai.dto.response.AiSuggestionItem;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionItemResponseDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.ai.service.AiSuggestionService;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
@@ -41,8 +41,8 @@ class AiSuggestionControllerTest {
 
     @Test
     void 정상_요청은_추천_결과를_반환한다() throws Exception {
-        when(aiSuggestionService.suggest(any())).thenReturn(new AiSuggestionResponse(List.of(
-                new AiSuggestionItem("주말 혜택 안내", "(광고) 혜택을 확인하세요. 무료수신거부 080-000-0000")
+        when(aiSuggestionService.suggest(any())).thenReturn(new AiSuggestionResponseDTO(List.of(
+                new AiSuggestionItemResponseDTO("주말 혜택 안내", "혜택을 확인하세요.")
         )));
 
         mockMvc.perform(post("/api/ai/suggestions")
@@ -65,7 +65,7 @@ class AiSuggestionControllerTest {
 
     @Test
     void customerTags가_비어_있어도_추천을_요청한다() throws Exception {
-        when(aiSuggestionService.suggest(any())).thenReturn(new AiSuggestionResponse(List.of()));
+        when(aiSuggestionService.suggest(any())).thenReturn(new AiSuggestionResponseDTO(List.of()));
         mockMvc.perform(post("/api/ai/suggestions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

@@ -1,7 +1,7 @@
 package com.example.smartmessaging.ai.controller;
 
-import com.example.smartmessaging.ai.dto.request.AiSuggestionRequest;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.request.AiSuggestionRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.ai.service.AiSuggestionService;
 import com.example.smartmessaging.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,8 +32,8 @@ public class AiSuggestionController {
 
     @Operation(summary = "AI 문구 추천", description = "서버 룰 검증을 통과한 제목과 본문 조합을 최대 3개 반환합니다.")
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AiSuggestionResponse> suggest(
-            @Valid @RequestBody AiSuggestionRequest request
+    public ResponseEntity<AiSuggestionResponseDTO> suggest(
+            @Valid @RequestBody AiSuggestionRequestDTO request
     ) {
         return ResponseEntity.ok(aiSuggestionService.suggest(request));
     }

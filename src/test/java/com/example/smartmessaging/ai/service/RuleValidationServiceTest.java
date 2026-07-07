@@ -1,14 +1,12 @@
 package com.example.smartmessaging.ai.service;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
-import com.example.smartmessaging.exception.BusinessException;
-import com.example.smartmessaging.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

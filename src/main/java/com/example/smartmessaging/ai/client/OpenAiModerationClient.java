@@ -1,8 +1,8 @@
 package com.example.smartmessaging.ai.client;
 
 import com.example.smartmessaging.ai.config.OpenAiModerationProperties;
-import com.example.smartmessaging.ai.dto.request.OpenAiModerationRequest;
-import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponse;
+import com.example.smartmessaging.ai.dto.request.OpenAiModerationRequestDTO;
+import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponseDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,7 +66,7 @@ public class OpenAiModerationClient {
         this.objectMapper = objectMapper;
     }
 
-    public OpenAiModerationResponse moderate(String input) {
+    public OpenAiModerationResponseDTO moderate(String input) {
         // 비활성화와 key 누락은 외부 요청 전에 구분해 안전한 실패 유형으로 전달한다.
         if (!properties.isEnabled()) {
             throw new OpenAiModerationException(DISABLED);
@@ -80,16 +80,16 @@ public class OpenAiModerationClient {
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         headers.setBearerAuth(properties.getApiKey());
 
-        HttpEntity<OpenAiModerationRequest> request = new HttpEntity<>(
-                new OpenAiModerationRequest(properties.getModel(), input),
+        HttpEntity<OpenAiModerationRequestDTO> request = new HttpEntity<>(
+                new OpenAiModerationRequestDTO(properties.getModel(), input),
                 headers
         );
 
         try {
-            OpenAiModerationResponse response = restTemplate.postForObject(
+            OpenAiModerationResponseDTO response = restTemplate.postForObject(
                     moderationUrl(),
                     request,
-                    OpenAiModerationResponse.class
+                    OpenAiModerationResponseDTO.class
             );
             if (response == null) {
                 throw new OpenAiModerationException(PARSING_ERROR);

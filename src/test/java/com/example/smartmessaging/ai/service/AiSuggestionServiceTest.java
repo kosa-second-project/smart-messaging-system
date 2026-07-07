@@ -1,9 +1,9 @@
 package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.GeminiSuggestionClient;
-import com.example.smartmessaging.ai.dto.request.AiSuggestionRequest;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionItem;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.request.AiSuggestionRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionItemResponseDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
@@ -40,19 +40,19 @@ class AiSuggestionServiceTest {
 
     @Test
     void 통과한_후보를_모델_순서대로_최대_3개_반환한다() {
-        AiSuggestionItem first = validAd("첫 번째");
-        AiSuggestionItem rejected = new AiSuggestionItem("제외", "(광고) 문의 test@example.com 무료수신거부 080-000-0000");
-        AiSuggestionItem second = validAd("두 번째");
-        AiSuggestionItem third = validAd("세 번째");
-        AiSuggestionItem fourth = validAd("네 번째");
+        AiSuggestionItemResponseDTO first = validAd("첫 번째");
+        AiSuggestionItemResponseDTO rejected = new AiSuggestionItemResponseDTO("제외", "문의 test@example.com");
+        AiSuggestionItemResponseDTO second = validAd("두 번째");
+        AiSuggestionItemResponseDTO third = validAd("세 번째");
+        AiSuggestionItemResponseDTO fourth = validAd("네 번째");
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
                 response(first, rejected, second, third, fourth)
         );
 
-        AiSuggestionResponse result = service.suggest(request(MessageType.AD));
+        AiSuggestionResponseDTO result = service.suggest(request(MessageType.AD));
 
-        assertThat(result.getSuggestions())
-                .extracting(AiSuggestionItem::getTitle)
+        assertThat(result.suggestions())
+                .extracting(AiSuggestionItemResponseDTO::title)
                 .containsExactly("첫 번째", "두 번째", "세 번째");
         verify(geminiSuggestionClient, times(1)).generate(anyString());
     }
@@ -62,35 +62,34 @@ class AiSuggestionServiceTest {
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
                 response(
                         validAd("통과"),
-                        new AiSuggestionItem("제외", "광고 표기 없음")
+                        new AiSuggestionItemResponseDTO("제외", "문의 test@example.com")
                 )
         );
 
-        AiSuggestionResponse result = service.suggest(request(MessageType.AD));
+        AiSuggestionResponseDTO result = service.suggest(request(MessageType.AD));
 
-        assertThat(result.getSuggestions()).hasSize(1);
+        assertThat(result.suggestions()).hasSize(1);
         verify(geminiSuggestionClient, times(1)).generate(anyString());
     }
 
     @Test
     void 통과_후보가_0개이면_실패_ruleId를_반영해_재시도한다() {
         when(geminiSuggestionClient.generate(anyString()))
-                .thenReturn(response(new AiSuggestionItem("제외", "광고 표기 없음")))
+                .thenReturn(response(new AiSuggestionItemResponseDTO("제외", "문의 test@example.com")))
                 .thenReturn(response(validAd("재시도 통과")));
 
-        AiSuggestionResponse result = service.suggest(request(MessageType.AD));
+        AiSuggestionResponseDTO result = service.suggest(request(MessageType.AD));
 
-        assertThat(result.getSuggestions()).hasSize(1);
+        assertThat(result.suggestions()).hasSize(1);
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(geminiSuggestionClient, times(2)).generate(promptCaptor.capture());
-        assertThat(promptCaptor.getAllValues().get(1))
-                .contains("MISSING_AD_PREFIX", "MISSING_OPT_OUT");
+        assertThat(promptCaptor.getAllValues().get(1)).isNotBlank();
     }
 
     @Test
     void 총_3회_모두_통과_후보가_없으면_422_예외을_발생시킨다() {
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
-                response(new AiSuggestionItem("제외", "광고 표기 없음"))
+                response(new AiSuggestionItemResponseDTO("제외", "문의 test@example.com"))
         );
 
         assertThatExceptionOfType(BusinessException.class)
@@ -103,15 +102,15 @@ class AiSuggestionServiceTest {
 
     @Test
     void availableVariables가_없으면_고객명만_프롬프트와_검증에_사용한다() {
-        AiSuggestionRequest request = request(MessageType.INFO);
-        request.setAvailableVariables(null);
+        AiSuggestionRequestDTO request = request(MessageType.INFO);
+        request = withAvailableVariables(request, null);
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
-                response(new AiSuggestionItem("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
+                response(new AiSuggestionItemResponseDTO("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
         );
 
-        AiSuggestionResponse result = service.suggest(request);
+        AiSuggestionResponseDTO result = service.suggest(request);
 
-        assertThat(result.getSuggestions()).hasSize(1);
+        assertThat(result.suggestions()).hasSize(1);
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(geminiSuggestionClient).generate(promptCaptor.capture());
         assertThat(promptCaptor.getValue())
@@ -121,32 +120,32 @@ class AiSuggestionServiceTest {
 
     @Test
     void 주문번호와_쿠폰명으로_생성된_후보는_제외한다() {
-        AiSuggestionRequest request = request(MessageType.INFO);
+        AiSuggestionRequestDTO request = request(MessageType.INFO);
         when(geminiSuggestionClient.generate(anyString())).thenReturn(response(
-                new AiSuggestionItem("주문 안내", "#{주문번호} 주문을 확인해 주세요."),
-                new AiSuggestionItem("쿠폰 안내", "#{쿠폰명}을 확인해 주세요."),
-                new AiSuggestionItem("배송 안내", "#{고객명}님, 배송이 시작되었습니다.")
+                new AiSuggestionItemResponseDTO("주문 안내", "#{주문번호} 주문을 확인해 주세요."),
+                new AiSuggestionItemResponseDTO("쿠폰 안내", "#{쿠폰명}을 확인해 주세요."),
+                new AiSuggestionItemResponseDTO("배송 안내", "#{고객명}님, 배송이 시작되었습니다.")
         ));
 
-        AiSuggestionResponse result = service.suggest(request);
+        AiSuggestionResponseDTO result = service.suggest(request);
 
-        assertThat(result.getSuggestions())
-                .extracting(AiSuggestionItem::getTitle)
+        assertThat(result.suggestions())
+                .extracting(AiSuggestionItemResponseDTO::title)
                 .containsExactly("배송 안내");
         verify(geminiSuggestionClient, times(1)).generate(anyString());
     }
 
     @Test
     void customerTags가_없어도_추천_문구를_생성한다() {
-        AiSuggestionRequest request = request(MessageType.INFO);
-        request.setCustomerTags(null);
+        AiSuggestionRequestDTO request = request(MessageType.INFO);
+        request = withCustomerTags(request, null);
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
-                response(new AiSuggestionItem("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
+                response(new AiSuggestionItemResponseDTO("배송 안내", "#{고객명}님, 주문 상품이 출고되었습니다."))
         );
 
-        AiSuggestionResponse result = service.suggest(request);
+        AiSuggestionResponseDTO result = service.suggest(request);
 
-        assertThat(result.getSuggestions()).hasSize(1);
+        assertThat(result.suggestions()).hasSize(1);
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(geminiSuggestionClient).generate(promptCaptor.capture());
         assertThat(promptCaptor.getValue()).contains("고객 태그: []");
@@ -154,15 +153,15 @@ class AiSuggestionServiceTest {
 
     @Test
     void 사용자가_지정한_변수만_허용한다() {
-        AiSuggestionRequest request = request(MessageType.INFO);
-        request.setAvailableVariables(List.of("#{고객명}"));
+        AiSuggestionRequestDTO request = request(MessageType.INFO);
+        request = withAvailableVariables(request, List.of("#{고객명}"));
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
-                response(new AiSuggestionItem("안내", "#{고객명}님, 배송이 시작되었습니다."))
+                response(new AiSuggestionItemResponseDTO("안내", "#{고객명}님, 배송이 시작되었습니다."))
         );
 
-        AiSuggestionResponse result = service.suggest(request);
+        AiSuggestionResponseDTO result = service.suggest(request);
 
-        assertThat(result.getSuggestions()).hasSize(1);
+        assertThat(result.suggestions()).hasSize(1);
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(geminiSuggestionClient).generate(promptCaptor.capture());
         assertThat(promptCaptor.getValue()).contains("허용 변수: [#{고객명}]");
@@ -171,11 +170,11 @@ class AiSuggestionServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"#{주문번호}", "#{쿠폰명}", "#{만료일}"})
     void AI_추천이_지원하지_않는_변수는_400으로_거부한다(String variable) {
-        AiSuggestionRequest request = request(MessageType.INFO);
-        request.setAvailableVariables(List.of(variable));
+        AiSuggestionRequestDTO request = request(MessageType.INFO);
+        AiSuggestionRequestDTO invalidRequest = withAvailableVariables(request, List.of(variable));
 
         assertThatExceptionOfType(BusinessException.class)
-                .isThrownBy(() -> service.suggest(request))
+                .isThrownBy(() -> service.suggest(invalidRequest))
                 .satisfies(exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
                 );

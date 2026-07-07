@@ -1,11 +1,11 @@
 package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.GeminiSuggestionClient;
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.request.AiSuggestionRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionItem;
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.request.AiSuggestionRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionItemResponseDTO;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
@@ -77,16 +77,16 @@ public class AiSuggestionService {
     private final GeminiSuggestionClient geminiSuggestionClient;
     private final RuleValidationService ruleValidationService;
 
-    public AiSuggestionResponse suggest(AiSuggestionRequest request) {
+    public AiSuggestionResponseDTO suggest(AiSuggestionRequestDTO request) {
         validateRequiredFields(request);
-        List<String> availableVariables = normalizeAvailableVariables(request.getAvailableVariables());
+        List<String> availableVariables = normalizeAvailableVariables(request.availableVariables());
         Set<String> previousFailureRuleIds = new LinkedHashSet<>();
 
         // 통과 후보가 하나라도 있으면 즉시 반환하고, 0개인 경우에만 최대 두 번 재시도한다.
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             String prompt = buildPrompt(request, availableVariables, previousFailureRuleIds);
-            AiSuggestionResponse generated = geminiSuggestionClient.generate(prompt);
-            List<AiSuggestionItem> candidates = generated.getSuggestions();
+            AiSuggestionResponseDTO generated = geminiSuggestionClient.generate(prompt);
+            List<AiSuggestionItemResponseDTO> candidates = generated.suggestions();
 
             ValidationOutcome outcome = validateCandidates(request, availableVariables, candidates);
             log.info(
@@ -99,7 +99,7 @@ public class AiSuggestionService {
             );
 
             if (!outcome.suggestions().isEmpty()) {
-                return new AiSuggestionResponse(outcome.suggestions());
+                return new AiSuggestionResponseDTO(outcome.suggestions());
             }
             // 원문은 재전송하지 않고 안전한 ruleId만 다음 프롬프트의 보정 정보로 사용한다.
             previousFailureRuleIds = outcome.failureRuleIds();
@@ -109,31 +109,31 @@ public class AiSuggestionService {
     }
 
     String buildPrompt(
-            AiSuggestionRequest request,
+            AiSuggestionRequestDTO request,
             List<String> availableVariables,
             Set<String> previousFailureRuleIds
     ) {
-        String channelRules = channelRules(request.getChannels());
-        String messageTypeRules = request.getMessageType() == MessageType.AD
+        String channelRules = channelRules(request.channels());
+        String messageTypeRules = request.messageType() == MessageType.AD
                 ? AD_MESSAGE_TYPE_RULES
                 : INFO_MESSAGE_TYPE_RULES;
-        String category = request.getContextType() == AiContextType.TEMPLATE_CREATE
-                && request.getCategory() != null
-                ? request.getCategory().name()
+        String category = request.contextType() == AiContextType.TEMPLATE_CREATE
+                && request.category() != null
+                ? request.category().name()
                 : "해당 없음";
-        String direction = request.getDirection() == null || request.getDirection().isBlank()
+        String direction = request.direction() == null || request.direction().isBlank()
                 ? "해당 없음"
-                : request.getDirection().trim();
+                : request.direction().trim();
         String retryGuidance = previousFailureRuleIds.isEmpty()
                 ? "최초 시도"
                 : "이전 시도 실패 ruleId: " + String.join(", ", previousFailureRuleIds)
                 + ". 동일한 실패가 발생하지 않도록 수정하십시오.";
 
         return SUGGESTION_PROMPT_TEMPLATE.formatted(
-                request.getContextType(),
-                request.getMessageType(),
-                request.getChannels(),
-                request.getCustomerTags() == null ? List.of() : request.getCustomerTags(),
+                request.contextType(),
+                request.messageType(),
+                request.channels(),
+                request.customerTags() == null ? List.of() : request.customerTags(),
                 direction,
                 category,
                 availableVariables,
@@ -170,15 +170,15 @@ public class AiSuggestionService {
     }
 
     private ValidationOutcome validateCandidates(
-            AiSuggestionRequest request,
+            AiSuggestionRequestDTO request,
             List<String> availableVariables,
-            List<AiSuggestionItem> candidates
+            List<AiSuggestionItemResponseDTO> candidates
     ) {
-        List<AiSuggestionItem> validSuggestions = new ArrayList<>();
+        List<AiSuggestionItemResponseDTO> validSuggestions = new ArrayList<>();
         Set<String> failureRuleIds = new LinkedHashSet<>();
         int passedCount = 0;
 
-        for (AiSuggestionItem candidate : candidates) {
+        for (AiSuggestionItemResponseDTO candidate : candidates) {
             Set<String> candidateFailures = validateCandidate(request, availableVariables, candidate);
             if (candidateFailures.isEmpty()) {
                 passedCount++;
@@ -198,52 +198,55 @@ public class AiSuggestionService {
     }
 
     private Set<String> validateCandidate(
-            AiSuggestionRequest request,
+            AiSuggestionRequestDTO request,
             List<String> availableVariables,
-            AiSuggestionItem candidate
+            AiSuggestionItemResponseDTO candidate
     ) {
         Set<String> failures = new LinkedHashSet<>();
         if (candidate == null) {
             failures.add("NULL_CANDIDATE");
             return failures;
         }
-        if (candidate.getTitle() == null || candidate.getTitle().isBlank()) {
+        if (candidate.title() == null || candidate.title().isBlank()) {
             failures.add("EMPTY_TITLE");
         } else {
             // 제목에는 광고 표기와 수신거부 규칙을 강제하지 않고 공통 안전 룰만 적용한다.
-            failures.addAll(validateText(request, candidate.getTitle(), MessageType.INFO, availableVariables));
+            failures.addAll(validateText(request, candidate.title(), MessageType.INFO, availableVariables));
         }
-        if (candidate.getContent() == null || candidate.getContent().isBlank()) {
+        if (candidate.content() == null || candidate.content().isBlank()) {
             failures.add("EMPTY_CONTENT");
         } else {
             // 본문은 실제 유형으로 검사해 AD인 경우 광고·수신거부 규칙까지 확인한다.
-            failures.addAll(validateText(request, candidate.getContent(), request.getMessageType(), availableVariables));
+            failures.addAll(validateText(request, candidate.content(), request.messageType(), availableVariables));
         }
         return failures;
     }
 
     private Set<String> validateText(
-            AiSuggestionRequest source,
+            AiSuggestionRequestDTO source,
             String text,
             MessageType messageType,
             List<String> availableVariables
     ) {
-        AiReviewRequest reviewRequest = new AiReviewRequest();
-        reviewRequest.setContextType(source.getContextType());
-        reviewRequest.setMessageType(messageType);
-        reviewRequest.setChannels(source.getChannels());
-        reviewRequest.setCustomerTags(source.getCustomerTags());
-        reviewRequest.setTitle(text);
-        reviewRequest.setContent(text);
-        reviewRequest.setAvailableVariables(availableVariables);
-        reviewRequest.setCategory(source.getCategory());
+        AiReviewRequestDTO reviewRequest = new AiReviewRequestDTO(
+                source.contextType(),
+                messageType,
+                source.channels(),
+                source.customerTags(),
+                text,
+                text,
+                availableVariables,
+                source.category(),
+                null,
+                null
+        );
 
-        AiReviewResponse reviewResponse = ruleValidationService.review(reviewRequest);
-        if (reviewResponse.getStatus() == ReviewStatus.PASS) {
+        AiReviewResponseDTO reviewResponse = ruleValidationService.review(reviewRequest);
+        if (reviewResponse.status() == ReviewStatus.PASS) {
             return Set.of();
         }
-        return reviewResponse.getIssues().stream()
-                .map(issue -> issue.getRuleId())
+        return reviewResponse.issues().stream()
+                .map(issue -> issue.ruleId())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
@@ -263,15 +266,15 @@ public class AiSuggestionService {
         return List.copyOf(normalized);
     }
 
-    private void validateRequiredFields(AiSuggestionRequest request) {
+    private void validateRequiredFields(AiSuggestionRequestDTO request) {
         if (request == null
-                || request.getContextType() == null
-                || request.getMessageType() == null
-                || request.getChannels() == null
-                || request.getChannels().isEmpty()
-                || request.getChannels().stream().anyMatch(java.util.Objects::isNull)
-                || (request.getCustomerTags() != null
-                && request.getCustomerTags().stream().anyMatch(tag -> tag == null || tag.isBlank()))) {
+                || request.contextType() == null
+                || request.messageType() == null
+                || request.channels() == null
+                || request.channels().isEmpty()
+                || request.channels().stream().anyMatch(java.util.Objects::isNull)
+                || (request.customerTags() != null
+                && request.customerTags().stream().anyMatch(tag -> tag == null || tag.isBlank()))) {
             throw invalidRequest("추천 요청값이 올바르지 않습니다.");
         }
     }
@@ -281,7 +284,7 @@ public class AiSuggestionService {
     }
 
     private record ValidationOutcome(
-            List<AiSuggestionItem> suggestions,
+            List<AiSuggestionItemResponseDTO> suggestions,
             int passedCount,
             Set<String> failureRuleIds
     ) {

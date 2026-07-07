@@ -1,7 +1,7 @@
 package com.example.smartmessaging.ai.client;
 
 import com.example.smartmessaging.ai.config.OpenAiModerationProperties;
-import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponse;
+import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -90,12 +90,12 @@ class OpenAiModerationClientTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        OpenAiModerationResponse response = client.moderate("검사할 본문");
+        OpenAiModerationResponseDTO response = client.moderate("검사할 본문");
 
-        assertThat(response.getResults()).hasSize(1);
-        assertThat(response.getResults().get(0).getFlagged()).isTrue();
-        assertThat(response.getResults().get(0).getCategories().getHarassment()).isTrue();
-        assertThat(response.getResults().get(0).getCategoryScores().getHarassment()).isEqualTo(0.9);
+        assertThat(response.results()).hasSize(1);
+        assertThat(response.results().get(0).flagged()).isTrue();
+        assertThat(response.results().get(0).categories().harassment()).isTrue();
+        assertThat(response.results().get(0).categoryScores().harassment()).isEqualTo(0.9);
         server.verify();
     }
 
@@ -162,7 +162,7 @@ class OpenAiModerationClientTest {
         when(restTemplate.postForObject(
                 anyString(),
                 any(HttpEntity.class),
-                eq(OpenAiModerationResponse.class)
+                eq(OpenAiModerationResponseDTO.class)
         )).thenThrow(new ResourceAccessException("timeout"));
 
         assertFailureType(TIMEOUT, () -> timeoutClient.moderate("검사할 본문"));

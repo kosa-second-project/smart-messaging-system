@@ -1,6 +1,6 @@
 package com.example.smartmessaging.ai.client;
 
-import com.example.smartmessaging.ai.dto.response.AiSuggestionResponse;
+import com.example.smartmessaging.ai.dto.response.AiSuggestionResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,7 +27,7 @@ public class GeminiSuggestionClient {
         this.objectMapper = objectMapper;
     }
 
-    public AiSuggestionResponse generate(String prompt) {
+    public AiSuggestionResponseDTO generate(String prompt) {
         try {
             String content = chatClient.prompt()
                     .user(prompt)
@@ -43,7 +43,7 @@ public class GeminiSuggestionClient {
         }
     }
 
-    AiSuggestionResponse parseResponse(String content) {
+    AiSuggestionResponseDTO parseResponse(String content) {
         if (content == null || content.isBlank()) {
             throw externalApiException(new IllegalArgumentException("Empty Gemini response"));
         }
@@ -51,8 +51,8 @@ public class GeminiSuggestionClient {
         try {
             // 모델이 지시를 어기고 코드블록이나 설명을 붙여도 JSON 객체 부분만 추출한다.
             String json = extractJson(content);
-            AiSuggestionResponse response = objectMapper.readValue(json, AiSuggestionResponse.class);
-            if (response.getSuggestions() == null) {
+            AiSuggestionResponseDTO response = objectMapper.readValue(json, AiSuggestionResponseDTO.class);
+            if (response.suggestions() == null) {
                 throw new IllegalArgumentException("Missing suggestions array");
             }
             return response;

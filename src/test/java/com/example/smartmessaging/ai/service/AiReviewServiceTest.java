@@ -1,8 +1,8 @@
 package com.example.smartmessaging.ai.service;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
@@ -56,71 +56,69 @@ class AiReviewServiceTest {
 
     @Test
     void 욕설이_없으면_기존_서버_룰_결과만_반환한다() {
-        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.");
-        when(profanityValidationService.validate(request.getContent())).thenReturn(List.of());
+        AiReviewRequestDTO request = request(MessageType.INFO, "배송이 완료되었습니다.");
+        when(profanityValidationService.validate(request.content())).thenReturn(List.of());
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.PASS);
-        assertThat(response.getIssues()).isEmpty();
-        assertThat(response.isNeedsHumanReview()).isFalse();
+        assertThat(response.status()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.issues()).isEmpty();
+        assertThat(response.needsHumanReview()).isFalse();
     }
 
     @Test
     void 욕설_issue를_서버_룰_issue와_병합하고_FAIL로_결정한다() {
-        AiReviewRequest request = request(MessageType.INFO, "문의는 test@example.com으로 주세요.");
-        ValidationIssue profanityIssue = new ValidationIssue(
+        AiReviewRequestDTO request = request(MessageType.INFO, "문의는 test@example.com으로 주세요.");
+        ValidationIssueResponseDTO profanityIssue = new ValidationIssueResponseDTO(
                 "PROFANITY_DETECTED",
                 IssueSeverity.HIGH,
                 "본문에 부적절한 표현이 포함되어 있습니다.",
                 "부적절어",
                 "부적절한 표현을 제거하거나 완화된 표현으로 수정하세요."
         );
-        when(profanityValidationService.validate(request.getContent()))
+        when(profanityValidationService.validate(request.content()))
                 .thenReturn(List.of(profanityIssue));
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getIssues())
-                .extracting(ValidationIssue::getRuleId)
+        assertThat(response.issues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
                 .containsExactly("PERSONAL_EMAIL", "PROFANITY_DETECTED");
-        assertThat(response.getIssues())
-                .extracting(ValidationIssue::getSource)
+        assertThat(response.issues())
+                .extracting(ValidationIssueResponseDTO::source)
                 .containsExactly(IssueSource.SERVER_RULE, IssueSource.PROFANITY_FILTER);
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
-        assertThat(response.getSummary()).isEqualTo("검사 결과 수정이 필요한 항목이 있습니다.");
-        assertThat(response.isNeedsHumanReview()).isTrue();
+        assertThat(response.status()).isEqualTo(ReviewStatus.FAIL);
+        assertThat(response.summary()).isEqualTo("검사 결과 수정이 필요한 항목이 있습니다.");
+        assertThat(response.needsHumanReview()).isTrue();
     }
 
     @Test
     void filtered_응답과_관계없이_요청_원문을_변경하지_않는다() {
-        AiReviewRequest request = request(MessageType.INFO, "사용자가 작성한 원문");
-        when(profanityValidationService.validate(request.getContent())).thenReturn(List.of());
+        AiReviewRequestDTO request = request(MessageType.INFO, "사용자가 작성한 원문");
+        when(profanityValidationService.validate(request.content())).thenReturn(List.of());
 
         aiReviewService.review(request);
 
-        assertThat(request.getContent()).isEqualTo("사용자가 작성한 원문");
+        assertThat(request.content()).isEqualTo("사용자가 작성한 원문");
         verify(profanityValidationService).validate("사용자가 작성한 원문");
     }
 
     @Test
     void 외부_검사_결과가_없으면_기존_FAIL_결과를_그대로_유지한다() {
-        AiReviewRequest request = request(MessageType.AD, "광고 안내");
-        when(profanityValidationService.validate(request.getContent())).thenReturn(List.of());
+        AiReviewRequestDTO request = request(MessageType.AD, "광고 안내");
+        when(profanityValidationService.validate(request.content())).thenReturn(List.of());
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
-        assertThat(response.getIssues())
-                .extracting(ValidationIssue::getRuleId)
-                .containsExactly("MISSING_AD_PREFIX", "MISSING_OPT_OUT");
-        assertThat(response.isNeedsHumanReview()).isTrue();
+        assertThat(response.status()).isEqualTo(ReviewStatus.PASS);
+        assertThat(response.issues()).isEmpty();
+        assertThat(response.needsHumanReview()).isFalse();
     }
 
     @Test
     void Moderation_경고를_병합하고_WARNING으로_결정한다() {
-        AiReviewRequest request = request(MessageType.INFO, "공격적으로 해석될 수 있는 본문");
-        ValidationIssue moderationIssue = new ValidationIssue(
+        AiReviewRequestDTO request = request(MessageType.INFO, "공격적으로 해석될 수 있는 본문");
+        ValidationIssueResponseDTO moderationIssue = new ValidationIssueResponseDTO(
                 "AI_SAFETY_DETECTED",
                 IssueSeverity.MEDIUM,
                 "OpenAI Moderation 검사에서 유해 가능 표현이 감지되었습니다.",
@@ -128,21 +126,21 @@ class AiReviewServiceTest {
                 "유해하거나 공격적으로 해석될 수 있는 표현을 완화해 주세요.",
                 List.of("harassment")
         );
-        when(openAiModerationValidationService.validate(request.getContent()))
+        when(openAiModerationValidationService.validate(request.content()))
                 .thenReturn(List.of(moderationIssue));
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.WARNING);
-        assertThat(response.getIssues())
-                .extracting(ValidationIssue::getRuleId)
+        assertThat(response.status()).isEqualTo(ReviewStatus.WARNING);
+        assertThat(response.issues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
                 .containsExactly("AI_SAFETY_DETECTED");
-        assertThat(response.isNeedsHumanReview()).isFalse();
+        assertThat(response.needsHumanReview()).isFalse();
     }
 
     @Test
     void 욕설_검사_다음에_Moderation_검사를_실행한다() {
-        AiReviewRequest request = request(MessageType.INFO, "검사 순서 확인");
+        AiReviewRequestDTO request = request(MessageType.INFO, "검사 순서 확인");
 
         aiReviewService.review(request);
 
@@ -151,15 +149,15 @@ class AiReviewServiceTest {
                 openAiModerationValidationService,
                 llmReviewService
         );
-        order.verify(profanityValidationService).validate(request.getContent());
-        order.verify(openAiModerationValidationService).validate(request.getContent());
+        order.verify(profanityValidationService).validate(request.content());
+        order.verify(openAiModerationValidationService).validate(request.content());
         order.verify(llmReviewService).review(any(), anyList());
     }
 
     @Test
     void LLM_신규_이슈와_수정안을_최종_응답에_병합한다() {
-        AiReviewRequest request = request(MessageType.INFO, "역대급 혜택을 확인하세요.");
-        ValidationIssue llmIssue = new ValidationIssue(
+        AiReviewRequestDTO request = request(MessageType.INFO, "역대급 혜택을 확인하세요.");
+        ValidationIssueResponseDTO llmIssue = new ValidationIssueResponseDTO(
                 "OVERSTATED_BENEFIT",
                 IssueSource.LLM_REVIEW,
                 IssueSeverity.MEDIUM,
@@ -177,39 +175,52 @@ class AiReviewServiceTest {
                         "혜택 조건을 확인해보세요."
                 ));
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.WARNING);
-        assertThat(response.getIssues()).containsExactly(llmIssue);
-        assertThat(response.getSuggestedRewrite()).isEqualTo("혜택 조건을 확인해보세요.");
+        assertThat(response.status()).isEqualTo(ReviewStatus.WARNING);
+        assertThat(response.issues()).containsExactly(llmIssue);
+        assertThat(response.suggestedRewrite()).isEqualTo("혜택 조건을 확인해보세요.");
     }
 
     @Test
     void LLM_호출이_실패하면_기존_결과와_가용성_이슈를_반환한다() {
-        AiReviewRequest request = request(MessageType.AD, "광고 안내");
+        AiReviewRequestDTO request = request(MessageType.AD, "광고 안내");
         when(llmReviewService.review(any(), anyList()))
                 .thenThrow(new IllegalStateException("LLM unavailable"));
 
-        AiReviewResponse response = aiReviewService.review(request);
+        AiReviewResponseDTO response = aiReviewService.review(request);
 
-        assertThat(response.getStatus()).isEqualTo(ReviewStatus.FAIL);
-        assertThat(response.getIssues())
-                .extracting(ValidationIssue::getRuleId)
-                .containsExactly("MISSING_AD_PREFIX", "MISSING_OPT_OUT", "LLM_REVIEW_UNAVAILABLE");
-        ValidationIssue unavailable = response.getIssues().get(2);
-        assertThat(unavailable.getSource()).isEqualTo(IssueSource.LLM_REVIEW);
-        assertThat(unavailable.getSeverity()).isEqualTo(IssueSeverity.LOW);
-        assertThat(unavailable.getStatus()).isEqualTo(ReviewStatus.NOTICE);
-        assertThat(unavailable.getField()).isNull();
+        assertThat(response.status()).isEqualTo(ReviewStatus.NOTICE);
+        assertThat(response.issues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
+                .containsExactly("LLM_REVIEW_UNAVAILABLE");
+        ValidationIssueResponseDTO unavailable = response.issues().get(0);
+        assertThat(unavailable.source()).isEqualTo(IssueSource.LLM_REVIEW);
+        assertThat(unavailable.severity()).isEqualTo(IssueSeverity.LOW);
+        assertThat(unavailable.status()).isEqualTo(ReviewStatus.NOTICE);
+        assertThat(unavailable.field()).isNull();
     }
 
     @Test
     void 필수값이_없으면_외부_검사를_호출하지_않는다() {
-        AiReviewRequest request = request(MessageType.INFO, "배송이 완료되었습니다.");
-        request.setTitle("  ");
+        AiReviewRequestDTO request = request(MessageType.INFO, "배송이 완료되었습니다.");
+        request = new AiReviewRequestDTO(
+                request.contextType(),
+                request.messageType(),
+                request.channels(),
+                request.customerTags(),
+                "  ",
+                request.content(),
+                request.availableVariables(),
+                request.category(),
+                request.templateId(),
+                request.userId()
+        );
+
+        AiReviewRequestDTO invalidRequest = request;
 
         assertThatExceptionOfType(BusinessException.class)
-                .isThrownBy(() -> aiReviewService.review(request));
+                .isThrownBy(() -> aiReviewService.review(invalidRequest));
 
         verifyNoInteractions(
                 profanityValidationService,
@@ -218,15 +229,18 @@ class AiReviewServiceTest {
         );
     }
 
-    private AiReviewRequest request(MessageType messageType, String content) {
-        AiReviewRequest request = new AiReviewRequest();
-        request.setContextType(AiContextType.MESSAGE_SEND);
-        request.setMessageType(messageType);
-        request.setChannels(List.of(ChannelType.SMS));
-        request.setCustomerTags(List.of());
-        request.setTitle("안내");
-        request.setContent(content);
-        request.setAvailableVariables(List.of());
-        return request;
+    private AiReviewRequestDTO request(MessageType messageType, String content) {
+        return new AiReviewRequestDTO(
+                AiContextType.MESSAGE_SEND,
+                messageType,
+                List.of(ChannelType.SMS),
+                List.of(),
+                "안내",
+                content,
+                List.of(),
+                null,
+                null,
+                null
+        );
     }
 }

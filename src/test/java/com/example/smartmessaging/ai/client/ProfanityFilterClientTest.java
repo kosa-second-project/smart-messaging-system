@@ -1,7 +1,7 @@
 package com.example.smartmessaging.ai.client;
 
 import com.example.smartmessaging.ai.config.ProfanityFilterProperties;
-import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponse;
+import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -62,11 +62,11 @@ class ProfanityFilterClientTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        Optional<ProfanityFilterResponse> response = client.filter("검사할 본문");
+        Optional<ProfanityFilterResponseDTO> response = client.filter("검사할 본문");
 
         assertThat(response).isPresent();
-        assertThat(response.orElseThrow().getStatus().getCode()).isEqualTo(2000);
-        assertThat(response.orElseThrow().getDetected().get(0).getFilteredWord()).isEqualTo("나쁜말");
+        assertThat(response.orElseThrow().status().code()).isEqualTo(2000);
+        assertThat(response.orElseThrow().detected().get(0).filteredWord()).isEqualTo("나쁜말");
         server.verify();
     }
 

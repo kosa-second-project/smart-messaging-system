@@ -1,7 +1,7 @@
 package com.example.smartmessaging.ai.controller;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
 import com.example.smartmessaging.ai.service.AiReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -48,7 +48,7 @@ public class AiMessageController {
             description = "통합 검사 결과",
             content = @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = AiReviewResponse.class),
+                    schema = @Schema(implementation = AiReviewResponseDTO.class),
                     examples = @ExampleObject(
                             name = "LLM 문맥 이슈가 포함된 응답",
                             value = """
@@ -79,7 +79,7 @@ public class AiMessageController {
             required = true,
             content = @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = AiReviewRequest.class),
+                    schema = @Schema(implementation = AiReviewRequestDTO.class),
                     examples = {
                             @ExampleObject(
                                     name = "광고성 메시지 검사 요청",
@@ -90,7 +90,7 @@ public class AiMessageController {
                                               "channels": ["SMS", "KAKAO"],
                                               "customerTags": ["최근구매"],
                                               "title": "6월 여름 할인 이벤트",
-                                              "content": "(광고) #{고객명}님, 6월 특별 여름 세일이 시작되었습니다. 최대 30% 할인 혜택을 확인해보세요. 무료수신거부 080-000-0000",
+                                              "content": "#{고객명}님, 6월 특별 여름 세일이 시작되었습니다. 최대 30% 할인 혜택을 확인해보세요.",
                                               "availableVariables": ["#{고객명}"],
                                               "category": null,
                                               "templateId": null,
@@ -119,8 +119,8 @@ public class AiMessageController {
             )
     )
     @PostMapping("/review")
-    public ResponseEntity<AiReviewResponse> reviewMessage(
-            @org.springframework.web.bind.annotation.RequestBody AiReviewRequest request
+    public ResponseEntity<AiReviewResponseDTO> reviewMessage(
+            @org.springframework.web.bind.annotation.RequestBody AiReviewRequestDTO request
     ) {
         return ResponseEntity.ok(aiReviewService.review(request));
     }

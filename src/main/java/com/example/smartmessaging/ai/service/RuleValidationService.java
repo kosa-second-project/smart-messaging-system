@@ -1,9 +1,9 @@
 package com.example.smartmessaging.ai.service;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.RuleCheckResult;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.RuleCheckResultResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
@@ -75,45 +75,45 @@ public class RuleValidationService {
             "(?<!\\d)\\d{6}-\\d{7}(?!\\d)"
     );
 
-    public AiReviewResponse review(AiReviewRequest request) {
+    public AiReviewResponseDTO review(AiReviewRequestDTO request) {
         // 필수값 검증
         validateRequiredFields(request);
 
         // 실제 룰 검사
-        RuleCheckResult result = validateRules(request);
+        RuleCheckResultResponseDTO result = validateRules(request);
 
         // 최종 status
-        ReviewStatus status = result.getStatus();
+        ReviewStatus status = result.status();
 
         // 문구 재작성은 추후 LLM 단계에서 제공 예정
-        return new AiReviewResponse(
+        return new AiReviewResponseDTO(
                 status,
                 summaryOf(status),
-                result.getIssues(),
+                result.issues(),
                 null,
                 status == ReviewStatus.FAIL
         );
     }
 
-    private void validateRequiredFields(AiReviewRequest request) {
+    private void validateRequiredFields(AiReviewRequestDTO request) {
         if (request == null) {
             throw invalidRequest("검사 요청은 필수입니다.");
         }
-        if (request.getContextType() == null) {
+        if (request.contextType() == null) {
             throw invalidRequest("검사 문맥 유형은 필수입니다.");
         }
-        if (request.getMessageType() == null) {
+        if (request.messageType() == null) {
             throw invalidRequest("메시지 유형은 필수입니다.");
         }
-        if (request.getChannels() == null
-                || request.getChannels().isEmpty()
-                || request.getChannels().stream().anyMatch(java.util.Objects::isNull)) {
+        if (request.channels() == null
+                || request.channels().isEmpty()
+                || request.channels().stream().anyMatch(java.util.Objects::isNull)) {
             throw invalidRequest("검사 채널은 하나 이상 필요합니다.");
         }
-        if (request.getTitle() == null || request.getTitle().isBlank()) {
+        if (request.title() == null || request.title().isBlank()) {
             throw invalidRequest("검사할 메시지 제목은 필수입니다.");
         }
-        if (request.getContent() == null || request.getContent().isBlank()) {
+        if (request.content() == null || request.content().isBlank()) {
             throw invalidRequest("검사할 메시지 내용은 필수입니다.");
         }
     }
@@ -207,7 +207,7 @@ public class RuleValidationService {
     private void checkSupportedVariables(
             String content,
             List<String> availableVariables,
-            List<ValidationIssue> issues
+            List<ValidationIssueResponseDTO> issues
     ) {
         // null/empty는 현재 화면 컨텍스트에서 허용된 변수가 없다는 의미다.
         // 표준 변수라도 이 목록에 없으면 화면별 변수 사용 범위를 지키기 위해 허용하지 않는다.
@@ -219,7 +219,7 @@ public class RuleValidationService {
         while (matcher.find()) {
             String variable = matcher.group();
             if (!SUPPORTED_VARIABLES.contains(variable) || !availableVariableSet.contains(variable)) {
-                issues.add(new ValidationIssue(
+                issues.add(new ValidationIssueResponseDTO(
                         UNSUPPORTED_VARIABLE,
                         IssueSeverity.HIGH,
                         "허용되지 않은 템플릿 변수가 사용되었습니다.",
@@ -232,7 +232,7 @@ public class RuleValidationService {
     }
 
     // 개인정보 패턴 검사
-    private void checkPersonalInformation(String content, List<ValidationIssue> issues) {
+    private void checkPersonalInformation(String content, List<ValidationIssueResponseDTO> issues) {
         // 실제 개인정보인지 DB로 확인하지 않고 본문에 직접 입력된 패턴만 찾는다. #{고객명} 같은 변수는 대상이 아니다.
         addPatternIssue(
                 content,
@@ -266,11 +266,11 @@ public class RuleValidationService {
             String ruleId,
             IssueSeverity severity,
             String message,
-            List<ValidationIssue> issues
+            List<ValidationIssueResponseDTO> issues
     ) {
         Matcher matcher = pattern.matcher(content);
         if (matcher.find()) {
-            issues.add(new ValidationIssue(
+            issues.add(new ValidationIssueResponseDTO(
                     ruleId,
                     severity,
                     message,
@@ -282,17 +282,17 @@ public class RuleValidationService {
 
     // 최종 검사 결과 상태를 결정하는 메서드
     // 각 검사 항목의 심각도(severity)를 기준으로 판단
-    private ReviewStatus determineStatus(List<ValidationIssue> issues) {
+    private ReviewStatus determineStatus(List<ValidationIssueResponseDTO> issues) {
         // HIGH가 하나라도 있을 경우 FAIL
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.HIGH)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.HIGH)) {
             return ReviewStatus.FAIL;
         }
         // HIGH는 없지만 MEDIUM이 있을 경우 WARNING
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.MEDIUM)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.MEDIUM)) {
             return ReviewStatus.WARNING;
         }
         // HIGH, MEDIUM은 없지만 LOW가 있을 경우 NOTICE
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.LOW)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.LOW)) {
             return ReviewStatus.NOTICE;
         }
         // issue가 없을 경우 PASS

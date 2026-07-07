@@ -1,8 +1,8 @@
 package com.example.smartmessaging.ai.controller;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.IssueSource;
@@ -39,18 +39,18 @@ class AiMessageControllerTest {
 
     @Test
     void 정상_요청을_검사하고_점수_없는_응답을_반환한다() throws Exception {
-        ValidationIssue issue = new ValidationIssue(
-                "MISSING_AD_PREFIX",
+        ValidationIssueResponseDTO issue = new ValidationIssueResponseDTO(
+                "PERSONAL_EMAIL",
                 IssueSource.SERVER_RULE,
                 IssueSeverity.HIGH,
                 ReviewStatus.FAIL,
                 "content",
-                "광고성 메시지에는 본문 시작부에 '(광고)' 문구가 필요합니다.",
+                "본문에 이메일 주소로 보이는 값이 포함되어 있습니다.",
                 null,
-                "본문 시작부에 '(광고)'를 추가하세요.",
+                "개인정보를 직접 입력하지 말고 템플릿 변수로 처리하세요.",
                 List.of()
         );
-        AiReviewResponse response = new AiReviewResponse(
+        AiReviewResponseDTO response = new AiReviewResponseDTO(
                 ReviewStatus.FAIL,
                 "검사 결과 반드시 수정해야 하는 항목이 있습니다.",
                 List.of(issue),
@@ -75,7 +75,7 @@ class AiMessageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("FAIL"))
                 .andExpect(jsonPath("$.summary").value("검사 결과 반드시 수정해야 하는 항목이 있습니다."))
-                .andExpect(jsonPath("$.issues[0].ruleId").value("MISSING_AD_PREFIX"))
+                .andExpect(jsonPath("$.issues[0].ruleId").value("PERSONAL_EMAIL"))
                 .andExpect(jsonPath("$.issues[0].source").value("SERVER_RULE"))
                 .andExpect(jsonPath("$.issues[0].status").value("FAIL"))
                 .andExpect(jsonPath("$.issues[0].field").value("content"))
@@ -84,9 +84,9 @@ class AiMessageControllerTest {
                 .andExpect(jsonPath("$.needsHumanReview").value(true))
                 .andExpect(jsonPath("$.overallScore").doesNotExist());
 
-        ArgumentCaptor<AiReviewRequest> requestCaptor = ArgumentCaptor.forClass(AiReviewRequest.class);
+        ArgumentCaptor<AiReviewRequestDTO> requestCaptor = ArgumentCaptor.forClass(AiReviewRequestDTO.class);
         verify(aiReviewService).review(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().getChannels())
+        assertThat(requestCaptor.getValue().channels())
                 .containsExactly(ChannelType.SMS, ChannelType.LMS, ChannelType.KAKAO);
     }
 }

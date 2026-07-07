@@ -2,8 +2,8 @@ package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.OpenAiModerationClient;
 import com.example.smartmessaging.ai.client.OpenAiModerationException;
-import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.response.OpenAiModerationResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,20 +43,17 @@ class OpenAiModerationValidationServiceTest {
 
     @Test
     void flagged가_true이면_true인_category만_경고_issue에_추가한다() {
-        OpenAiModerationResponse.Categories categories = new OpenAiModerationResponse.Categories();
-        categories.setHarassment(true);
-        categories.setHate(false);
-        categories.setViolenceGraphic(true);
+        OpenAiModerationResponseDTO.Categories categories = new OpenAiModerationResponseDTO.Categories(true, null, false, null, null, null, null, null, null, null, null, null, true);
         when(client.moderate("검사 본문")).thenReturn(response(true, categories));
 
-        List<ValidationIssue> issues = service.validate("검사 본문");
+        List<ValidationIssueResponseDTO> issues = service.validate("검사 본문");
 
         assertThat(issues).hasSize(1);
-        ValidationIssue issue = issues.get(0);
-        assertThat(issue.getRuleId()).isEqualTo("AI_SAFETY_DETECTED");
-        assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.MEDIUM);
-        assertThat(issue.getTargetText()).isEqualTo("harassment, violence/graphic");
-        assertThat(issue.getDetail()).containsExactly("harassment", "violence/graphic");
+        ValidationIssueResponseDTO issue = issues.get(0);
+        assertThat(issue.ruleId()).isEqualTo("AI_SAFETY_DETECTED");
+        assertThat(issue.severity()).isEqualTo(IssueSeverity.MEDIUM);
+        assertThat(issue.targetText()).isEqualTo("harassment, violence/graphic");
+        assertThat(issue.detail()).containsExactly("harassment", "violence/graphic");
     }
 
     @ParameterizedTest
@@ -67,26 +64,25 @@ class OpenAiModerationValidationServiceTest {
         when(client.moderate("검사 본문"))
                 .thenThrow(new OpenAiModerationException(failureType));
 
-        List<ValidationIssue> issues = service.validate("검사 본문");
+        List<ValidationIssueResponseDTO> issues = service.validate("검사 본문");
 
         assertThat(issues).hasSize(1);
-        ValidationIssue issue = issues.get(0);
-        assertThat(issue.getRuleId()).isEqualTo("MODERATION_UNAVAILABLE");
-        assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.MEDIUM);
-        assertThat(issue.getTargetText()).isNull();
-        assertThat(issue.getDetail()).containsExactly(failureType.name());
+        ValidationIssueResponseDTO issue = issues.get(0);
+        assertThat(issue.ruleId()).isEqualTo("MODERATION_UNAVAILABLE");
+        assertThat(issue.severity()).isEqualTo(IssueSeverity.MEDIUM);
+        assertThat(issue.targetText()).isNull();
+        assertThat(issue.detail()).containsExactly(failureType.name());
     }
 
     @Test
     void results가_비어_있으면_PARSING_ERROR_경고로_복구한다() {
-        OpenAiModerationResponse response = new OpenAiModerationResponse();
-        response.setResults(List.of());
+        OpenAiModerationResponseDTO response = new OpenAiModerationResponseDTO(null, null, List.of());
         when(client.moderate("검사 본문")).thenReturn(response);
 
-        ValidationIssue issue = service.validate("검사 본문").get(0);
+        ValidationIssueResponseDTO issue = service.validate("검사 본문").get(0);
 
-        assertThat(issue.getRuleId()).isEqualTo("MODERATION_UNAVAILABLE");
-        assertThat(issue.getDetail()).containsExactly("PARSING_ERROR");
+        assertThat(issue.ruleId()).isEqualTo("MODERATION_UNAVAILABLE");
+        assertThat(issue.detail()).containsExactly("PARSING_ERROR");
     }
 
     @Test
@@ -94,10 +90,10 @@ class OpenAiModerationValidationServiceTest {
         when(client.moderate("검사 본문"))
                 .thenThrow(new IllegalStateException("unexpected failure"));
 
-        ValidationIssue issue = service.validate("검사 본문").get(0);
+        ValidationIssueResponseDTO issue = service.validate("검사 본문").get(0);
 
-        assertThat(issue.getRuleId()).isEqualTo("MODERATION_UNAVAILABLE");
-        assertThat(issue.getDetail()).containsExactly("API_ERROR");
+        assertThat(issue.ruleId()).isEqualTo("MODERATION_UNAVAILABLE");
+        assertThat(issue.detail()).containsExactly("API_ERROR");
         assertThat(output.getOut())
                 .containsOnlyOnce("OpenAI Moderation 검사 중 예상하지 못한 오류가 발생했습니다.")
                 .contains("exceptionType=IllegalStateException")
@@ -105,16 +101,11 @@ class OpenAiModerationValidationServiceTest {
                 .doesNotContain("OpenAI Moderation 검사를 완료하지 못했습니다.");
     }
 
-    private OpenAiModerationResponse response(
+    private OpenAiModerationResponseDTO response(
             boolean flagged,
-            OpenAiModerationResponse.Categories categories
+            OpenAiModerationResponseDTO.Categories categories
     ) {
-        OpenAiModerationResponse.Result result = new OpenAiModerationResponse.Result();
-        result.setFlagged(flagged);
-        result.setCategories(categories);
-
-        OpenAiModerationResponse response = new OpenAiModerationResponse();
-        response.setResults(List.of(result));
-        return response;
+        OpenAiModerationResponseDTO.Result result = new OpenAiModerationResponseDTO.Result(flagged, categories, null);
+        return new OpenAiModerationResponseDTO(null, null, List.of(result));
     }
 }
