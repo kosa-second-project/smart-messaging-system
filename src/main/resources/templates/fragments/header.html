@@ -7,19 +7,17 @@
         </button>
         <h1 class="app-header__title" th:text="${pageTitle ?: '스마트 메시징 시스템'}">스마트 메시징 시스템</h1>
     </div>
-    <div class="app-header__right">
-        <!-- 카카오 토큰이 없는 경우: 연동 유도 -->
-        <a th:if="${session.kakaoAccessToken == null}" th:href="@{/kakao/login}" class="app-header__user no-underline-link" title="카카오 로그인 연동">
-            <span class="app-header__avatar app-header__avatar--unlinked">?</span>
-            <span class="d-none d-sm-inline">카카오 연동 필요</span>
+    <div class="app-header__right" th:with="displayName=${#authentication?.principal?.name ?: '사용자'}">
+        <a th:href="@{/kakao/login}"
+           class="app-header__profile-link no-underline-link"
+           title="카카오 로그인 연동"
+           aria-label="카카오 로그인 연동">
+            <img class="app-header__profile-image"
+                 th:src="@{/images/default-profile.svg}"
+                 alt="프로필 사진">
         </a>
-        <!-- 카카오 토큰이 있는 경우: 연동 완료 표시 -->
-        <div th:if="${session.kakaoAccessToken != null}" class="app-header__user no-underline-link" title="카카오 연동 완료">
-            <span class="app-header__avatar app-header__avatar--linked">K</span>
-            <span class="d-none d-sm-inline">카카오톡 연결됨</span>
-        </div>
-        <!-- 로그아웃 버튼을 시큐리티 로그아웃 GET 주소(/auth/logout) 링크로 연동 -->
-        <a th:href="@{/auth/logout}" class="ds-button ds-button--outline ds-button--sm" >로그아웃</a>
+        <span class="app-header__profile-name d-none d-sm-inline" th:text="${displayName}">사용자</span>
+        <a th:href="@{/auth/logout}" class="ds-button ds-button--outline ds-button--sm">로그아웃</a>
     </div>
 </header>
 </html>

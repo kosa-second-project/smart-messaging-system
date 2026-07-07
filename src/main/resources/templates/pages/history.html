@@ -6,83 +6,99 @@
     <title>전송 기록</title>
 </head>
 <main layout:fragment="content" class="page history-page">
-    <form id="historySearchForm" class="history-filter" method="get" th:action="@{/history}"
+    <form id="historySearchForm" class="history-filter ds-filter-panel" method="get" th:action="@{/history}"
           th:object="${searchCondition}">
-        <div class="history-filter__controls">
-            <label class="history-search">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                </svg>
-                <span class="visually-hidden">전송 기록 검색</span>
-                <input class="ds-input" type="search" th:field="*{keyword}"
-                       placeholder="제목, 내용, 태그 검색..." autocomplete="off">
-            </label>
-
-            <label class="history-filter__select">
-                <span class="visually-hidden">채널</span>
-                <select class="ds-select" th:field="*{channelId}" data-auto-submit>
-                    <option value="">전체 채널</option>
-                    <option th:each="channel : ${channels}" th:value="${channel.id}" th:text="${channel.label}"></option>
-                </select>
-            </label>
-
-            <label class="history-filter__select">
-                <span class="visually-hidden">상태</span>
-                <select class="ds-select" th:field="*{status}" data-auto-submit>
-                    <option value="">전체 상태</option>
-                    <option th:each="statusOption : ${statuses}"
-                            th:value="${statusOption.value}"
-                            th:text="${statusOption.label}"></option>
-                </select>
-            </label>
-
-            <label class="history-filter__select">
-                <span class="visually-hidden">광고 여부</span>
-                <select class="ds-select" th:field="*{purpose}" data-auto-submit>
-                    <option value="">전체 광고여부</option>
-                    <option th:each="purposeOption : ${purposes}"
-                            th:value="${purposeOption}"
-                            th:text="${#strings.equalsIgnoreCase(purposeOption, 'INFO') ? '정보성' : (#strings.equalsIgnoreCase(purposeOption, 'AD') ? '광고성' : purposeOption)}"></option>
-                </select>
-            </label>
-
-            <label class="history-filter__sort">
-                <span class="visually-hidden">정렬 기준</span>
-                <select class="ds-select" th:field="*{sort}" data-auto-submit>
-                    <option value="latest">최신순</option>
-                    <option value="oldest">오래된순</option>
-                    <option value="mostSent">발송많은순</option>
-                    <option value="highestSuccessRate">성공률높은순</option>
-                </select>
-            </label>
-
-            <div class="history-filter__period" aria-label="발송 기간">
-                <label>
-                    <span class="visually-hidden">시작일</span>
-                    <input class="ds-input" type="date" th:field="*{startDate}">
+        <div class="ds-filter-row ds-filter-row--split">
+            <div class="ds-filter-group">
+                <label class="history-search ds-filter-search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span class="visually-hidden">전송 기록 검색</span>
+                    <input class="ds-input" type="search" th:field="*{keyword}"
+                           placeholder="제목, 내용, 태그 검색..." autocomplete="off">
                 </label>
-                <span aria-hidden="true">~</span>
-                <label>
-                    <span class="visually-hidden">종료일</span>
-                    <input class="ds-input" type="date" th:field="*{endDate}">
+
+                <div class="ds-multiselect" data-multiselect data-placeholder="전체 채널">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 채널</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu>
+                        <label class="ds-multiselect__option" th:each="channel : ${channels}">
+                            <input type="checkbox" name="channelIds" th:value="${channel.id}"
+                                   th:checked="${#lists.contains(searchCondition.channelIds, channel.id)}"
+                                   th:attr="data-label=${channel.label}">
+                            <span th:text="${channel.label}">채널</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ds-multiselect" data-multiselect data-placeholder="전체 상태">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 상태</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu>
+                        <label class="ds-multiselect__option" th:each="statusOption : ${statuses}">
+                            <input type="checkbox" name="statuses" th:value="${statusOption.value}"
+                                   th:checked="${#lists.contains(searchCondition.statuses, statusOption.value)}"
+                                   th:attr="data-label=${statusOption.label}">
+                            <span th:text="${statusOption.label}">상태</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ds-multiselect" data-multiselect data-placeholder="전체 광고여부">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 광고여부</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu>
+                        <label class="ds-multiselect__option" th:each="purposeOption : ${purposes}">
+                            <input type="checkbox" name="purposes" th:value="${purposeOption}"
+                                   th:checked="${#lists.contains(searchCondition.purposes, purposeOption)}"
+                                   th:attr="data-label=${#strings.equalsIgnoreCase(purposeOption, 'INFO') ? '정보성' : (#strings.equalsIgnoreCase(purposeOption, 'AD') ? '광고성' : purposeOption)}">
+                            <span th:text="${#strings.equalsIgnoreCase(purposeOption, 'INFO') ? '정보성' : (#strings.equalsIgnoreCase(purposeOption, 'AD') ? '광고성' : purposeOption)}">광고여부</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ds-multiselect" data-multiselect data-placeholder="전체 태그">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 태그</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu>
+                        <label class="ds-multiselect__option" th:each="tag : ${tags}">
+                            <input type="checkbox" name="tagIds" th:value="${tag.id}"
+                                   th:checked="${#lists.contains(searchCondition.tagIds, tag.id)}"
+                                   th:attr="data-label=${tag.label}">
+                            <span th:text="${tag.label}">태그</span>
+                        </label>
+                    </div>
+                </div>
+
+                <label class="history-filter__sort">
+                    <span class="visually-hidden">정렬 기준</span>
+                    <select class="ds-select" th:field="*{sort}" data-auto-submit>
+                        <option value="latest">최신순</option>
+                        <option value="oldest">오래된순</option>
+                        <option value="mostSent">발송많은순</option>
+                        <option value="highestSuccessRate">성공률높은순</option>
+                    </select>
                 </label>
+
+                <div class="ds-filter-period" aria-label="발송 기간">
+                    <label>
+                        <span class="visually-hidden">시작일</span>
+                        <input class="ds-input" type="date" th:field="*{startDate}" data-auto-submit>
+                    </label>
+                    <span aria-hidden="true">~</span>
+                    <label>
+                        <span class="visually-hidden">종료일</span>
+                        <input class="ds-input" type="date" th:field="*{endDate}" data-auto-submit>
+                    </label>
+                </div>
+                <a class="ds-button ds-button--ghost" th:href="@{/history}">초기화</a>
             </div>
-
-            <button class="ds-button ds-button--primary history-filter__submit" type="submit">조회</button>
-            <a class="ds-button ds-button--ghost" th:href="@{/history}">초기화</a>
-        </div>
-
-        <div class="history-tags" aria-label="태그 필터">
-            <a class="history-tag"
-               th:classappend="${searchCondition.tagIds.isEmpty()} ? ' is-active'"
-               th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=1)}">전체</a>
-            <label class="history-tag" th:each="tag : ${tags}"
-                   th:classappend="${#lists.contains(searchCondition.tagIds, tag.id)} ? ' is-active'">
-                <input class="history-tag__input" type="checkbox" th:field="*{tagIds}"
-                       th:value="${tag.id}" data-tag-submit>
-                <span th:text="${tag.label}">태그</span>
-            </label>
         </div>
     </form>
 
@@ -151,20 +167,42 @@
         <nav class="ds-pagination" th:if="${historyPage.totalPages > 0}" aria-label="전송 기록 페이지">
             <span class="ds-pagination__summary"
                   th:text="'총 ' + ${#numbers.formatInteger(historyPage.totalElements, 1, 'COMMA')} + '건 중 ' + ${historyPage.startElement} + '-' + ${historyPage.endElement}">총 40건 중 1-10</span>
-            <div class="ds-pagination__pages">
-                <a class="ds-page-button" th:if="${historyPage.hasPrevious}" aria-label="이전 페이지"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${historyPage.currentPage - 1})}">‹</a>
-                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasPrevious}" aria-hidden="true">‹</span>
+            <div class="ds-pagination__actions">
+                <div class="ds-pagination__pages">
+                    <a class="ds-page-button" th:if="${historyPage.hasPrevious}" aria-label="이전 페이지"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${historyPage.currentPage - 1})}">이전</a>
+                    <span class="ds-page-button is-disabled" th:unless="${historyPage.hasPrevious}" aria-hidden="true">이전</span>
 
-                <a class="ds-page-button" th:each="pageNumber : ${#numbers.sequence(historyPage.startPage, historyPage.endPage)}"
-                   th:classappend="${pageNumber == historyPage.currentPage} ? ' is-active'"
-                   th:text="${pageNumber}"
-                   th:aria-current="${pageNumber == historyPage.currentPage} ? 'page'"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${pageNumber})}">1</a>
+                    <a class="ds-page-button" th:each="pageNumber : ${#numbers.sequence(historyPage.startPage, historyPage.endPage)}"
+                       th:classappend="${pageNumber == historyPage.currentPage} ? ' is-active'"
+                       th:text="${pageNumber}"
+                       th:aria-current="${pageNumber == historyPage.currentPage} ? 'page'"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${pageNumber})}">1</a>
 
-                <a class="ds-page-button" th:if="${historyPage.hasNext}" aria-label="다음 페이지"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelId=${searchCondition.channelId},status=${searchCondition.status},purpose=${searchCondition.purpose},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},page=${historyPage.currentPage + 1})}">›</a>
-                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasNext}" aria-hidden="true">›</span>
+                    <a class="ds-page-button" th:if="${historyPage.hasNext}" aria-label="다음 페이지"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${historyPage.currentPage + 1})}">다음</a>
+                    <span class="ds-page-button is-disabled" th:unless="${historyPage.hasNext}" aria-hidden="true">다음</span>
+                </div>
+
+                <form class="ds-pagination__size" method="get" th:action="@{/history}">
+                    <input type="hidden" name="keyword" th:value="${searchCondition.keyword}">
+                    <input type="hidden" name="sort" th:value="${searchCondition.sort}">
+                    <input type="hidden" name="startDate" th:value="${searchCondition.startDate}">
+                    <input type="hidden" name="endDate" th:value="${searchCondition.endDate}">
+                    <input type="hidden" name="page" value="1">
+                    <input th:each="channelId : ${searchCondition.channelIds}" type="hidden" name="channelIds" th:value="${channelId}">
+                    <input th:each="status : ${searchCondition.statuses}" type="hidden" name="statuses" th:value="${status}">
+                    <input th:each="purpose : ${searchCondition.purposes}" type="hidden" name="purposes" th:value="${purpose}">
+                    <input th:each="tagId : ${searchCondition.tagIds}" type="hidden" name="tagIds" th:value="${tagId}">
+                    <span>페이지 당 보기</span>
+                    <select class="ds-select ds-pagination__size-select" name="size" aria-label="페이지 크기"
+                            onchange="this.form.submit()">
+                        <option value="10" th:selected="${historyPage.pageSize == 10}">10개</option>
+                        <option value="20" th:selected="${historyPage.pageSize == 20}">20개</option>
+                        <option value="50" th:selected="${historyPage.pageSize == 50}">50개</option>
+                        <option value="100" th:selected="${historyPage.pageSize == 100}">100개</option>
+                    </select>
+                </form>
             </div>
         </nav>
     </section>

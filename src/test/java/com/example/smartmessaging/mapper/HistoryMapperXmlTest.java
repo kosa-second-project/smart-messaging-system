@@ -80,9 +80,11 @@ class HistoryMapperXmlTest {
 
         assertThat(mapperXml)
                 .contains("NVL(sh.is_deleted, 0) = 0",
-                        "shr.priority_order AS attempt_order",
+                        "WITH attempt_orders AS (",
+                        "SELECT DISTINCT sa.attempt_order",
+                        "ao.attempt_order AS attempt_order",
                         "c.channel_type AS channel_name",
-                        "LEFT JOIN (",
+                        "LEFT JOIN attempt_counts ac",
                         "COUNT(sa.id) AS request_count",
                         "NVL(st.is_deleted, 0) = 0",
                         "NVL(sa.is_deleted, 0) = 0",
@@ -90,11 +92,10 @@ class HistoryMapperXmlTest {
                         "NVL(shr.is_deleted, 0) = 0",
                         "COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END)",
                         "COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END)",
-                        "GROUP BY st.send_history_id, sa.channel_id",
-                        "attempt_counts.send_history_id = shr.send_history_id",
-                        "attempt_counts.channel_id = shr.channel_id",
-                        "ORDER BY shr.priority_order ASC")
-                .doesNotContain("GROUP BY sa.attempt_order")
+                        "GROUP BY sa.attempt_order, sa.channel_id",
+                        "ac.attempt_order = ao.attempt_order",
+                        "ac.channel_id = shr.channel_id",
+                        "ORDER BY ao.attempt_order ASC, shr.priority_order ASC")
                 .doesNotContain("fail_reason");
     }
 

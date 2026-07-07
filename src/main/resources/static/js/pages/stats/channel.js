@@ -30,7 +30,7 @@ function loadChannelStats(state) {
         }, {
             channelSuccessRate: {
                 kind: "horizontalBar",
-                xMin: 96,
+                xMin: 0,
                 xMax: 100,
                 tooltipSuffix: "%",
                 yFormatter: function(value) {

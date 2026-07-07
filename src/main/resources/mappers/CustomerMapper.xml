@@ -23,6 +23,37 @@
         <result property="emailConsent" column="emailConsent"/>
     </resultMap>
 
+    <sql id="manageTagFilterConditions">
+        <if test="tagIds != null and tagIds.size() > 0">
+            <choose>
+                <when test="matchType == 'ALL' or matchType == 'AND'">
+                    AND c.id IN (
+                        SELECT customer_id
+                        FROM customer_tag_mapping
+                        WHERE tag_id IN
+                        <foreach item="tagId" collection="tagIds" open="(" separator="," close=")">
+                            #{tagId}
+                        </foreach>
+                          AND is_deleted = 0
+                        GROUP BY customer_id
+                        HAVING COUNT(DISTINCT tag_id) = #{tagCount}
+                    )
+                </when>
+                <otherwise>
+                    AND c.id IN (
+                        SELECT customer_id
+                        FROM customer_tag_mapping
+                        WHERE tag_id IN
+                        <foreach item="tagId" collection="tagIds" open="(" separator="," close=")">
+                            #{tagId}
+                        </foreach>
+                          AND is_deleted = 0
+                    )
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
     <!-- 1-1. 단일 고객 상세 조회 -->
     <select id="selectCustomerById" resultMap="CustomerResultMap" parameterType="long">
         SELECT
@@ -109,6 +140,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 고객 유형 필터 (일반, 신규, 휴면 - 실시간 계산식 매칭) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -135,6 +185,7 @@
             AND t.is_deleted = 0
             )
         </if>
+        <include refid="manageTagFilterConditions"/>
         ORDER BY
         <choose>
             <when test="sortOrder == 'name'">
@@ -169,6 +220,25 @@
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -193,6 +263,7 @@
             AND t.is_deleted = 0
             )
         </if>
+        <include refid="manageTagFilterConditions"/>
     </select>
 
     <!-- 3-1. 고객 유형별 집계 통계 조회 -->
@@ -254,6 +325,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -269,6 +359,7 @@
                 </when>
             </choose>
         </if>
+        <include refid="manageTagFilterConditions"/>
         ORDER BY
         <choose>
             <when test="sortOrder == 'name'">
@@ -301,6 +392,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -316,21 +426,13 @@
                 </when>
             </choose>
         </if>
+        <include refid="manageTagFilterConditions"/>
     </select>
 
-    <!-- 공통 WHERE 조건 (휴면 제외, 광고 차단 제외, 수신 동의, 키워드/태그 필터) -->
+    <!-- 공통 WHERE 조건 (광고 차단 제외, 수신 동의, 키워드/태그 필터) -->
     <sql id="commonWhereConditions">
         AND NVL(is_deleted, 0) = 0
         AND NVL(is_ad_blocked, 0) = 0
-        AND (customer_type IS NULL OR customer_type != '휴면')
-        <if test="dormantTagId != null">
-            AND id NOT IN (
-                SELECT customer_id
-                FROM   customer_tag_mapping
-                WHERE  tag_id = #{dormantTagId}
-                AND  is_deleted = 0
-            )
-        </if>
         <if test="consentTagIds != null and consentTagIds.size() > 0">
             AND id IN (
                 SELECT customer_id

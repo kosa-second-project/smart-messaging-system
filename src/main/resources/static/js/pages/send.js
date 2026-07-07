@@ -145,6 +145,9 @@ const SendPage = {
                 $("#messageContent").focus();
                 return;
             }
+            if (typeof MessageComposer !== "undefined" && !MessageComposer.validateMessageLength()) {
+                return;
+            }
             sessionStorage.setItem("messageTitle", messageTitle);
             sessionStorage.setItem("messageContent", messageContent);
             sessionStorage.setItem("messagePurpose", $(".purpose-btn.active").data("val") || "INFO");

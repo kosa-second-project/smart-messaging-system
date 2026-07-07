@@ -185,16 +185,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private void applySystemTagIds(CustomerSearchRequest request) {
         List<TagVO> tags = customerMapper.findAllTags();
-        request.setDormantTagId(findTagId(tags, Set.of("휴면")));
         request.setConsentTagIds(findTagIds(tags, Set.of("카카오 동의", "sms 동의", "SMS 동의", "이메일 동의")));
-    }
-
-    private Long findTagId(List<TagVO> tags, Set<String> names) {
-        return tags.stream()
-                .filter(tag -> tag.getName() != null && names.contains(tag.getName().trim()))
-                .map(TagVO::getId)
-                .findFirst()
-                .orElse(null);
     }
 
     private List<Long> findTagIds(List<TagVO> tags, Set<String> names) {

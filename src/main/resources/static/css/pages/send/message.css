@@ -145,20 +145,27 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .channel-card {
-    display: flex;
+    display: grid;
+    grid-template-columns: 24px 34px minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0.65rem 0.75rem;
     background-color: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     cursor: grab;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     position: relative;
+}
+
+.channel-card:hover {
+    border-color: var(--primary-300);
+    background-color: var(--primary-50);
 }
 
 .channel-card:active {
@@ -166,10 +173,12 @@
 }
 
 .channel-card.dragging {
-    opacity: 0.6;
+    opacity: 0.72;
     border-style: dashed;
     border-color: var(--primary-500);
     background-color: var(--primary-50);
+    box-shadow: var(--shadow-md);
+    transform: scale(0.99);
 }
 
 .channel-card.disabled {
@@ -180,54 +189,85 @@
 
 .channel-info {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
 }
 
 .drag-handle {
+    width: 24px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--muted-foreground);
-    font-size: 1.2rem;
+    font-size: 0.95rem;
+    line-height: 1;
     cursor: inherit;
+}
+
+.channel-rank {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-full);
+    background-color: var(--primary-50);
+    color: var(--primary-700);
+    font-size: 0.9rem;
+    font-weight: var(--font-weight-bold);
 }
 
 .channel-name {
     font-weight: var(--font-weight-bold);
-    font-size: 1.1rem;
-    width: auto;
-    min-width: 80px;
+    font-size: 0.95rem;
+    width: 100%;
+    min-width: 0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .channel-meta {
     color: var(--muted-foreground);
-    font-size: 0.9rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
 }
 
 /* 우선순위 배지 그라데이션 */
 .priority-badge {
-    padding: 0.4rem 1rem;
+    min-width: 54px;
+    padding: 0.25rem 0.55rem;
     border-radius: var(--radius-full);
     font-weight: var(--font-weight-bold);
-    color: white;
-    font-size: 0.9rem;
+    color: var(--foreground);
+    font-size: 0.76rem;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .priority-1 {
-    background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
-    box-shadow: 0 4px 15px 0 rgba(255, 65, 108, 0.4);
+    background: #fff1f2;
+    color: #be123c;
 }
 
 .priority-2 {
-    background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%);
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 .priority-3 {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    background: #ecfdf5;
+    color: #047857;
 }
 
 .priority-disabled {
-    background-color: var(--muted-foreground);
-    color: white;
+    background-color: var(--muted);
+    color: var(--muted-foreground);
 }
 
 /* 입력 영역 */
@@ -266,6 +306,11 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.byte-counter--error {
+    color: var(--destructive);
+    border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent);
 }
 
 .msg-type-badge--lms {
@@ -963,17 +1008,30 @@
     resize: none;
 }
 
-.preview-wrapper {
-    width: 100%;
+.preview-wrapper,
+.preview-phone-frame {
+    max-width: 100%;
 }
 
-.preview-section #phonePreviewBox {
-    width: min(320px, 100%);
-    height: clamp(460px, 58dvh, 620px);
+.preview-phone-frame {
+    --send-preview-scale: 0.84;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: calc(393px * var(--send-preview-scale));
+    height: calc(852px * var(--send-preview-scale));
+    min-width: 0;
+    overflow: visible;
 }
 
-.preview-section .preview-status-bar {
-    flex: 0 0 82px;
+.preview-phone-frame #phonePreviewBox {
+    width: 393px;
+    flex: 0 0 393px;
+    max-width: none;
+    aspect-ratio: 393 / 852;
+    height: 852px;
+    transform: scale(var(--send-preview-scale));
+    transform-origin: top center;
 }
 
 .preview-section .preview-body {
@@ -1024,11 +1082,13 @@
     }
 
     .channel-card {
-        padding: 0.875rem 1rem;
+        grid-template-columns: 22px 32px minmax(0, 1fr) auto;
+        gap: 0.6rem;
+        padding: 0.6rem 0.7rem;
     }
 
     .channel-info {
-        gap: 0.75rem;
+        gap: 0.15rem;
     }
 }
 
@@ -1041,7 +1101,7 @@
         max-height: 360px;
     }
 
-    .preview-section #phonePreviewBox {
-        height: 560px;
+    .preview-phone-frame {
+        --send-preview-scale: 0.78;
     }
 }

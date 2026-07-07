@@ -22,7 +22,7 @@ class SmsMessageTypeResolverTest {
                 쿠폰 보기
                 http://localhost:8080/r/abc
 
-                수신거부를 원하시면 아래 링크를 눌러주세요.
+                수신거부:
                 http://localhost:8080/u/def""");
     }
 

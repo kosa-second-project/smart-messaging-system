@@ -6,6 +6,7 @@ import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,6 +31,31 @@ class TemplateMapperXmlTest {
         assertThat(configuration.hasStatement(
                 "com.example.smartmessaging.service.repository.TemplateMapper.selectTagOptions"
         )).isFalse();
+    }
+
+    @Test
+    void default_sort_orders_by_updated_at_then_created_at() throws Exception {
+        String mapper = new String(
+                Resources.getResourceAsStream(RESOURCE).readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(mapper)
+                .contains("t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST, t.id DESC");
+    }
+
+    @Test
+    void detail_query_calculates_click_and_conversion_rates() throws Exception {
+        String mapper = new String(
+                Resources.getResourceAsStream(RESOURCE).readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(mapper)
+                .contains("AS click_rate",
+                        "AS conversion_rate",
+                        "SUM(NVL(click_count, 0)) / SUM(NVL(click_target_count, 0))",
+                        "SUM(NVL(conversion_count, 0)) / SUM(NVL(conversion_target_count, 0))");
     }
 
     private void parseMapper(Configuration configuration, String resource) throws Exception {

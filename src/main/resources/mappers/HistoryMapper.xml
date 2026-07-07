@@ -89,20 +89,29 @@
                 )
             )
         </if>
-        <if test="channelId != null">
+        <if test="channelIds != null and !channelIds.isEmpty()">
             AND EXISTS (
                 SELECT 1
                 FROM send_history_routing shr
                 WHERE shr.send_history_id = sh.id
-                  AND shr.channel_id = #{channelId}
+                  AND shr.channel_id IN
+                <foreach collection="channelIds" item="channelIdItem" open="(" separator="," close=")">
+                    #{channelIdItem}
+                </foreach>
                   AND NVL(shr.is_deleted, 0) = 0
             )
         </if>
-        <if test="status != null">
-            AND sh.status = #{status}
+        <if test="statuses != null and !statuses.isEmpty()">
+            AND sh.status IN
+            <foreach collection="statuses" item="statusItem" open="(" separator="," close=")">
+                #{statusItem}
+            </foreach>
         </if>
-        <if test="purpose != null">
-            AND sh.purpose = #{purpose}
+        <if test="purposes != null and !purposes.isEmpty()">
+            AND sh.purpose IN
+            <foreach collection="purposes" item="purposeItem" open="(" separator="," close=")">
+                #{purposeItem}
+            </foreach>
         </if>
         <if test="tagIds != null and !tagIds.isEmpty()">
             AND (

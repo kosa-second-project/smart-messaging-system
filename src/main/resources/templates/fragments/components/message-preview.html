@@ -1,21 +1,30 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="preview" class="message-preview mode-sms" id="phonePreviewBox">
+<div th:fragment="preview" class="message-preview mode-sms" id="phonePreviewBox" aria-label="메시지 미리보기">
     <div class="preview-status-bar">
-        <span class="time">9:41</span>
-        <div class="notch"></div>
-        <div class="status-icons">
-            <span class="icon-signal">LTE</span>
-            <span class="icon-battery">100%</span>
+        <span class="preview-time">9:41</span>
+        <div class="dynamic-island" aria-hidden="true"></div>
+        <div class="status-icons" aria-hidden="true">
+            <span class="signal-bars"><i></i><i></i><i></i><i></i></span>
+            <span class="network-label">5G</span>
+            <span class="battery-icon"></span>
         </div>
-        <div class="app-title title-kakao">카카오톡</div>
-        <div class="app-title title-email">Mail</div>
     </div>
 
     <div class="preview-body view-sms">
-        <div class="preview-sender">010-0000-0000</div>
-        <div class="bubble-wrap">
+        <div class="sms-app-bar">
+            <span class="sms-back">‹</span>
+            <div class="sms-contact">
+                <div class="sms-avatar">S</div>
+                <div>
+                    <div class="sms-contact-name">스마트 메시징</div>
+                    <div class="sms-contact-meta">문자 메시지</div>
+                </div>
+            </div>
+        </div>
+        <div class="sms-date-divider">오늘 오전 9:41</div>
+        <div class="bubble-wrap bubble-wrap--received">
             <div class="bubble sms-bubble">
                 <div class="bubble-title" id="previewSmsTitle">메시지 제목</div>
                 <div class="bubble-text" id="previewSmsContent">발송할 메시지 내용을 입력해주세요.</div>
@@ -23,22 +32,45 @@
                 <div class="bubble-unsubscribe" id="previewSmsUnsubscribe"></div>
             </div>
         </div>
+        <div class="sms-compose-bar" aria-hidden="true">
+            <span class="sms-plus">+</span>
+            <span class="sms-input-pill">문자 메시지</span>
+            <span class="sms-send-dot"></span>
+        </div>
     </div>
 
     <div class="preview-body view-kakao">
-        <div class="preview-sender">스마트 메시징</div>
-        <div class="bubble-wrap">
-            <div class="bubble kakao-bubble">
-                <div class="bubble-title" id="previewKakaoTitle">메시지 제목</div>
-                <div class="bubble-text" id="previewKakaoContent">발송할 메시지 내용을 입력해주세요.</div>
-                <div class="bubble-link-area" id="previewKakaoLinks"></div>
-                <div class="bubble-unsubscribe" id="previewKakaoUnsubscribe"></div>
+        <div class="kakao-app-bar">
+            <span class="kakao-back">‹</span>
+            <strong>스마트 메시징</strong>
+            <span class="kakao-menu">☰</span>
+        </div>
+        <div class="kakao-date-divider">2026년 7월 7일 화요일</div>
+        <div class="kakao-message-row">
+            <div class="kakao-profile">S</div>
+            <div class="kakao-stack">
+                <div class="preview-sender">스마트 메시징</div>
+                <div class="bubble-wrap">
+                    <div class="bubble kakao-bubble">
+                        <div class="bubble-title" id="previewKakaoTitle">메시지 제목</div>
+                        <div class="bubble-text" id="previewKakaoContent">발송할 메시지 내용을 입력해주세요.</div>
+                        <div class="bubble-link-area" id="previewKakaoLinks"></div>
+                        <div class="bubble-unsubscribe" id="previewKakaoUnsubscribe"></div>
+                    </div>
+                </div>
+                <span class="kakao-message-time">오전 9:41</span>
             </div>
+        </div>
+        <div class="kakao-compose-bar" aria-hidden="true">
+            <span>+</span>
+            <span class="kakao-input-pill">메시지 입력</span>
+            <span>#</span>
         </div>
     </div>
 
     <div class="preview-body view-email">
         <div class="email-app-header">
+            <span class="email-menu-icon" aria-hidden="true">☰</span>
             <span class="email-logo-icon">M</span>
             <strong>Gmail</strong>
         </div>
@@ -48,7 +80,7 @@
                 <div class="sender-avatar">S</div>
                 <div class="sender-details">
                     <div class="sender-name">스마트 메시징</div>
-                    <div class="sender-meta">to me <span class="time">오전 9:41</span></div>
+                    <div class="sender-meta">to me <span>오전 9:41</span></div>
                 </div>
             </div>
             <div class="email-body-box">
@@ -61,7 +93,7 @@
         </div>
     </div>
 
-    <div class="preview-home-bar"></div>
+    <div class="preview-home-bar" aria-hidden="true"></div>
 </div>
 </body>
 </html>

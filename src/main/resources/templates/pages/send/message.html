@@ -88,7 +88,6 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnSendTestMessage">테스트 발송</button>
                         <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnSaveTemplate">템플릿 저장</button>
                     </div>
                 </div>
@@ -104,8 +103,8 @@
                         <label class="message-label">개인화 항목</label>
                         <div class="personalization-tags">
                             <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{고객명}">고객명</button>
-                            <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{주문번호}">주문번호</button>
-                            <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn js-insert-variable" data-variable="#{쿠폰명}">쿠폰명</button>
+                            <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn" data-variable="#{주문번호}" disabled aria-disabled="true">주문번호</button>
+                            <button type="button" class="ds-button ds-button--sm ds-button--outline tag-btn" data-variable="#{쿠폰명}" disabled aria-disabled="true">쿠폰명</button>
                         </div>
                     </div>
 
@@ -118,7 +117,7 @@
                         <label for="messageContent" class="message-label">내용</label>
                         <textarea id="messageContent" class="ds-textarea message-textarea" placeholder="발송할 메시지 내용을 입력해주세요." maxlength="1000"></textarea>
                         <div class="byte-counter">
-                            <span id="currentBytes">0</span> / <span id="maxBytes">최대 1000자</span>
+                            <span id="currentBytes">0</span> / <span id="maxBytes">최대 90byte</span>
                             <span class="msg-type-badge ds-badge ds-badge--primary" id="msgTypeBadge">SMS</span>
                         </div>
                     </div>
@@ -138,7 +137,9 @@
                     <span class="preview-ad-badge">광고성</span>
                 </div>
                 <div class="ds-card__body preview-body-container">
-                    <div th:replace="~{fragments/components/message-preview :: preview}"></div>
+                    <div class="preview-phone-frame">
+                        <div th:replace="~{fragments/components/message-preview :: preview}"></div>
+                    </div>
                 </div>
             </div>
         </div>
