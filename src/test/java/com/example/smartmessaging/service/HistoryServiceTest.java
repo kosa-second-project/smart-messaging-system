@@ -1,7 +1,12 @@
 package com.example.smartmessaging.service;
 
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
-import com.example.smartmessaging.dto.response.*;
+import com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryChannelResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
+import com.example.smartmessaging.dto.response.PageResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.mapper.HistoryMapper;
@@ -11,9 +16,12 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,71 +37,69 @@ class HistoryServiceTest {
     }
 
     @Test
-    void 조회조건을_정규화하고_채널과_태그를_배치결과로_조립한다() {
-        HistorySearchRequestDTO condition = new HistorySearchRequestDTO();
-        condition.setKeyword("  이벤트  ");
-        condition.setSort("invalid-sort");
-        condition.setStartDate(LocalDate.of(2026, 7, 1));
-        condition.setEndDate(LocalDate.of(2026, 7, 2));
-        condition.setTagIds(new java.util.ArrayList<>(java.util.Arrays.asList(1L, 2L, 1L, null)));
+    void search_condition_is_normalized_and_channels_and_tags_are_attached() {
+        HistorySearchRequestDTO condition = searchCondition(
+                "  이벤트  ",
+                "invalid-sort",
+                LocalDate.of(2026, 7, 1),
+                LocalDate.of(2026, 7, 2),
+                Arrays.asList(1L, 2L, 1L, null),
+                null
+        );
+        HistorySearchRequestDTO normalized = condition.normalized();
+        HistoryListResponseDTO history = history(11L);
+        HistoryChannelResponseDTO channel = new HistoryChannelResponseDTO(11L, "SMS");
+        HistoryTagResponseDTO tag = new HistoryTagResponseDTO(11L, "이벤트");
 
-        HistoryListResponseDTO history = new HistoryListResponseDTO();
-        history.setId(11L);
-        HistoryChannelResponseDTO channel = new HistoryChannelResponseDTO();
-        channel.setSendHistoryId(11L);
-        channel.setChannelName("SMS");
-        HistoryTagResponseDTO tag = new HistoryTagResponseDTO();
-        tag.setSendHistoryId(11L);
-        tag.setTagName("이벤트");
-
-        when(historyMapper.countHistories(condition)).thenReturn(1L);
-        when(historyMapper.findHistories(condition)).thenReturn(List.of(history));
+        when(historyMapper.countHistories(normalized)).thenReturn(1L);
+        when(historyMapper.findHistories(normalized)).thenReturn(List.of(history));
         when(historyMapper.findChannelsByHistoryIds(List.of(11L))).thenReturn(List.of(channel));
         when(historyMapper.findTagsByHistoryIds(List.of(11L))).thenReturn(List.of(tag));
 
         PageResponseDTO<HistoryListResponseDTO> result = historyService.getHistories(condition);
 
-        assertThat(condition.getKeyword()).isEqualTo("이벤트");
-        assertThat(condition.getSort()).isEqualTo("latest");
-        assertThat(condition.getStartAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 0, 0));
-        assertThat(condition.getEndAtExclusive()).isEqualTo(LocalDateTime.of(2026, 7, 3, 0, 0));
-        assertThat(condition.getTagIds()).containsExactly(1L, 2L);
-        assertThat(condition.getTagCount()).isEqualTo(2);
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getChannels()).containsExactly("SMS");
-        assertThat(result.getContent().get(0).getTags()).containsExactly("이벤트");
-        assertThat(result.getContent().get(0).getDisplayTags()).containsExactly("이벤트");
-        assertThat(result.getContent().get(0).getHiddenTagCount()).isZero();
+        assertThat(normalized.keyword()).isEqualTo("이벤트");
+        assertThat(normalized.sort()).isEqualTo("latest");
+        assertThat(normalized.startAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 0, 0));
+        assertThat(normalized.endAtExclusive()).isEqualTo(LocalDateTime.of(2026, 7, 3, 0, 0));
+        assertThat(normalized.tagIds()).containsExactly(1L, 2L);
+        assertThat(normalized.tagCount()).isEqualTo(2);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).channels()).containsExactly("SMS");
+        assertThat(result.content().get(0).tags()).containsExactly("이벤트");
+        assertThat(result.content().get(0).displayTags()).containsExactly("이벤트");
+        assertThat(result.content().get(0).hiddenTagCount()).isZero();
     }
 
     @Test
-    void 데이터가_없으면_상세배치조회를_실행하지_않는다() {
-        HistorySearchRequestDTO condition = new HistorySearchRequestDTO();
-        when(historyMapper.countHistories(condition)).thenReturn(0L);
+    void empty_result_does_not_load_detail_batches() {
+        HistorySearchRequestDTO condition = searchCondition(null, null, null, null, List.of(), null);
+        HistorySearchRequestDTO normalized = condition.normalized();
+        when(historyMapper.countHistories(normalized)).thenReturn(0L);
 
         PageResponseDTO<HistoryListResponseDTO> result = historyService.getHistories(condition);
 
         assertThat(result.isEmpty()).isTrue();
-        assertThat(result.getTotalPages()).isZero();
-        verify(historyMapper).countHistories(condition);
+        assertThat(result.totalPages()).isZero();
+        verify(historyMapper).countHistories(normalized);
     }
 
     @Test
-    void 요청페이지가_마지막페이지보다_크면_마지막페이지로_보정한다() {
-        HistorySearchRequestDTO condition = new HistorySearchRequestDTO();
-        condition.setPage(99);
-        when(historyMapper.countHistories(condition)).thenReturn(21L);
-        when(historyMapper.findHistories(condition)).thenReturn(List.of());
+    void page_over_total_pages_is_adjusted_to_last_page() {
+        HistorySearchRequestDTO condition = searchCondition(null, null, null, null, List.of(), 99);
+        HistorySearchRequestDTO firstNormalized = condition.normalized();
+        HistorySearchRequestDTO lastPageCondition = firstNormalized.withPage(3);
+        when(historyMapper.countHistories(firstNormalized)).thenReturn(21L);
+        when(historyMapper.findHistories(lastPageCondition)).thenReturn(List.of());
 
         PageResponseDTO<HistoryListResponseDTO> result = historyService.getHistories(condition);
 
-        assertThat(condition.getPage()).isEqualTo(3);
-        assertThat(result.getCurrentPage()).isEqualTo(3);
-        assertThat(condition.getOffset()).isEqualTo(20);
+        assertThat(result.currentPage()).isEqualTo(3);
+        assertThat(lastPageCondition.offset()).isEqualTo(20);
     }
 
     @Test
-    void 상태필터는_DB_CHECK_제약조건에_정의된_네_상태를_제공한다() {
+    void status_options_match_database_check_constraint_values() {
         assertThat(historyService.getStatusOptions())
                 .extracting("value", "label")
                 .containsExactly(
@@ -104,24 +110,12 @@ class HistoryServiceTest {
                 );
     }
 
-
     @Test
-    void 상세조회에_채널_태그_대체발송흐름을_조립한다() {
-        HistoryDetailResponseDTO detail = new HistoryDetailResponseDTO();
-        detail.setSendHistoryId(11L);
-
-        HistoryChannelResponseDTO channel = new HistoryChannelResponseDTO();
-        channel.setSendHistoryId(11L);
-        channel.setChannelName("SMS");
-        HistoryTagResponseDTO tag = new HistoryTagResponseDTO();
-        tag.setSendHistoryId(11L);
-        tag.setTagName("이벤트");
-        HistoryAttemptFlowResponseDTO attempt = new HistoryAttemptFlowResponseDTO();
-        attempt.setAttemptOrder(1);
-        attempt.setChannelName("SMS");
-        attempt.setRequestCount(10);
-        attempt.setSuccessCount(8);
-        attempt.setFailCount(2);
+    void detail_result_attaches_channels_tags_and_attempt_flows() {
+        HistoryDetailResponseDTO detail = detail(11L);
+        HistoryChannelResponseDTO channel = new HistoryChannelResponseDTO(11L, "SMS");
+        HistoryTagResponseDTO tag = new HistoryTagResponseDTO(11L, "이벤트");
+        HistoryAttemptFlowResponseDTO attempt = new HistoryAttemptFlowResponseDTO(1, "SMS", 10, 8, 2);
 
         when(historyMapper.findHistoryDetailById(11L)).thenReturn(detail);
         when(historyMapper.findChannelsByHistoryIds(List.of(11L))).thenReturn(List.of(channel));
@@ -130,18 +124,47 @@ class HistoryServiceTest {
 
         HistoryDetailResponseDTO result = historyService.getHistoryDetail(11L);
 
-        assertThat(result.getChannels()).containsExactly("SMS");
-        assertThat(result.getTags()).containsExactly("이벤트");
-        assertThat(result.getAttemptFlows()).containsExactly(attempt);
+        assertThat(result.channels()).containsExactly("SMS");
+        assertThat(result.tags()).containsExactly("이벤트");
+        assertThat(result.attemptFlows()).containsExactly(attempt);
     }
 
     @Test
-    void 삭제되었거나_없는_전송기록은_상세조회할_수_없다() {
+    void deleted_or_missing_send_history_cannot_be_loaded() {
         when(historyMapper.findHistoryDetailById(999L)).thenReturn(null);
 
         assertThatThrownBy(() -> historyService.getHistoryDetail(999L))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.SEND_HISTORY_NOT_FOUND);
+    }
+
+    private HistorySearchRequestDTO searchCondition(
+            String keyword,
+            String sort,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<Long> tagIds,
+            Integer page
+    ) {
+        return new HistorySearchRequestDTO(
+                keyword,
+                null,
+                null,
+                null,
+                tagIds,
+                startDate,
+                endDate,
+                sort,
+                page
+        );
+    }
+
+    private HistoryListResponseDTO history(Long id) {
+        return new HistoryListResponseDTO(id, null, null, null, null, null, null, null, null, null);
+    }
+
+    private HistoryDetailResponseDTO detail(Long id) {
+        return new HistoryDetailResponseDTO(id, null, null, null, null, null, null, null, null, null, null, null);
     }
 }
