@@ -25,7 +25,6 @@ public class CustomerSearchRequest {
     private String activeTab; // "filtered" 또는 "selected"
 
     // 매퍼에서 하드코딩을 제거하기 위해 애플리케이션 계층에서 주입하는 상수 값 (기본값 설정)
-    private Long dormantTagId;
     private List<Long> consentTagIds = List.of();
 
     /** "ANY"(기본) = OR 조건, "ALL" = AND 조건 */

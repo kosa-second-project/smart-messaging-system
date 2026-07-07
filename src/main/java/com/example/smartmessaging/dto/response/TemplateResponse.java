@@ -4,6 +4,7 @@ import com.example.smartmessaging.dto.vo.TemplateCategory;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -20,6 +21,8 @@ public class TemplateResponse {
     private String categoryDisplayName;
     private Integer cnt;
     private String purpose;
+    private BigDecimal clickRate;
+    private BigDecimal conversionRate;
     private String createdAt;
     private String updatedAt;
     private List<TemplateChannelResponse> channels;

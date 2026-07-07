@@ -6,6 +6,11 @@ let templateReviewSignature = null;
 let templateReviewStatus = null;
 let templateGenerating = false;
 let templateReviewing = false;
+let templateLastValidFields = {
+    title: "",
+    content: ""
+};
+let templateLastValidChannelIds = [];
 let templateOptions = {
     channels: [],
     categories: [],
@@ -13,6 +18,8 @@ let templateOptions = {
 };
 
 const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}"];
+const TEMPLATE_SMS_MAX_BYTES = 90;
+const TEMPLATE_EXTENDED_MAX_BYTES = 1000;
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();
@@ -27,26 +34,39 @@ function bindTemplateEvents() {
         fetchTemplates();
     });
 
-    ["templateCategoryFilter", "templatePurposeFilter", "templateChannelFilter", "templateSortSelect"].forEach(id => {
-        document.getElementById(id).addEventListener("change", function() {
-            templateCurrentPage = 1;
-            fetchTemplates();
-        });
+    document.getElementById("templateSortSelect").addEventListener("change", function() {
+        templateCurrentPage = 1;
+        fetchTemplates();
+    });
+
+    document.querySelector(".template-toolbar").addEventListener("multiselect:change", function() {
+        templateCurrentPage = 1;
+        fetchTemplates();
     });
 
     ["templateTitle", "templateContent"].forEach(id => {
         document.getElementById(id).addEventListener("input", function() {
             templateIsAiGenerated = false;
+            renderTemplateByteCount();
             renderFormPreview();
+            if (!enforceTemplateLength()) {
+                return;
+            }
             invalidateTemplateReview();
         });
     });
 
     document.getElementById("templateCategory").addEventListener("change", invalidateTemplateReview);
-    document.getElementById("templateChannelCheckboxes").addEventListener("change", invalidateTemplateReview);
-
-    document.getElementById("templateContent").addEventListener("input", function(event) {
-        document.getElementById("templateContentCount").innerText = `${event.target.value.length}자`;
+    document.getElementById("templateChannelCheckboxes").addEventListener("change", function() {
+        renderTemplateByteCount();
+        if (!enforceTemplateLength()) {
+            restoreTemplateChannelSelection();
+            renderTemplateByteCount();
+            renderFormPreview();
+            return;
+        }
+        syncTemplateChannelSelection();
+        invalidateTemplateReview();
     });
 
     document.querySelectorAll("[data-preview-mode]").forEach(button => {
@@ -97,17 +117,35 @@ function renderTemplateFilters() {
         value: option.value,
         label: getCategoryLabel(option.value || option.label)
     }));
-    renderSelectOptions("templateCategoryFilter", categoryOptions, "전체 카테고리");
+    renderMultiSelectOptions("templateCategoryFilter", categoryOptions, "categories");
     renderSelectOptions("templateCategory", categoryOptions, "카테고리 선택");
 
     const purposeOptions = buildPurposeOptions(templateOptions.purposes || []);
-    renderSelectOptions("templatePurposeFilter", purposeOptions, "전체 광고여부");
+    renderMultiSelectOptions("templatePurposeFilter", purposeOptions, "purposes");
 
     const channelOptions = (templateOptions.channels || []).map(channel => ({
         value: channel.channelType,
         label: channel.channelType
     }));
-    renderSelectOptions("templateChannelFilter", channelOptions, "전체 채널");
+    renderMultiSelectOptions("templateChannelFilter", channelOptions, "channelTypes");
+}
+
+function renderMultiSelectOptions(rootId, options, inputName) {
+    const root = document.getElementById(rootId);
+    const menu = root.querySelector("[data-multiselect-menu]");
+    const selected = new Set(getMultiSelectValues(rootId));
+
+    menu.innerHTML = options.map(option => `
+        <label class="ds-multiselect__option">
+            <input type="checkbox" name="${inputName}" value="${escapeHtml(option.value)}" data-label="${escapeHtml(option.label)}" ${selected.has(String(option.value)) ? "checked" : ""}>
+            <span>${escapeHtml(option.label)}</span>
+        </label>
+    `).join("");
+
+    if (window.DsMultiselect) {
+        window.DsMultiselect.initAll(root.parentElement);
+        window.DsMultiselect.refresh(root);
+    }
 }
 
 function renderSelectOptions(selectId, options, firstLabel) {
@@ -138,6 +176,113 @@ function renderTemplateChannelCheckboxes() {
         `;
         wrapper.appendChild(label);
     });
+    syncTemplateChannelSelection();
+    renderTemplateByteCount();
+}
+
+function getKoreanByteLength(text) {
+    if (!text) {
+        return 0;
+    }
+    let byteCount = 0;
+    for (let i = 0; i < text.length; i++) {
+        byteCount += text.charCodeAt(i) <= 0x007F ? 1 : 2;
+    }
+    return byteCount;
+}
+
+function buildTemplateMetricText() {
+    const title = (document.getElementById("templateTitle")?.value || "").trim();
+    const content = document.getElementById("templateContent")?.value || "";
+    if (!title) {
+        return content;
+    }
+    return title + "\n" + content;
+}
+
+function normalizeTemplateChannelType(channelType) {
+    const value = (channelType || "").trim().toUpperCase();
+    if (value.startsWith("KAKAO")) {
+        return "KAKAO";
+    }
+    return value;
+}
+
+function getTemplateLimitInfo() {
+    const channels = getSelectedChannelTypes().map(normalizeTemplateChannelType);
+    const hasSms = channels.includes("SMS");
+    const limit = hasSms ? TEMPLATE_SMS_MAX_BYTES : TEMPLATE_EXTENDED_MAX_BYTES;
+    const totalBytes = getKoreanByteLength(buildTemplateMetricText());
+    return {
+        totalBytes,
+        limit,
+        isOverLimit: totalBytes > limit
+    };
+}
+
+function renderTemplateByteCount() {
+    const counter = document.getElementById("templateContentCount");
+    if (!counter) {
+        return;
+    }
+    const info = getTemplateLimitInfo();
+    counter.innerText = `${info.totalBytes} / 최대 ${info.limit}byte`;
+    counter.classList.toggle("is-error", info.isOverLimit);
+}
+
+function validateTemplateLength() {
+    const info = getTemplateLimitInfo();
+    if (!info.isOverLimit) {
+        return true;
+    }
+    alert(`템플릿은 제목과 내용을 포함해 ${info.limit}byte까지 입력할 수 있습니다. 현재 ${info.totalBytes}byte입니다.`);
+    document.getElementById("templateContent").focus();
+    return false;
+}
+
+function getCurrentTemplateFields() {
+    return {
+        title: document.getElementById("templateTitle")?.value || "",
+        content: document.getElementById("templateContent")?.value || ""
+    };
+}
+
+function syncTemplateFields() {
+    templateLastValidFields = getCurrentTemplateFields();
+}
+
+function restoreTemplateFields() {
+    document.getElementById("templateTitle").value = templateLastValidFields.title || "";
+    document.getElementById("templateContent").value = templateLastValidFields.content || "";
+    renderTemplateByteCount();
+    renderFormPreview();
+}
+
+function getSelectedTemplateChannelIds() {
+    return Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
+        .map(input => String(input.value));
+}
+
+function syncTemplateChannelSelection() {
+    templateLastValidChannelIds = getSelectedTemplateChannelIds();
+}
+
+function restoreTemplateChannelSelection() {
+    const selected = new Set(templateLastValidChannelIds);
+    document.querySelectorAll("input[name='templateChannel']").forEach(input => {
+        input.checked = selected.has(String(input.value));
+    });
+}
+
+function enforceTemplateLength() {
+    const info = getTemplateLimitInfo();
+    if (!info.isOverLimit) {
+        syncTemplateFields();
+        return true;
+    }
+    alert(`템플릿은 제목과 내용을 포함해 ${info.limit}byte까지 입력할 수 있습니다. 현재 ${info.totalBytes}byte입니다.`);
+    restoreTemplateFields();
+    return false;
 }
 
 function fetchTemplates() {
@@ -152,9 +297,9 @@ function fetchTemplates() {
     });
 
     appendParam(params, "keyword", document.getElementById("templateKeywordInput").value.trim());
-    appendParam(params, "category", document.getElementById("templateCategoryFilter").value);
-    appendParam(params, "purpose", document.getElementById("templatePurposeFilter").value);
-    appendParam(params, "channelType", document.getElementById("templateChannelFilter").value);
+    appendParams(params, "categories", getMultiSelectValues("templateCategoryFilter"));
+    appendParams(params, "purposes", getMultiSelectValues("templatePurposeFilter"));
+    appendParams(params, "channelTypes", getMultiSelectValues("templateChannelFilter"));
 
     fetch(`/api/templates?${params.toString()}`)
         .then(res => res.json())
@@ -174,6 +319,16 @@ function appendParam(params, key, value) {
     if (value) {
         params.append(key, value);
     }
+}
+
+function appendParams(params, key, values) {
+    values.forEach(value => appendParam(params, key, value));
+}
+
+function getMultiSelectValues(rootId) {
+    return Array.from(document.querySelectorAll(`#${rootId} input[type='checkbox']:checked`))
+        .map(input => input.value)
+        .filter(Boolean);
 }
 
 function renderTemplateTable(list) {
@@ -262,45 +417,22 @@ function renderTemplatePagination(pageData) {
     const total = pageData.totalCount || 0;
     const current = pageData.page || 1;
     const size = pageData.size || templatePageSize;
-    const totalPages = pageData.totalPages || 0;
-    const from = total === 0 ? 0 : ((current - 1) * size) + 1;
-    const to = Math.min(current * size, total);
 
-    document.getElementById("templatePageInfo").innerText = `${total.toLocaleString()}건 중 ${from.toLocaleString()}-${to.toLocaleString()}`;
-
-    const container = document.getElementById("templatePaginationButtons");
-    container.innerHTML = "";
-
-    container.appendChild(createPageButton("이전", current === 1, function() {
-        templateCurrentPage = Math.max(1, templateCurrentPage - 1);
-        fetchTemplates();
-    }));
-
-    const max = Math.max(1, totalPages);
-    const base = Math.min(Math.max(current - 2, 1), Math.max(max - 4, 1));
-    for (let page = base; page < base + 5 && page <= max; page++) {
-        const button = createPageButton(page, false, function() {
+    window.DsPagination?.renderOffset("#templatePagination", {
+        total,
+        page: current,
+        size,
+        totalPages: pageData.totalPages || 0,
+        onPageChange: function(page) {
             templateCurrentPage = page;
             fetchTemplates();
-        });
-        button.classList.toggle("is-active", page === current);
-        container.appendChild(button);
-    }
-
-    container.appendChild(createPageButton("다음", current >= max, function() {
-        templateCurrentPage = Math.min(max, templateCurrentPage + 1);
-        fetchTemplates();
-    }));
-}
-
-function createPageButton(label, disabled, onClick) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ds-page-button";
-    button.innerText = label;
-    button.disabled = disabled;
-    button.onclick = onClick;
-    return button;
+        },
+        onPageSizeChange: function(nextSize) {
+            templatePageSize = nextSize;
+            templateCurrentPage = 1;
+            fetchTemplates();
+        }
+    });
 }
 
 let currentDetailItem = null;
@@ -317,6 +449,7 @@ function openTemplateDetailModal(templateId) {
         .then(data => {
             currentDetailItem = data;
             body.innerHTML = renderTemplateDetail(data);
+            renderTemplateDetailPreview(data);
         })
         .catch(err => {
             console.error("Template detail load fail:", err);
@@ -330,57 +463,55 @@ function renderTemplateDetail(item) {
     }
 
     return `
-        <div class="template-detail">
-            <div class="template-detail__summary">
-                <div>
-                    <div class="template-detail__title">${escapeHtml(item.title)}</div>
-                    <div class="template-detail__meta">
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">채널</span>
-                            <span class="template-detail__value">${renderChannelChips(item.channels || [])}</span>
-                        </div>
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">카테고리</span>
-                            <span class="template-detail__value">${escapeHtml(item.categoryDisplayName || getCategoryLabel(item.category))}</span>
-                        </div>
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">광고여부</span>
-                            ${renderPurposeBadge(item.purpose)}
+        <div class="template-modal-layout template-modal-layout--detail template-detail">
+            <section class="template-modal-main">
+                <div class="template-detail__summary">
+                    <div>
+                        <div class="template-detail__title">${escapeHtml(item.title)}</div>
+                        <div class="template-detail__meta">
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">채널</span>
+                                <span class="template-detail__value">${renderChannelChips(item.channels || [])}</span>
+                            </div>
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">카테고리</span>
+                                <span class="template-detail__value">${escapeHtml(item.categoryDisplayName || getCategoryLabel(item.category))}</span>
+                            </div>
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">광고여부</span>
+                                ${renderPurposeBadge(item.purpose)}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="template-detail__metrics">
-                ${renderMetric("템플릿 ID", item.id || "-")}
-                ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
-                ${renderMetric("생성일", item.createdAt || "-")}
-                ${renderMetric("최근 수정", item.updatedAt || "-")}
-                ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
-            </div>
+                <div class="template-detail__metrics">
+                    ${renderMetric("템플릿 ID", item.id || "-")}
+                    ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
+                    ${renderMetric("클릭률", formatPercent(item.clickRate))}
+                    ${renderMetric("전환률", formatPercent(item.conversionRate))}
+                    ${renderMetric("생성일", item.createdAt || "-")}
+                    ${renderMetric("최근 수정", item.updatedAt || "-")}
+                    ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
+                </div>
 
-            <div class="template-detail__content">
-                <!-- 좌측: 메시지 내용 -->
-                <section>
+                <section class="template-detail__content">
                     <div class="template-detail__metric-label">메시지 내용</div>
                     <div class="template-message-box" style="white-space: pre-wrap; word-break: break-all;">${escapeHtml(item.content || "")}</div>
                 </section>
+            </section>
 
-                <!-- 우측: 채널별 미리보기 -->
-                <section class="template-detail-preview">
-                    <div class="template-preview-header">
-                        <span>미리보기</span>
-                        <div class="ds-segment">
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'message' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('message')">메시지</button>
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'kakao' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('kakao')">카카오톡</button>
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'email' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('email')">이메일</button>
-                        </div>
+            <aside class="template-modal-aside template-detail-preview">
+                <div class="template-panel-header">
+                    <span>미리보기</span>
+                    <div class="ds-segment">
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'message' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('message')">메시지</button>
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'kakao' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('kakao')">카카오톡</button>
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'email' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('email')">이메일</button>
                     </div>
-                    <div id="templateDetailPreview">
-                        ${renderMessagePreview(item.title, item.content, currentDetailPreviewMode, true)}
-                    </div>
-                </section>
-            </div>
+                </div>
+                <div id="templateDetailPreview"></div>
+            </aside>
         </div>
     `;
 }
@@ -398,12 +529,60 @@ function switchDetailPreviewMode(mode) {
     // 미리보기 화면 갱신
     const previewDiv = document.getElementById("templateDetailPreview");
     if (previewDiv && currentDetailItem) {
-        previewDiv.innerHTML = renderMessagePreview(
-            currentDetailItem.title, 
-            currentDetailItem.content, 
-            mode, 
-            true
-        );
+        renderTemplateDetailPreview(currentDetailItem);
+    }
+}
+
+function renderTemplateDetailPreview(item) {
+    const previewDiv = document.getElementById("templateDetailPreview");
+    if (!previewDiv) {
+        return;
+    }
+
+    const component = createCommonMessagePreview(item.title, item.content, currentDetailPreviewMode);
+    previewDiv.innerHTML = "";
+    if (component) {
+        previewDiv.appendChild(component);
+    }
+}
+
+function createCommonMessagePreview(title, content, mode) {
+    const template = document.getElementById("messagePreviewComponentTemplate");
+    if (!template) {
+        return null;
+    }
+
+    const fragment = template.content.cloneNode(true);
+    const preview = fragment.querySelector("#phonePreviewBox");
+    if (!preview) {
+        return null;
+    }
+
+    const normalizedMode = mode === "message" ? "sms" : mode;
+    preview.classList.remove("mode-sms", "mode-kakao", "mode-email");
+    preview.classList.add(`mode-${normalizedMode}`);
+
+    setPreviewText(preview, "#previewSmsTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewKakaoTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewEmailTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewSmsContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewKakaoContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewEmailContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewSmsLinks", "");
+    setPreviewText(preview, "#previewKakaoLinks", "");
+    setPreviewText(preview, "#previewSmsUnsubscribe", "");
+    setPreviewText(preview, "#previewKakaoUnsubscribe", "");
+
+    const frame = document.createElement("div");
+    frame.className = "preview-phone-frame";
+    frame.appendChild(preview);
+    return frame;
+}
+
+function setPreviewText(root, selector, text) {
+    const target = root.querySelector(selector);
+    if (target) {
+        target.textContent = text;
     }
 }
 
@@ -416,6 +595,17 @@ function renderMetric(label, value) {
     `;
 }
 
+function formatPercent(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+        return "0%";
+    }
+    return `${number.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1
+    })}%`;
+}
+
 function openAddTemplateModal() {
     resetTemplateForm();
     document.getElementById("templateAddModal").classList.add("is-open");
@@ -424,6 +614,8 @@ function openAddTemplateModal() {
 
 function closeAddTemplateModal() {
     document.getElementById("templateAddModal").classList.remove("is-open");
+    closeTemplateAiPanel();
+    closeTemplateReviewModal();
 }
 
 function closeAddTemplateOnBackdrop(event) {
@@ -439,6 +631,18 @@ function closeTemplateDetailModal() {
 function closeTemplateDetailOnBackdrop(event) {
     if (event.target.id === "templateDetailModal" || event.target.classList.contains("ds-modal__backdrop")) {
         closeTemplateDetailModal();
+    }
+}
+
+function closeTemplateAiOnBackdrop(event) {
+    if (event.target.id === "templateAiModal" || event.target.classList.contains("ds-modal__backdrop")) {
+        closeTemplateAiPanel();
+    }
+}
+
+function closeTemplateReviewOnBackdrop(event) {
+    if (event.target.id === "templateReviewModal" || event.target.classList.contains("ds-modal__backdrop")) {
+        closeTemplateReviewModal();
     }
 }
 
@@ -458,8 +662,10 @@ function resetTemplateForm() {
     document.querySelectorAll("[data-preview-mode]").forEach(button => {
         button.classList.toggle("is-active", button.dataset.previewMode === "message");
     });
-    document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
+    syncTemplateFields();
+    syncTemplateChannelSelection();
+    renderTemplateByteCount();
     document.getElementById("templateAiDirection").value = "";
     document.getElementById("templateAiMessage").innerText = "";
     document.getElementById("templateAiSuggestions").innerHTML = "";
@@ -476,6 +682,9 @@ function resetTemplateForm() {
 }
 
 function saveTemplate() {
+    if (!validateTemplateLength()) {
+        return;
+    }
     if (templateReviewSignature !== getTemplateReviewSignature()) {
         invalidateTemplateReview();
         alert("현재 내용으로 AI 검사를 먼저 완료해 주세요.");
@@ -510,14 +719,23 @@ function saveTemplate() {
 }
 
 function openTemplateAiPanel() {
-    document.getElementById("templatePreviewPanel").hidden = true;
+    document.getElementById("templateAiModal").classList.add("is-open");
     document.getElementById("templateAiPanel").hidden = false;
     document.getElementById("templateAiDirection").focus();
 }
 
 function closeTemplateAiPanel() {
-    document.getElementById("templatePreviewPanel").hidden = false;
+    document.getElementById("templateAiModal").classList.remove("is-open");
     document.getElementById("templateAiPanel").hidden = true;
+}
+
+function openTemplateReviewModal() {
+    document.getElementById("templateReviewModal").classList.add("is-open");
+    document.getElementById("templateReviewPanel").hidden = false;
+}
+
+function closeTemplateReviewModal() {
+    document.getElementById("templateReviewModal").classList.remove("is-open");
 }
 
 function generateTemplateSuggestions() {
@@ -556,7 +774,7 @@ function generateTemplateSuggestions() {
             if (generationSignature !== JSON.stringify(currentRequest)) {
                 throw new Error("생성 중 조건이 변경되었습니다. 다시 생성해 주세요.");
             }
-            const suggestions = (data.suggestions || []).slice(0, 3);
+            const suggestions = (data.suggestions || []).slice(0, 2);
             if (!suggestions.length) throw new Error("추천 가능한 문구가 없습니다. 입력 방향을 바꿔 다시 시도해 주세요.");
             message.innerText = `${suggestions.length}개의 문구를 생성했습니다.`;
             renderTemplateSuggestions(suggestions);
@@ -599,7 +817,10 @@ function renderTemplateSuggestions(suggestions) {
 function applyTemplateSuggestion(suggestion) {
     document.getElementById("templateTitle").value = suggestion.title || "";
     document.getElementById("templateContent").value = suggestion.content || "";
-    document.getElementById("templateContentCount").innerText = `${(suggestion.content || "").length}자`;
+    renderTemplateByteCount();
+    if (!enforceTemplateLength()) {
+        return;
+    }
     templateIsAiGenerated = true;
     invalidateTemplateReview();
     renderFormPreview();
@@ -618,6 +839,7 @@ function reviewTemplate() {
     button.disabled = true;
     button.innerText = "검사 중...";
     const panel = document.getElementById("templateReviewPanel");
+    openTemplateReviewModal();
     panel.hidden = false;
     document.getElementById("templateReviewResult").innerHTML = `<p class="template-review-summary">문구를 검사하고 있습니다...</p>`;
     document.getElementById("templateReviewAcknowledgeRow").hidden = true;
@@ -657,6 +879,9 @@ function validateTemplateForReview() {
     if (!form.reportValidity()) return false;
     if (!getSelectedChannelTypes().length) {
         alert("하나 이상의 채널을 선택해 주세요.");
+        return false;
+    }
+    if (!validateTemplateLength()) {
         return false;
     }
     return true;
@@ -718,7 +943,8 @@ function updateTemplateSaveState() {
         && templateReviewSignature === getTemplateReviewSignature();
     const acknowledged = templateReviewStatus === "PASS"
         || document.getElementById("templateReviewAcknowledge").checked;
-    document.getElementById("templateSaveButton").disabled = !(currentReview && acknowledged);
+    const isLengthValid = !getTemplateLimitInfo().isOverLimit;
+    document.getElementById("templateSaveButton").disabled = !(currentReview && acknowledged && isLengthValid);
 }
 
 function renderTemplateReview(data) {
@@ -762,7 +988,10 @@ function renderTemplateReview(data) {
     if (data.suggestedRewrite) {
         document.getElementById("templateApplyRewriteButton").addEventListener("click", function() {
             document.getElementById("templateContent").value = data.suggestedRewrite;
-            document.getElementById("templateContentCount").innerText = `${data.suggestedRewrite.length}자`;
+            renderTemplateByteCount();
+            if (!enforceTemplateLength()) {
+                return;
+            }
             renderFormPreview();
             invalidateTemplateReview();
         });
@@ -786,7 +1015,16 @@ async function readErrorMessage(response, fallback) {
 function renderFormPreview() {
     const title = document.getElementById("templateTitle")?.value || "";
     const content = document.getElementById("templateContent")?.value || "";
-    document.getElementById("templateFormPreview").innerHTML = renderMessagePreview(title, content, templatePreviewMode, true);
+    const previewDiv = document.getElementById("templateFormPreview");
+    if (!previewDiv) {
+        return;
+    }
+
+    const component = createCommonMessagePreview(title, content, templatePreviewMode);
+    previewDiv.innerHTML = "";
+    if (component) {
+        previewDiv.appendChild(component);
+    }
 }
 
 function renderMessagePreview(title, content, mode, compact = false) {

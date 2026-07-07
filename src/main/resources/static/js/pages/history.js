@@ -16,8 +16,7 @@ $(function() {
         $form.trigger("submit");
     });
 
-    // 태그 조건이 바뀌면 검색 폼을 자동으로 submit
-    $form.find("[data-tag-submit]").on("change", function() {
+    $form.on("multiselect:change", function() {
         $form.find("input[name='page']").remove();
         $form.trigger("submit");
     });

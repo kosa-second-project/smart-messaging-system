@@ -8,9 +8,12 @@ import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.ExistingIssueReviewResult;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.IssueSource;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagPromptContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class LlmReviewService {
 
     private static final String PROFANITY_DETECTED = "PROFANITY_DETECTED";
@@ -36,6 +39,12 @@ public class LlmReviewService {
             "CHANNEL_FIT_WARNING", IssueSeverity.LOW,
             "CLARITY_ISSUE", IssueSeverity.LOW
     );
+    private static final List<String> RAG_REVIEW_FOCUS = List.of(
+            "brandTone",
+            "naturalness",
+            "benefitClarity",
+            "overstatementRisk"
+    );
 
     static final String SYSTEM_PROMPT = """
             당신은 스마트 메시징 서비스의 문구 검토 도우미입니다.
@@ -44,6 +53,10 @@ public class LlmReviewService {
             PROFANITY_FILTER와 OPENAI_MODERATION 결과만 문맥상 실제 문제인지 재검토하고,
             CONFIRMED, POSSIBLE_FALSE_POSITIVE, NEEDS_REVIEW 중 하나를 반환하세요.
             같은 문제를 newIssues에 중복 추가하지 마세요.
+            RAG 참고자료는 판단 주체가 아니라 현대홈쇼핑/Hmall 브랜드톤 참고자료입니다.
+            RAG 참고자료는 브랜드톤, 자연스러움, 혜택 명확성, 과장 표현 가능성 검토에만 사용하세요.
+            RAG 참고자료의 상품명, 혜택, 증정품, 기간, 조건을 사용자 문구에 새로 추가하지 마세요.
+            SERVER_RULE, PROFANITY_FILTER, OPENAI_MODERATION 결과는 RAG 또는 LLM이 제거하거나 무효화할 수 없습니다.
             새 이슈의 ruleId는 BRAND_TONE_MISMATCH, OVERSTATED_BENEFIT,
             INFO_MESSAGE_PROMOTIONAL, SENSITIVE_EXPRESSION_RISK, CHANNEL_FIT_WARNING,
             CLARITY_ISSUE 중 하나만 사용하세요.
@@ -57,9 +70,30 @@ public class LlmReviewService {
 
     private final GeminiReviewClient geminiReviewClient;
     private final ObjectMapper objectMapper;
+    // 검사 LLM에 전달할 RAG 참고자료를 만들지만, 이 서비스가 확정 룰 결과를 바꾸지는 않습니다.
+    private final RagPromptContextService ragPromptContextService;
+
+    @Autowired
+    public LlmReviewService(
+            GeminiReviewClient geminiReviewClient,
+            ObjectMapper objectMapper,
+            RagPromptContextService ragPromptContextService
+    ) {
+        this.geminiReviewClient = geminiReviewClient;
+        this.objectMapper = objectMapper;
+        this.ragPromptContextService = ragPromptContextService;
+    }
+
+    LlmReviewService(GeminiReviewClient geminiReviewClient, ObjectMapper objectMapper) {
+        this(geminiReviewClient, objectMapper, null);
+    }
 
     public ReviewResult review(AiReviewRequestDTO request, List<ValidationIssueResponseDTO> existingIssues) {
-        String userPrompt = serialize(LlmReviewRequestDTO.from(request, existingIssues));
+        // RAG는 LLM 검사 단계에만 추가하며, 검색 실패 시 빈 문자열로 떨어져 기존 검사를 계속 진행합니다.
+        RagPromptContext ragContext = ragPromptContextService == null
+                ? RagPromptContext.empty()
+                : ragPromptContextService.buildReviewPromptContext(request);
+        String userPrompt = serialize(LlmReviewRequestDTO.from(request, existingIssues, ragContext.promptText()));
         LlmReviewResponseDTO response = geminiReviewClient.review(SYSTEM_PROMPT, userPrompt);
         if (response == null) {
             throw new IllegalStateException("Empty LLM review response");
@@ -70,7 +104,16 @@ public class LlmReviewService {
                 response.reviewedExistingIssues()
         );
         List<ValidationIssueResponseDTO> newIssues = normalizeNewIssues(response.newIssues());
-        return new ReviewResult(reviewedIssues, newIssues, textOrNull(response.suggestedRewrite()));
+        String suggestedRewrite = textOrNull(response.suggestedRewrite());
+        log.info(
+                "RAG-assisted review completed: refs={}, focus={}, llmNewIssues={}, llmReviewedExistingIssues={}, suggestedRewrite={}",
+                ragContext.references(),
+                RAG_REVIEW_FOCUS,
+                newIssues.stream().map(ValidationIssueResponseDTO::ruleId).toList(),
+                reviewedIssueSummaries(response.reviewedExistingIssues()),
+                suggestedRewrite != null
+        );
+        return new ReviewResult(reviewedIssues, newIssues, suggestedRewrite);
     }
 
     private String serialize(LlmReviewRequestDTO request) {
@@ -79,6 +122,15 @@ public class LlmReviewService {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to serialize LLM review request", exception);
         }
+    }
+
+    private List<String> reviewedIssueSummaries(List<LlmReviewResponseDTO.ReviewedExistingIssue> reviews) {
+        if (reviews == null || reviews.isEmpty()) {
+            return List.of();
+        }
+        return reviews.stream()
+                .map(review -> "%s:%s:%s".formatted(review.source(), review.ruleId(), review.reviewResult()))
+                .toList();
     }
 
     private List<ValidationIssueResponseDTO> applyExistingIssueReviews(
@@ -137,7 +189,8 @@ public class LlmReviewService {
         }
 
         IssueSeverity severity = issue.severity();
-        if (decision.result() == ExistingIssueReviewResult.POSSIBLE_FALSE_POSITIVE) {
+        // SERVER_RULE은 확정 규칙이라 보존하고, 필터/Moderation의 오탐 가능성만 한 단계 완화합니다.
+        if (canLowerSeverity(issue.source()) && decision.result() == ExistingIssueReviewResult.POSSIBLE_FALSE_POSITIVE) {
             severity = lowerSeverity(severity);
         }
 
@@ -158,6 +211,11 @@ public class LlmReviewService {
                 decision.suggestion() == null ? issue.suggestion() : decision.suggestion(),
                 detail
         );
+    }
+
+    private boolean canLowerSeverity(IssueSource source) {
+        // RAG는 이 판단에 관여하지 않고, LLM의 문맥 재검토 결과도 두 외부 필터에만 적용합니다.
+        return source == IssueSource.PROFANITY_FILTER || source == IssueSource.OPENAI_MODERATION;
     }
 
     private IssueSeverity lowerSeverity(IssueSeverity severity) {

@@ -5,6 +5,7 @@ const MessageComposer = {
     channels: [],
     draggedItem: null,
     smsMaxLength: 90, // DB ?곕룞 ??湲곕낯媛?
+    extendedMaxLength: 1000,
     baseEstimatedCost: 0,
     smsCost: 18,
     lmsCost: 45,
@@ -19,12 +20,14 @@ const MessageComposer = {
     templateChannels: [],
     searchTimer: null,
     linkSettingsSnapshot: null,
+    lastValidMessageFields: null,
     previewActionCode: "Ab3dE5gH",
     previewUnsubscribeCode: "Qr7xK2Lm",
 
     init: function () {
         this.loadChannels();
         this.bindEvents();
+        this.setupPreviewScale();
         // 1?④퀎?먯꽌 媛?몄삩 珥???????뚮뜑留?
         const shouldRestoreMessageDraft = sessionStorage.getItem("messageEntrySource") === "review";
         if (shouldRestoreMessageDraft) {
@@ -40,11 +43,35 @@ const MessageComposer = {
         }
         this.restorePurposeState(shouldRestoreMessageDraft);
         this.restoreLinkPurposeState(shouldRestoreMessageDraft);
+        this.syncLastValidMessageFields();
         this.loadTemplateOptions();
         this.loadTemplates();
         this.restoreSelectedTemplate();
         $("#messageTitle").trigger("input");
         $("#messageContent").trigger("input");
+    },
+
+    setupPreviewScale: function () {
+        const frame = document.querySelector(".preview-phone-frame");
+        if (!frame) {
+            return;
+        }
+
+        const updateScale = () => {
+            const width = frame.parentElement ? frame.parentElement.clientWidth : frame.clientWidth;
+            const scale = Math.min(0.84, Math.max(0.48, width / 393));
+            frame.style.setProperty("--send-preview-scale", scale.toFixed(3));
+        };
+
+        updateScale();
+
+        if (typeof ResizeObserver === "undefined") {
+            window.addEventListener("resize", updateScale);
+            return;
+        }
+
+        const observer = new ResizeObserver(updateScale);
+        observer.observe(frame.parentElement || frame);
     },
 
     getByteLength: function (text) {
@@ -58,8 +85,96 @@ const MessageComposer = {
         return byteCount;
     },
 
-    getCharacterLength: function (text) {
-        return text ? text.length : 0;
+    getMessageLimitInfo: function () {
+        const totalBytes = this.getByteLength(this.buildPreviewMetricText());
+        const isSms = totalBytes <= this.smsMaxLength;
+        const limit = isSms ? this.smsMaxLength : this.extendedMaxLength;
+        return {
+            totalBytes: totalBytes,
+            limit: limit,
+            type: isSms ? "SMS" : "LMS",
+            isOverLimit: totalBytes > this.extendedMaxLength
+        };
+    },
+
+    getMessageLimitMessage: function (limitInfo) {
+        return `메시지는 제목, 내용, 자동 링크를 포함해 ${limitInfo.limit}byte까지 입력할 수 있습니다. 현재 ${limitInfo.totalBytes}byte입니다.`;
+    },
+
+    validateMessageLength: function () {
+        const limitInfo = this.getMessageLimitInfo();
+        if (!limitInfo.isOverLimit) {
+            return true;
+        }
+        alert(this.getMessageLimitMessage(limitInfo));
+        $("#messageContent").focus();
+        return false;
+    },
+
+    getCurrentMessageFields: function () {
+        return {
+            title: $("#messageTitle").val() || "",
+            content: $("#messageContent").val() || "",
+            linkButtonName: $("#linkButtonName").val() || "",
+            linkUrl: $("#linkUrl").val() || "",
+            purpose: $(".purpose-btn.active").data("val") || "INFO"
+        };
+    },
+
+    syncLastValidMessageFields: function () {
+        this.lastValidMessageFields = this.getCurrentMessageFields();
+    },
+
+    restoreLastValidMessageFields: function () {
+        const fields = this.lastValidMessageFields || {
+            title: "",
+            content: "",
+            linkButtonName: "",
+            linkUrl: "",
+            purpose: "INFO"
+        };
+        $("#messageTitle").val(fields.title);
+        $("#messageContent").val(fields.content);
+        $("#linkButtonName").val(fields.linkButtonName);
+        $("#linkUrl").val(fields.linkUrl);
+        $(".purpose-btn").removeClass("active");
+        $(`.purpose-btn[data-val="${fields.purpose}"]`).addClass("active");
+        this.persistCurrentMessageFields();
+        this.refreshMessagePreview();
+    },
+
+    persistCurrentMessageFields: function () {
+        const fields = this.getCurrentMessageFields();
+        sessionStorage.setItem("messageTitle", fields.title);
+        sessionStorage.setItem("messageContent", fields.content);
+        sessionStorage.setItem("linkButtonName", fields.linkButtonName);
+        sessionStorage.setItem("linkUrl", fields.linkUrl);
+        sessionStorage.setItem("messagePurpose", fields.purpose);
+    },
+
+    refreshMessagePreview: function () {
+        const title = this.normalizePreviewText($("#messageTitle").val()) || "메시지 제목";
+        $("#previewSmsTitle").text(title);
+        $("#previewKakaoTitle").text(title);
+        $("#previewEmailTitle").text(title);
+        this.updatePurposeNotice();
+        this.updatePreviewContent();
+        this.updateMessageMetrics();
+    },
+
+    normalizePreviewText: function (text) {
+        return (text || "").replace(/^\s+|\s+$/g, "");
+    },
+
+    enforceMessageLength: function () {
+        const limitInfo = this.getMessageLimitInfo();
+        if (!limitInfo.isOverLimit) {
+            this.syncLastValidMessageFields();
+            return true;
+        }
+        alert(this.getMessageLimitMessage(limitInfo));
+        this.restoreLastValidMessageFields();
+        return false;
     },
 
     normalizeChannelType: function (channelType) {
@@ -300,8 +415,9 @@ const MessageComposer = {
 
             const html = `
                 <li class="channel-card" draggable="true" data-index="${index}" data-id="${ch.id}">
+                    <div class="drag-handle" aria-hidden="true">::</div>
+                    <div class="channel-rank">${index + 1}</div>
                     <div class="channel-info">
-                        <div class="drag-handle">::</div>
                         <div class="channel-name">${safeName}</div>
                         <div class="channel-meta">건당 ${safeCostStr}</div>
                     </div>
@@ -395,21 +511,26 @@ const MessageComposer = {
         // ?쒕ぉ ?낅젰 ?ㅼ떆媛?誘몃━蹂닿린 ?숆린??
         $("#messageTitle").on("input", function () {
             const rawVal = $(this).val() || "";
-            sessionStorage.setItem("messageTitle", rawVal);
-            const title = rawVal || "메시지 제목";
+            const title = self.normalizePreviewText(rawVal) || "메시지 제목";
             $("#previewSmsTitle").text(title);
             $("#previewKakaoTitle").text(title);
             $("#previewEmailTitle").text(title);
             self.updateMessageMetrics();
+            if (!self.enforceMessageLength()) {
+                return;
+            }
+            sessionStorage.setItem("messageTitle", rawVal);
         });
 
         // ?띿뒪??諛붿씠????怨꾩궛 諛?誘몃━蹂닿린 ?붾㈃ ?띿뒪???숆린??
         $("#messageContent").on("input", function () {
             const actualText = $(this).val() || "";
-            sessionStorage.setItem("messageContent", actualText);
-
             self.updatePreviewContent();
             self.updateMessageMetrics();
+            if (!self.enforceMessageLength()) {
+                return;
+            }
+            sessionStorage.setItem("messageContent", actualText);
         });
 
         // 템플릿 카드 클릭 시 제목과 내용을 자동 완성하고 미리보기를 연동
@@ -468,6 +589,9 @@ const MessageComposer = {
             self.updatePurposeNotice();
             self.updatePreviewContent();
             self.updateMessageMetrics();
+            if (self.enforceMessageLength()) {
+                sessionStorage.setItem("messagePurpose", $(".purpose-btn.active").data("val") || "INFO");
+            }
         });
 
         $("#btnSaveTemplate").on("click", function () {
@@ -512,6 +636,11 @@ const MessageComposer = {
         $("#linkButtonName, #linkUrl").on("input", function () {
             self.updatePreviewContent();
             self.updateMessageMetrics();
+            if (!self.enforceMessageLength()) {
+                return;
+            }
+            sessionStorage.setItem("linkButtonName", $("#linkButtonName").val() || "");
+            sessionStorage.setItem("linkUrl", $("#linkUrl").val() || "");
         });
 
         $(".link-purpose-btn").on("click", function () {
@@ -648,13 +777,14 @@ const MessageComposer = {
     },
 
     updateMessageMetrics: function () {
-        const characterCount = this.getCharacterLength(this.buildPreviewMetricText());
-        $("#currentBytes").text(characterCount);
+        const limitInfo = this.getMessageLimitInfo();
+        $("#currentBytes").text(limitInfo.totalBytes);
+        $("#maxBytes").text(`최대 ${limitInfo.limit}byte`);
+        $(".byte-counter").toggleClass("byte-counter--error", limitInfo.isOverLimit);
 
-        const isLms = this.isCurrentLmsMessage();
         const $badge = $("#msgTypeBadge");
-        if (isLms) {
-            $badge.text("LMS")
+        if (limitInfo.type === "LMS") {
+            $badge.text(limitInfo.isOverLimit ? "초과" : "LMS")
                 .removeClass("ds-badge--primary")
                 .addClass("ds-badge--secondary msg-type-badge--lms");
         } else {
@@ -668,10 +798,10 @@ const MessageComposer = {
         const parts = this.buildPreviewParts(usePlaceholder);
         let text = parts.body;
         if (parts.actionLink) {
-            text += "\n\n" + parts.actionLink;
+            text += "\n" + parts.actionLink;
         }
         if (parts.unsubscribe) {
-            text += "\n\n" + parts.unsubscribe;
+            text += "\n" + parts.unsubscribe;
         }
         return text;
     },
@@ -682,12 +812,12 @@ const MessageComposer = {
         if (!title) {
             return bodyText;
         }
-        return title + bodyText;
+        return title + "\n" + bodyText;
     },
 
     buildPreviewParts: function (usePlaceholder) {
-        const body = $("#messageContent").val() || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
-        const buttonName = ($("#linkButtonName").val() || "?먯꽭??蹂닿린").trim();
+        const body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
+        const buttonName = ($("#linkButtonName").val() || "자세히 보기").trim();
         const linkUrl = ($("#linkUrl").val() || "").trim();
         const purpose = $(".purpose-btn.active").data("val") || "INFO";
         const parts = {
@@ -700,7 +830,7 @@ const MessageComposer = {
             parts.actionLink = buttonName + "\n" + this.getPreviewShortUrl("r");
         }
         if (purpose === "AD") {
-            parts.unsubscribe = "수신거부를 원하시면 아래 링크를 눌러주세요.\n" + this.getPreviewShortUrl("u");
+            parts.unsubscribe = "수신거부:\n" + this.getPreviewShortUrl("u");
         }
         return parts;
     },
@@ -708,14 +838,6 @@ const MessageComposer = {
     getPreviewShortUrl: function (path) {
         const code = path === "u" ? this.previewUnsubscribeCode : this.previewActionCode;
         return "https://kosa.kr/" + path + "/" + code;
-    },
-
-    hasMessageTitle: function () {
-        return !!($("#messageTitle").val() || "").trim();
-    },
-
-    isCurrentLmsMessage: function () {
-        return this.hasMessageTitle() || this.getByteLength(this.buildPreviewMessageText(false)) > this.smsMaxLength;
     },
 
     updateSelectedTemplate: function (title, content) {
@@ -752,6 +874,9 @@ const MessageComposer = {
         if (!content) {
             alert("템플릿 내용을 입력해주세요.");
             $("#messageContent").focus();
+            return;
+        }
+        if (!this.validateMessageLength()) {
             return;
         }
 
@@ -801,6 +926,9 @@ const MessageComposer = {
         if (!content) {
             alert("테스트 발송 전에 내용을 입력해주세요.");
             $("#messageContent").focus();
+            return;
+        }
+        if (!this.validateMessageLength()) {
             return;
         }
         if (!linkUrl) {

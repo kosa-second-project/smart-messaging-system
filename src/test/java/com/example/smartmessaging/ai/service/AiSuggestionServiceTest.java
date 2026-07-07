@@ -8,6 +8,9 @@ import com.example.smartmessaging.ai.dto.type.AiContextType;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.TemplateCategory;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagPromptContext;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagReferenceLog;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -218,6 +221,43 @@ class AiSuggestionServiceTest {
                 .contains("카카오 메시지에 어울리는 친근하지만 과하지 않은 톤")
                 .contains("가장 제약이 큰 채널을 기준으로")
                 .doesNotContain("LMS에 맞게 SMS보다 조금 자세하되");
+    }
+
+    @Test
+    void RAG_context_isIncludedInGeminiPromptAndBuiltOncePerRequest() {
+        RagPromptContextService ragPromptContextService = mock(RagPromptContextService.class);
+        AiSuggestionService serviceWithRag = new AiSuggestionService(
+                geminiSuggestionClient,
+                new RuleValidationService(),
+                ragPromptContextService
+        );
+        AiSuggestionRequestDTO request = request(MessageType.AD);
+        // 추천 재시도마다 Qdrant를 다시 치지 않고, 첫 검색 결과를 프롬프트에 계속 재사용하는지 확인한다.
+        when(ragPromptContextService.buildSuggestionPromptContext(request))
+                .thenReturn(new RagPromptContext(
+                        "\n[RAG Reference Materials]\n- tone reference only\n",
+                        List.of(new RagReferenceLog(
+                                "hmall-campaign-001",
+                                0.82,
+                                "campaign_copy",
+                                List.of("coupon"),
+                                List.of("tone_reference"),
+                                List.of("100%"),
+                                "Hmall coupon reference preview"
+                        ))
+                ));
+        when(geminiSuggestionClient.generate(anyString()))
+                .thenReturn(response(new AiSuggestionItemResponseDTO("excluded", "contact test@example.com")))
+                .thenReturn(response(validAd("retry passed")));
+
+        AiSuggestionResponseDTO result = serviceWithRag.suggest(request);
+
+        assertThat(result.suggestions()).hasSize(1);
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(geminiSuggestionClient, times(2)).generate(promptCaptor.capture());
+        assertThat(promptCaptor.getAllValues().get(0)).contains("[RAG Reference Materials]");
+        assertThat(promptCaptor.getAllValues().get(1)).contains("[RAG Reference Materials]");
+        verify(ragPromptContextService, times(1)).buildSuggestionPromptContext(request);
     }
 
     private AiSuggestionRequestDTO request(MessageType messageType) {

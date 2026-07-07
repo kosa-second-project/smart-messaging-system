@@ -187,35 +187,12 @@ const RecipientSelector = {
             });
         });
 
-        // 7. 페이지 크기 셀렉터 이벤트 바인딩
-        $(document).on("change", "#pageSizeSelect", function () {
-            SendPage.state.pageSize = parseInt($(this).val(), 10);
-            SendPage.state.currentCursorIndex = 0;
-            SendPage.state.cursorHistory = [null];
-            self.renderAll();
-        });
-
         // 8. 토글 스위치 변경 제어
         $("#toggleShowSelected").on("change", function () {
             SendPage.state.activeTab = this.checked ? "selected" : "filtered";
             SendPage.state.currentCursorIndex = 0;
             SendPage.state.cursorHistory = [null];
             self.renderAll();
-        });
-
-        // 9. 페이징 버튼 (이전/다음) 클릭 처리
-        $(document).on("click", ".page-link-btn", function () {
-            const action = $(this).data("action");
-            if (action === 'prev' && SendPage.state.currentCursorIndex > 0) {
-                SendPage.state.currentCursorIndex--;
-                self.renderTableOnly();
-            } else if (action === 'next' && SendPage.state.hasNext) {
-                SendPage.state.currentCursorIndex++;
-                if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
-                    SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
-                }
-                self.renderTableOnly();
-            }
         });
 
         // 10. "현재 회원 모두 추가" 버튼 클릭 → POST /api/campaigns/draft 로 Redis에 저장
@@ -360,8 +337,10 @@ const RecipientSelector = {
                 if (pagedList.length === 0) {
                     $tbody.empty();
                     $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">검색 및 필터 조건에 부합하는 수신자가 없습니다.</td></tr>');
+                    SendPage.state.nextCursorId = null;
+                    SendPage.state.hasNext = false;
                     self.updatePaginationInfo(0, 0, 0);
-                    self.renderPaginationControls(0);
+                    self.renderPaginationControls(SendPage.state.currentCursorIndex + 1);
                     $("#thCheckAll").prop("checked", false);
                     $("#lblCandidateCount").text("0");
                     return;
@@ -373,7 +352,7 @@ const RecipientSelector = {
                     const isChecked = SendPage.state.activeTab === 'selected' || customer.isInDraft;
                     const gender = customer.tags.find(t => t === '남자' || t === '여자') || '-';
                     const age = customer.tags.find(t => t.endsWith('대')) || '-';
-                    const type = customer.tags.find(t => t === '일반' || t === '신규') || '-';
+                    const type = customer.tags.find(t => t === '일반' || t === '신규' || t === '휴면') || '-';
                     const isBirthday = customer.tags.includes('생일 대상자') ? '<span class="ds-badge ds-badge--primary" style="background-color: var(--accent); color: var(--primary); font-weight: var(--font-weight-bold);">대상</span>' : '-';
 
                     const hasSms = customer.tags.includes('sms 동의');
@@ -428,9 +407,6 @@ const RecipientSelector = {
                 self.updatePaginationInfo(totalCount > 0 ? startIndex + 1 : 0, endIndex, totalCount);
                 self.renderPaginationControls(currentPageNum);
 
-                // 페이지 크기 셀렉터 상태 동기화
-                $("#pageSizeSelect").val(SendPage.state.pageSize);
-
                 // filtered 탭: 검색 응답의 totalCount를 후보 카운트로 직접 사용 (별도 API 호출 절약)
                 if (SendPage.state.activeTab === 'filtered') {
                     $("#lblCandidateCount").text(totalCount);
@@ -444,26 +420,124 @@ const RecipientSelector = {
 
     // 페이징 인포 갱신
     updatePaginationInfo: function (start, end, total) {
-        $("#lblStartIdx").text(start);
-        $("#lblEndIdx").text(end);
-        $("#lblTotalIdx").text(total);
+        SendPage.state.paginationTotalCount = total;
+        SendPage.state.paginationSummary = `Showing ${start} to ${end} of ${total} entries`;
     },
 
     // 페이징 컨트롤 버튼 생성 (커서 기반)
     renderPaginationControls: function (currentPageNum) {
-        const $controls = $("#paginationControls");
-        $controls.empty();
+        const self = this;
+        window.DsPagination?.renderCursor("#recipientPagination", {
+            page: currentPageNum,
+            size: SendPage.state.pageSize,
+            sizes: [20, 50, 100],
+            total: SendPage.state.paginationTotalCount || 0,
+            summary: SendPage.state.paginationSummary || "Showing 0 to 0 of 0 entries",
+            knownPages: SendPage.state.cursorHistory.length,
+            hasPrevious: SendPage.state.currentCursorIndex > 0,
+            hasNext: SendPage.state.hasNext,
+            allowUnknownPages: true,
+            onPageChange: function(pageNumber) {
+                const targetIndex = pageNumber - 1;
+                if (targetIndex === SendPage.state.currentCursorIndex) {
+                    return;
+                }
+                if (targetIndex < SendPage.state.cursorHistory.length) {
+                    SendPage.state.currentCursorIndex = targetIndex;
+                    self.renderTableOnly();
+                    return;
+                }
+                if (targetIndex > SendPage.state.currentCursorIndex) {
+                    self.jumpToCursorPage(targetIndex);
+                    return;
+                }
+                if (pageNumber === SendPage.state.currentCursorIndex + 2 && SendPage.state.hasNext) {
+                    SendPage.state.currentCursorIndex++;
+                    if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
+                        SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    }
+                    self.renderTableOnly();
+                }
+            },
+            onPrevious: function() {
+                if (SendPage.state.currentCursorIndex > 0) {
+                    SendPage.state.currentCursorIndex--;
+                    self.renderTableOnly();
+                }
+            },
+            onNext: function() {
+                if (SendPage.state.hasNext) {
+                    SendPage.state.currentCursorIndex++;
+                    if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
+                        SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    }
+                    self.renderTableOnly();
+                }
+            },
+            onPageSizeChange: function(size) {
+                SendPage.state.pageSize = size;
+                SendPage.state.currentCursorIndex = 0;
+                SendPage.state.cursorHistory = [null];
+                self.renderAll();
+            }
+        });
+    },
 
-        // [이전] 버튼
-        const prevDisabled = SendPage.state.currentCursorIndex === 0 ? 'disabled' : '';
-        $controls.append(`<button type="button" class="page-link-btn" data-action="prev" ${prevDisabled}>이전</button>`);
+    // Cursor-based pagination requires walking through intermediate cursors before a distant page can render.
+    jumpToCursorPage: function (targetIndex) {
+        const self = this;
+        const totalPages = Math.ceil((SendPage.state.paginationTotalCount || 0) / SendPage.state.pageSize);
 
-        // 현재 페이지 표시
-        $controls.append(`<span style="margin: 0 10px; line-height: 36px; font-weight: 500;">${currentPageNum} 페이지</span>`);
+        if (totalPages > 0 && targetIndex + 1 > totalPages) {
+            return;
+        }
 
-        // [다음] 버튼
-        const nextDisabled = !SendPage.state.hasNext ? 'disabled' : '';
-        $controls.append(`<button type="button" class="page-link-btn" data-action="next" ${nextDisabled}>다음</button>`);
+        if (targetIndex < SendPage.state.cursorHistory.length) {
+            SendPage.state.currentCursorIndex = targetIndex;
+            self.renderTableOnly();
+            return;
+        }
+
+        if (!SendPage.state.hasNext || !SendPage.state.nextCursorId) {
+            return;
+        }
+
+        if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex + 1) {
+            SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+        }
+
+        const prefetchNextCursor = function () {
+            if (SendPage.state.cursorHistory.length > targetIndex) {
+                SendPage.state.currentCursorIndex = targetIndex;
+                self.renderTableOnly();
+                return;
+            }
+
+            const cursorId = SendPage.state.cursorHistory[SendPage.state.cursorHistory.length - 1];
+            if (!cursorId) {
+                return;
+            }
+
+            const params = self.getQueryParams(false);
+            params.size = SendPage.state.pageSize;
+            params.cursorId = cursorId;
+
+            CustomerApi.search(params)
+                .done(function (response) {
+                    if (!response || !response.hasNext || !response.nextCursorId) {
+                        SendPage.state.hasNext = false;
+                        SendPage.state.nextCursorId = response ? response.nextCursorId : null;
+                        return;
+                    }
+
+                    SendPage.state.cursorHistory.push(response.nextCursorId);
+                    SendPage.state.hasNext = response.hasNext;
+                    SendPage.state.nextCursorId = response.nextCursorId;
+                    prefetchNextCursor();
+                });
+        };
+
+        prefetchNextCursor();
     },
 
     // 4. 선택 카운트만 갱신 (API 호출 없음)

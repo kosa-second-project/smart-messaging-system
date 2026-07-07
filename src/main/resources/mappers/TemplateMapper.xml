@@ -24,9 +24,17 @@
             AND t.category = #{category}
             </when>
         </choose>
-        <if test="purpose != null and purpose != ''">
-            AND t.purpose = #{purpose}
-        </if>
+        <choose>
+            <when test="purposes != null and purposes.size() > 0">
+                AND t.purpose IN
+                <foreach item="purposeItem" collection="purposes" open="(" separator="," close=")">
+                    #{purposeItem}
+                </foreach>
+            </when>
+            <when test="purpose != null and purpose != ''">
+                AND t.purpose = #{purpose}
+            </when>
+        </choose>
         <choose>
             <when test="channelTypes != null and channelTypes.size() > 0">
                 AND EXISTS (
@@ -82,7 +90,7 @@
                 NVL(t.cnt, 0) DESC, t.id DESC
             </when>
             <otherwise>
-                t.updated_at DESC, t.id DESC
+                t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST, t.id DESC
             </otherwise>
         </choose>
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
@@ -107,9 +115,26 @@
             t.category,
             t.cnt,
             t.purpose,
+            NVL(ts.click_rate, 0) AS click_rate,
+            NVL(ts.conversion_rate, 0) AS conversion_rate,
             TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
             TO_CHAR(t.updated_at, 'YYYY-MM-DD HH24:MI') AS updated_at
         FROM template t
+        LEFT JOIN (
+            SELECT
+                template_id,
+                CASE
+                    WHEN SUM(NVL(click_target_count, 0)) = 0 THEN 0
+                    ELSE ROUND((SUM(NVL(click_count, 0)) / SUM(NVL(click_target_count, 0))) * 100, 1)
+                END AS click_rate,
+                CASE
+                    WHEN SUM(NVL(conversion_target_count, 0)) = 0 THEN 0
+                    ELSE ROUND((SUM(NVL(conversion_count, 0)) / SUM(NVL(conversion_target_count, 0))) * 100, 1)
+                END AS conversion_rate
+            FROM template_stat
+            WHERE NVL(is_deleted, 0) = 0
+            GROUP BY template_id
+        ) ts ON ts.template_id = t.id
         WHERE t.id = #{templateId}
           AND t.user_id = #{userId}
           AND NVL(t.is_deleted, 0) = 0

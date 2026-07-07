@@ -65,7 +65,7 @@ public class HistoryServiceImpl implements HistoryService {
         condition = condition.normalized();
         long totalElements = historyMapper.countHistories(condition);
         int totalPages = totalElements == 0 ? 0
-                : (int) Math.ceil((double) totalElements / HistorySearchRequestDTO.PAGE_SIZE);
+                : (int) Math.ceil((double) totalElements / condition.pageSize());
 
         if (totalPages > 0 && condition.page() > totalPages) {
             condition = condition.withPage(totalPages);

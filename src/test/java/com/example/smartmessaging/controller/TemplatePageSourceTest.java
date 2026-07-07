@@ -26,10 +26,50 @@ class TemplatePageSourceTest {
                         "item.createdAt",
                         "item.updatedAt",
                         "item.content",
-                        "renderMessagePreview");
+                        "item.clickRate",
+                        "item.conversionRate",
+                        "templateDetailPreview");
         assertThat(detailFunction)
                 .doesNotContain("010-0000-0000",
                         "Gmail");
+    }
+
+    @Test
+    void 템플릿_상세_미리보기는_메시지작성_공통_컴포넌트를_사용한다() throws Exception {
+        String template = Files.readString(
+                Path.of("src/main/resources/templates/pages/templates.html"),
+                StandardCharsets.UTF_8
+        );
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(template)
+                .contains("messagePreviewComponentTemplate",
+                        "fragments/components/message-preview :: preview");
+        assertThat(script)
+                .contains("createCommonMessagePreview",
+                        "templateFormPreview",
+                        "templateDetailPreview",
+                        "phonePreviewBox",
+                        "mode-sms",
+                        "mode-kakao",
+                        "mode-email");
+    }
+
+    @Test
+    void 템플릿_상세는_클릭률과_전환률을_표시한다() throws Exception {
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(script)
+                .contains("클릭률",
+                        "전환률",
+                        "formatPercent(item.clickRate)",
+                        "formatPercent(item.conversionRate)");
     }
 
     @Test

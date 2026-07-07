@@ -126,7 +126,7 @@ class SmsMessageServiceTest {
         assertThat(captor.getValue().getText())
                 .contains("쿠폰 보기")
                 .contains("http://localhost:8080/r/abc")
-                .contains("수신거부를 원하시면")
+                .contains("수신거부:")
                 .contains("http://localhost:8080/u/def");
     }
 }
