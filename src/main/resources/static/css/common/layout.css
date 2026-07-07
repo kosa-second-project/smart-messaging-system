@@ -213,6 +213,13 @@
   font-weight: var(--font-weight-bold);
 }
 
+.app-header__avatar--large {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  font-size: 0.875rem;
+}
+
 .app-header__avatar--unlinked {
   background-color: var(--border);
   color: var(--muted-foreground);
@@ -221,6 +228,179 @@
 .app-header__avatar--linked {
   background-color: #FEE500;
   color: #000000;
+}
+
+.app-profile {
+  position: relative;
+}
+
+.app-profile__trigger {
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--foreground);
+  padding: 0.25rem 0.375rem;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.app-profile__trigger:hover,
+.app-profile.is-open .app-profile__trigger {
+  border-color: var(--border);
+  background: var(--muted);
+}
+
+.app-profile__identity {
+  min-width: 0;
+  display: grid;
+  gap: 0.0625rem;
+  text-align: left;
+}
+
+.app-profile__label {
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.app-profile__name {
+  max-width: 8rem;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-profile__chevron {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.app-profile.is-open .app-profile__chevron {
+  transform: rotate(180deg);
+}
+
+.app-profile__menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 70;
+  width: min(20rem, calc(100vw - 1.5rem));
+  display: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-profile.is-open .app-profile__menu {
+  display: block;
+}
+
+.app-profile__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-profile__summary-text {
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.app-profile__summary-text strong,
+.app-profile__summary-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-profile__summary-text strong {
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.app-profile__summary-text span {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.app-profile__section {
+  padding: 0.5rem;
+}
+
+.app-profile__menu-item,
+.app-profile__logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  padding: 0.75rem;
+  text-decoration: none;
+}
+
+.app-profile__menu-item:hover,
+.app-profile__logout:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.app-profile__menu-item--readonly {
+  cursor: default;
+}
+
+.app-profile__menu-item--readonly:hover {
+  background: transparent;
+}
+
+.app-profile__menu-icon {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.app-profile__menu-item span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.app-profile__menu-item strong {
+  color: var(--foreground);
+  font-size: 0.8125rem;
+}
+
+.app-profile__menu-item small {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.app-profile__logout {
+  justify-content: center;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
 }
 
 .app-mobile-backdrop {
@@ -377,6 +557,10 @@
     display: inline-flex !important;
   }
 
+  .app-profile__name {
+    max-width: 6rem;
+  }
+
   .page {
     padding: 0.875rem;
   }
@@ -388,6 +572,16 @@
 
   .page-toolbar__actions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .app-profile__identity {
+    display: none;
+  }
+
+  .app-profile__trigger {
+    gap: 0.375rem;
   }
 }
 

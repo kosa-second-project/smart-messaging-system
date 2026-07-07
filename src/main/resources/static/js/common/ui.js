@@ -55,4 +55,31 @@ $(function () {
         $sidebar.removeClass("is-open");
         $backdrop.removeClass("is-open");
     });
+
+    const $profileMenu = $("[data-profile-menu]");
+    const $profileToggle = $("[data-profile-toggle]");
+
+    function closeProfileMenu() {
+        $profileMenu.removeClass("is-open");
+        $profileToggle.attr("aria-expanded", "false");
+    }
+
+    $profileToggle.on("click", function (event) {
+        event.stopPropagation();
+        const isOpen = $profileMenu.hasClass("is-open");
+        $profileMenu.toggleClass("is-open", !isOpen);
+        $profileToggle.attr("aria-expanded", !isOpen ? "true" : "false");
+    });
+
+    $(document).on("click", function (event) {
+        if (!$(event.target).closest("[data-profile-menu]").length) {
+            closeProfileMenu();
+        }
+    });
+
+    $(document).on("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeProfileMenu();
+        }
+    });
 });
