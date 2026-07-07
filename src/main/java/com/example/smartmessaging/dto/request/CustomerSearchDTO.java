@@ -7,16 +7,17 @@ import java.util.List;
 
 @Data
 public class CustomerSearchDTO {
-    
+
     private String name;
     private String phone;
-    private String customerType;      // 일반, 신규, 휴면
+    private String customerType;
     private List<String> customerTypes = new ArrayList<>();
-    private String searchTag;         // 타겟/태그명 검색
-    private Boolean isRejectedOnly = false; // 수신거부자 목록 탭 전용 필터
-    private String sortOrder = "latest";    // 정렬 순서 (latest, name, type)
-    
-    // 페이징 처리 용도 (기본값 설정)
+    private String searchTag;
+    private Boolean isRejectedOnly = false;
+    private List<Long> tagIds = new ArrayList<>();
+    private String matchType = "ANY";
+    private String sortOrder = "latest";
+
     private int page = 1;
     private int size = 10;
 
@@ -24,7 +25,15 @@ public class CustomerSearchDTO {
         return (page - 1) * size;
     }
 
+    public void setPage(int page) {
+        this.page = Math.max(page, 1);
+    }
+
     public void setSize(int size) {
         this.size = Math.min(Math.max(size, 10), 100);
+    }
+
+    public int getTagCount() {
+        return tagIds == null ? 0 : tagIds.size();
     }
 }

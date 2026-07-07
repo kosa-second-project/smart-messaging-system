@@ -6,6 +6,11 @@ let templateReviewSignature = null;
 let templateReviewStatus = null;
 let templateGenerating = false;
 let templateReviewing = false;
+let templateLastValidFields = {
+    title: "",
+    content: ""
+};
+let templateLastValidChannelIds = [];
 let templateOptions = {
     channels: [],
     categories: [],
@@ -13,6 +18,8 @@ let templateOptions = {
 };
 
 const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}"];
+const TEMPLATE_SMS_MAX_BYTES = 90;
+const TEMPLATE_EXTENDED_MAX_BYTES = 1000;
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();
@@ -40,16 +47,26 @@ function bindTemplateEvents() {
     ["templateTitle", "templateContent"].forEach(id => {
         document.getElementById(id).addEventListener("input", function() {
             templateIsAiGenerated = false;
+            renderTemplateByteCount();
             renderFormPreview();
+            if (!enforceTemplateLength()) {
+                return;
+            }
             invalidateTemplateReview();
         });
     });
 
     document.getElementById("templateCategory").addEventListener("change", invalidateTemplateReview);
-    document.getElementById("templateChannelCheckboxes").addEventListener("change", invalidateTemplateReview);
-
-    document.getElementById("templateContent").addEventListener("input", function(event) {
-        document.getElementById("templateContentCount").innerText = `${event.target.value.length}자`;
+    document.getElementById("templateChannelCheckboxes").addEventListener("change", function() {
+        renderTemplateByteCount();
+        if (!enforceTemplateLength()) {
+            restoreTemplateChannelSelection();
+            renderTemplateByteCount();
+            renderFormPreview();
+            return;
+        }
+        syncTemplateChannelSelection();
+        invalidateTemplateReview();
     });
 
     document.querySelectorAll("[data-preview-mode]").forEach(button => {
@@ -159,6 +176,113 @@ function renderTemplateChannelCheckboxes() {
         `;
         wrapper.appendChild(label);
     });
+    syncTemplateChannelSelection();
+    renderTemplateByteCount();
+}
+
+function getKoreanByteLength(text) {
+    if (!text) {
+        return 0;
+    }
+    let byteCount = 0;
+    for (let i = 0; i < text.length; i++) {
+        byteCount += text.charCodeAt(i) <= 0x007F ? 1 : 2;
+    }
+    return byteCount;
+}
+
+function buildTemplateMetricText() {
+    const title = (document.getElementById("templateTitle")?.value || "").trim();
+    const content = document.getElementById("templateContent")?.value || "";
+    if (!title) {
+        return content;
+    }
+    return title + "\n" + content;
+}
+
+function normalizeTemplateChannelType(channelType) {
+    const value = (channelType || "").trim().toUpperCase();
+    if (value.startsWith("KAKAO")) {
+        return "KAKAO";
+    }
+    return value;
+}
+
+function getTemplateLimitInfo() {
+    const channels = getSelectedChannelTypes().map(normalizeTemplateChannelType);
+    const hasSms = channels.includes("SMS");
+    const limit = hasSms ? TEMPLATE_SMS_MAX_BYTES : TEMPLATE_EXTENDED_MAX_BYTES;
+    const totalBytes = getKoreanByteLength(buildTemplateMetricText());
+    return {
+        totalBytes,
+        limit,
+        isOverLimit: totalBytes > limit
+    };
+}
+
+function renderTemplateByteCount() {
+    const counter = document.getElementById("templateContentCount");
+    if (!counter) {
+        return;
+    }
+    const info = getTemplateLimitInfo();
+    counter.innerText = `${info.totalBytes} / 최대 ${info.limit}byte`;
+    counter.classList.toggle("is-error", info.isOverLimit);
+}
+
+function validateTemplateLength() {
+    const info = getTemplateLimitInfo();
+    if (!info.isOverLimit) {
+        return true;
+    }
+    alert(`템플릿은 제목과 내용을 포함해 ${info.limit}byte까지 입력할 수 있습니다. 현재 ${info.totalBytes}byte입니다.`);
+    document.getElementById("templateContent").focus();
+    return false;
+}
+
+function getCurrentTemplateFields() {
+    return {
+        title: document.getElementById("templateTitle")?.value || "",
+        content: document.getElementById("templateContent")?.value || ""
+    };
+}
+
+function syncTemplateFields() {
+    templateLastValidFields = getCurrentTemplateFields();
+}
+
+function restoreTemplateFields() {
+    document.getElementById("templateTitle").value = templateLastValidFields.title || "";
+    document.getElementById("templateContent").value = templateLastValidFields.content || "";
+    renderTemplateByteCount();
+    renderFormPreview();
+}
+
+function getSelectedTemplateChannelIds() {
+    return Array.from(document.querySelectorAll("input[name='templateChannel']:checked"))
+        .map(input => String(input.value));
+}
+
+function syncTemplateChannelSelection() {
+    templateLastValidChannelIds = getSelectedTemplateChannelIds();
+}
+
+function restoreTemplateChannelSelection() {
+    const selected = new Set(templateLastValidChannelIds);
+    document.querySelectorAll("input[name='templateChannel']").forEach(input => {
+        input.checked = selected.has(String(input.value));
+    });
+}
+
+function enforceTemplateLength() {
+    const info = getTemplateLimitInfo();
+    if (!info.isOverLimit) {
+        syncTemplateFields();
+        return true;
+    }
+    alert(`템플릿은 제목과 내용을 포함해 ${info.limit}byte까지 입력할 수 있습니다. 현재 ${info.totalBytes}byte입니다.`);
+    restoreTemplateFields();
+    return false;
 }
 
 function fetchTemplates() {
@@ -339,58 +463,55 @@ function renderTemplateDetail(item) {
     }
 
     return `
-        <div class="template-detail">
-            <div class="template-detail__summary">
-                <div>
-                    <div class="template-detail__title">${escapeHtml(item.title)}</div>
-                    <div class="template-detail__meta">
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">채널</span>
-                            <span class="template-detail__value">${renderChannelChips(item.channels || [])}</span>
-                        </div>
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">카테고리</span>
-                            <span class="template-detail__value">${escapeHtml(item.categoryDisplayName || getCategoryLabel(item.category))}</span>
-                        </div>
-                        <div class="template-detail__meta-item">
-                            <span class="template-detail__label">광고여부</span>
-                            ${renderPurposeBadge(item.purpose)}
+        <div class="template-modal-layout template-modal-layout--detail template-detail">
+            <section class="template-modal-main">
+                <div class="template-detail__summary">
+                    <div>
+                        <div class="template-detail__title">${escapeHtml(item.title)}</div>
+                        <div class="template-detail__meta">
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">채널</span>
+                                <span class="template-detail__value">${renderChannelChips(item.channels || [])}</span>
+                            </div>
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">카테고리</span>
+                                <span class="template-detail__value">${escapeHtml(item.categoryDisplayName || getCategoryLabel(item.category))}</span>
+                            </div>
+                            <div class="template-detail__meta-item">
+                                <span class="template-detail__label">광고여부</span>
+                                ${renderPurposeBadge(item.purpose)}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="template-detail__metrics">
-                ${renderMetric("템플릿 ID", item.id || "-")}
-                ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
-                ${renderMetric("클릭률", formatPercent(item.clickRate))}
-                ${renderMetric("전환률", formatPercent(item.conversionRate))}
-                ${renderMetric("생성일", item.createdAt || "-")}
-                ${renderMetric("최근 수정", item.updatedAt || "-")}
-                ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
-            </div>
+                <div class="template-detail__metrics">
+                    ${renderMetric("템플릿 ID", item.id || "-")}
+                    ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
+                    ${renderMetric("클릭률", formatPercent(item.clickRate))}
+                    ${renderMetric("전환률", formatPercent(item.conversionRate))}
+                    ${renderMetric("생성일", item.createdAt || "-")}
+                    ${renderMetric("최근 수정", item.updatedAt || "-")}
+                    ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
+                </div>
 
-            <div class="template-detail__content">
-                <!-- 좌측: 메시지 내용 -->
-                <section>
+                <section class="template-detail__content">
                     <div class="template-detail__metric-label">메시지 내용</div>
                     <div class="template-message-box" style="white-space: pre-wrap; word-break: break-all;">${escapeHtml(item.content || "")}</div>
                 </section>
+            </section>
 
-                <!-- 우측: 채널별 미리보기 -->
-                <section class="template-detail-preview">
-                    <div class="template-preview-header">
-                        <span>미리보기</span>
-                        <div class="ds-segment">
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'message' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('message')">메시지</button>
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'kakao' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('kakao')">카카오톡</button>
-                            <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'email' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('email')">이메일</button>
-                        </div>
+            <aside class="template-modal-aside template-detail-preview">
+                <div class="template-panel-header">
+                    <span>미리보기</span>
+                    <div class="ds-segment">
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'message' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('message')">메시지</button>
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'kakao' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('kakao')">카카오톡</button>
+                        <button type="button" class="ds-segment__item ${currentDetailPreviewMode === 'email' ? 'is-active' : ''}" onclick="switchDetailPreviewMode('email')">이메일</button>
                     </div>
-                    <div id="templateDetailPreview">
-                    </div>
-                </section>
-            </div>
+                </div>
+                <div id="templateDetailPreview"></div>
+            </aside>
         </div>
     `;
 }
@@ -490,6 +611,8 @@ function openAddTemplateModal() {
 
 function closeAddTemplateModal() {
     document.getElementById("templateAddModal").classList.remove("is-open");
+    closeTemplateAiPanel();
+    closeTemplateReviewModal();
 }
 
 function closeAddTemplateOnBackdrop(event) {
@@ -505,6 +628,18 @@ function closeTemplateDetailModal() {
 function closeTemplateDetailOnBackdrop(event) {
     if (event.target.id === "templateDetailModal" || event.target.classList.contains("ds-modal__backdrop")) {
         closeTemplateDetailModal();
+    }
+}
+
+function closeTemplateAiOnBackdrop(event) {
+    if (event.target.id === "templateAiModal" || event.target.classList.contains("ds-modal__backdrop")) {
+        closeTemplateAiPanel();
+    }
+}
+
+function closeTemplateReviewOnBackdrop(event) {
+    if (event.target.id === "templateReviewModal" || event.target.classList.contains("ds-modal__backdrop")) {
+        closeTemplateReviewModal();
     }
 }
 
@@ -524,8 +659,10 @@ function resetTemplateForm() {
     document.querySelectorAll("[data-preview-mode]").forEach(button => {
         button.classList.toggle("is-active", button.dataset.previewMode === "message");
     });
-    document.getElementById("templateContentCount").innerText = "0자";
     document.querySelectorAll("input[name='templateChannel']").forEach(input => input.checked = false);
+    syncTemplateFields();
+    syncTemplateChannelSelection();
+    renderTemplateByteCount();
     document.getElementById("templateAiDirection").value = "";
     document.getElementById("templateAiMessage").innerText = "";
     document.getElementById("templateAiSuggestions").innerHTML = "";
@@ -542,6 +679,9 @@ function resetTemplateForm() {
 }
 
 function saveTemplate() {
+    if (!validateTemplateLength()) {
+        return;
+    }
     if (templateReviewSignature !== getTemplateReviewSignature()) {
         invalidateTemplateReview();
         alert("현재 내용으로 AI 검사를 먼저 완료해 주세요.");
@@ -576,14 +716,23 @@ function saveTemplate() {
 }
 
 function openTemplateAiPanel() {
-    document.getElementById("templatePreviewPanel").hidden = true;
+    document.getElementById("templateAiModal").classList.add("is-open");
     document.getElementById("templateAiPanel").hidden = false;
     document.getElementById("templateAiDirection").focus();
 }
 
 function closeTemplateAiPanel() {
-    document.getElementById("templatePreviewPanel").hidden = false;
+    document.getElementById("templateAiModal").classList.remove("is-open");
     document.getElementById("templateAiPanel").hidden = true;
+}
+
+function openTemplateReviewModal() {
+    document.getElementById("templateReviewModal").classList.add("is-open");
+    document.getElementById("templateReviewPanel").hidden = false;
+}
+
+function closeTemplateReviewModal() {
+    document.getElementById("templateReviewModal").classList.remove("is-open");
 }
 
 function generateTemplateSuggestions() {
@@ -622,7 +771,7 @@ function generateTemplateSuggestions() {
             if (generationSignature !== JSON.stringify(currentRequest)) {
                 throw new Error("생성 중 조건이 변경되었습니다. 다시 생성해 주세요.");
             }
-            const suggestions = (data.suggestions || []).slice(0, 3);
+            const suggestions = (data.suggestions || []).slice(0, 2);
             if (!suggestions.length) throw new Error("추천 가능한 문구가 없습니다. 입력 방향을 바꿔 다시 시도해 주세요.");
             message.innerText = `${suggestions.length}개의 문구를 생성했습니다.`;
             renderTemplateSuggestions(suggestions);
@@ -665,7 +814,10 @@ function renderTemplateSuggestions(suggestions) {
 function applyTemplateSuggestion(suggestion) {
     document.getElementById("templateTitle").value = suggestion.title || "";
     document.getElementById("templateContent").value = suggestion.content || "";
-    document.getElementById("templateContentCount").innerText = `${(suggestion.content || "").length}자`;
+    renderTemplateByteCount();
+    if (!enforceTemplateLength()) {
+        return;
+    }
     templateIsAiGenerated = true;
     invalidateTemplateReview();
     renderFormPreview();
@@ -684,6 +836,7 @@ function reviewTemplate() {
     button.disabled = true;
     button.innerText = "검사 중...";
     const panel = document.getElementById("templateReviewPanel");
+    openTemplateReviewModal();
     panel.hidden = false;
     document.getElementById("templateReviewResult").innerHTML = `<p class="template-review-summary">문구를 검사하고 있습니다...</p>`;
     document.getElementById("templateReviewAcknowledgeRow").hidden = true;
@@ -723,6 +876,9 @@ function validateTemplateForReview() {
     if (!form.reportValidity()) return false;
     if (!getSelectedChannelTypes().length) {
         alert("하나 이상의 채널을 선택해 주세요.");
+        return false;
+    }
+    if (!validateTemplateLength()) {
         return false;
     }
     return true;
@@ -784,7 +940,8 @@ function updateTemplateSaveState() {
         && templateReviewSignature === getTemplateReviewSignature();
     const acknowledged = templateReviewStatus === "PASS"
         || document.getElementById("templateReviewAcknowledge").checked;
-    document.getElementById("templateSaveButton").disabled = !(currentReview && acknowledged);
+    const isLengthValid = !getTemplateLimitInfo().isOverLimit;
+    document.getElementById("templateSaveButton").disabled = !(currentReview && acknowledged && isLengthValid);
 }
 
 function renderTemplateReview(data) {
@@ -828,7 +985,10 @@ function renderTemplateReview(data) {
     if (data.suggestedRewrite) {
         document.getElementById("templateApplyRewriteButton").addEventListener("click", function() {
             document.getElementById("templateContent").value = data.suggestedRewrite;
-            document.getElementById("templateContentCount").innerText = `${data.suggestedRewrite.length}자`;
+            renderTemplateByteCount();
+            if (!enforceTemplateLength()) {
+                return;
+            }
             renderFormPreview();
             invalidateTemplateReview();
         });

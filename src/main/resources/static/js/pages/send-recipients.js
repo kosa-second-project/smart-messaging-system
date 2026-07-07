@@ -350,7 +350,7 @@ const RecipientSelector = {
                     const isChecked = SendPage.state.activeTab === 'selected' || customer.isInDraft;
                     const gender = customer.tags.find(t => t === '남자' || t === '여자') || '-';
                     const age = customer.tags.find(t => t.endsWith('대')) || '-';
-                    const type = customer.tags.find(t => t === '일반' || t === '신규') || '-';
+                    const type = customer.tags.find(t => t === '일반' || t === '신규' || t === '휴면') || '-';
                     const isBirthday = customer.tags.includes('생일 대상자') ? '<span class="ds-badge ds-badge--primary" style="background-color: var(--accent); color: var(--primary); font-weight: var(--font-weight-bold);">대상</span>' : '-';
 
                     const hasSms = customer.tags.includes('sms 동의');

@@ -127,27 +127,29 @@
 }
 
 .bubble {
-    max-width: 88%;
-    padding: 8px 14px;
-    font-size: 14px;
-    line-height: 1.42;
+    box-sizing: border-box;
+    width: 236px;
+    min-height: 0;
+    padding: 6px 10px;
+    font-size: 13px;
+    line-height: 1.34;
     word-break: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
 }
 
 .bubble-title {
-    margin-bottom: 4px;
-    font-size: 14px;
+    margin-bottom: 3px;
+    font-size: 13px;
     font-weight: 700;
 }
 
 .bubble-link-area,
 .bubble-unsubscribe {
-    margin-top: 8px;
-    padding-top: 6px;
-    font-size: 12px;
-    line-height: 1.45;
+    margin-top: 6px;
+    padding-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
     white-space: pre-wrap;
 }
 
@@ -235,7 +237,7 @@
     position: relative;
     background: #e9e9eb;
     color: #111113;
-    border-radius: 18px 18px 18px 6px;
+    border-radius: 17px 17px 17px 6px;
     box-shadow: none;
 }
 
@@ -362,11 +364,11 @@
 
 .kakao-bubble {
     position: relative;
-    width: fit-content;
-    max-width: 92%;
+    width: 228px;
+    max-width: 228px;
     background: #ffffff;
     color: #191919;
-    border-radius: 4px 16px 16px 16px;
+    border-radius: 3px 12px 12px 12px;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 

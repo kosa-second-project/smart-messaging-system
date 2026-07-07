@@ -268,6 +268,11 @@
     gap: 0.5rem;
 }
 
+.byte-counter--error {
+    color: var(--destructive);
+    border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent);
+}
+
 .msg-type-badge--lms {
     background-color: #8E54E9 !important;
     color: white !important;

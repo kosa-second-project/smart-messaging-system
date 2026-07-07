@@ -3,149 +3,142 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/send-layout}">
 <body>
-    <div layout:fragment="send-content" class="send-layout">
-                <!-- 1. 좌측 태그 필터 패널 -->
-                <aside class="send-filter-panel">
-                    <div class="panel-section">
-                        <div class="panel-header">
-                            <h3 class="panel-title">태그 선택</h3>
-                            <button type="button" id="btnResetTags" class="ds-button ds-button--text btn-reset-tags">
-                                태그 선택 초기화 🔄
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="panel-section">
-                        <h4 class="section-title">조건</h4>
-                        <div class="ds-button-group w-100">
-                            <button type="button" id="btnConditionOr" class="ds-button ds-button--outline w-50 active">하나라도 해당</button>
-                            <button type="button" id="btnConditionAnd" class="ds-button ds-button--outline w-50">모두 해당</button>
-                        </div>
-                    </div>
-
-                    <!-- 필터 스크롤 영역 -->
-                    <div class="filter-scroll-container">
-                        <!-- 1. 고객 유형 조건 그룹 -->
-                        <div class="panel-section filter-group" data-group="type">
-                            <div class="filter-group-header">
-                                <h4 class="section-title">고객 유형</h4>
-                            </div>
-                            <div class="tag-cloud">
-                                <button type="button" class="tag-item-btn" data-tag="일반">일반</button>
-                                <button type="button" class="tag-item-btn" data-tag="신규">신규</button>
-                                <button type="button" class="tag-item-btn" data-tag="생일 대상자">생일 대상자</button>
-                            </div>
-                        </div>
-
-                        <!-- 2. 성별 조건 그룹 -->
-                        <div class="panel-section filter-group" data-group="gender">
-                            <div class="filter-group-header">
-                                <h4 class="section-title">성별</h4>
-                            </div>
-                            <div class="tag-cloud">
-                                <button type="button" class="tag-item-btn" data-tag="남자">남자</button>
-                                <button type="button" class="tag-item-btn" data-tag="여자">여자</button>
-                            </div>
-                        </div>
-
-                        <!-- 3. 나이 조건 그룹 -->
-                        <div class="panel-section filter-group" data-group="age">
-                            <div class="filter-group-header">
-                                <h4 class="section-title">나이</h4>
-                            </div>
-                            <div class="tag-cloud">
-                                <button type="button" class="tag-item-btn" data-tag="10대">10대</button>
-                                <button type="button" class="tag-item-btn" data-tag="20대">20대</button>
-                                <button type="button" class="tag-item-btn" data-tag="30대">30대</button>
-                                <button type="button" class="tag-item-btn" data-tag="40대">40대</button>
-                                <button type="button" class="tag-item-btn" data-tag="50대">50대</button>
-                                <button type="button" class="tag-item-btn" data-tag="60대">60대</button>
-                                <button type="button" class="tag-item-btn" data-tag="70대">70대</button>
-                            </div>
-                        </div>
-
-                        <!-- 4. 수신 동의 조건 그룹 -->
-                        <div class="panel-section filter-group" data-group="consent">
-                            <div class="filter-group-header">
-                                <h4 class="section-title">수신 동의</h4>
-                            </div>
-                            <div class="tag-cloud">
-                                <button type="button" class="tag-item-btn" data-tag="카카오 동의">카카오 동의</button>
-                                <button type="button" class="tag-item-btn" data-tag="sms 동의">sms 동의</button>
-                                <button type="button" class="tag-item-btn" data-tag="이메일 동의">이메일 동의</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </aside>
-                
-                <!-- 2. 우측 회원 목록 패널 -->
-                <div class="send-main-panel">
-                    <div class="main-header-row">
-                        <div class="search-box flex-grow-1">
-                            <input type="text" id="customerSearchInput" class="ds-input" placeholder="고객명, 태그 검색" autocomplete="off">
-                        </div>
-                    </div>
-                    
-                    <!-- 테이블 컨트롤 바 -->
-                    <div class="table-control-bar">
-                        <div class="table-control-left">
-                            <span class="search-result-text">검색 결과 <b><span id="lblCandidateCount">0</span></b>명</span>
-                        </div>
-                        <div class="table-control-right">
-                            <!-- 토글 스위치 -->
-                            <label class="ds-toggle-switch">
-                                <input type="checkbox" id="toggleShowSelected">
-                                <span class="ds-toggle-slider"></span>
-                                <span class="ds-toggle-label">선택된 회원만 보기</span>
-                            </label>
-                            
-                            <div class="divider"></div>
-
-                            <!-- 일괄 액션 버튼 -->
-                            <button type="button" id="btnAddAllFiltered" class="ds-button ds-button--outline ds-button--sm btn-add-all">
-                                ✚ 필터 결과 일괄 추가
-                            </button>
-                            <button type="button" id="btnRemoveAllSelected" class="ds-button ds-button--outline ds-button--sm btn-remove-all" style="display: none;">
-                                ➖ 수신 대상 전체 초기화
-                            </button>
-                            
-                            <!-- 장바구니 요약 뱃지 -->
-                            <div class="selected-summary-count-badge">
-                                선택됨: <span id="lblSelectedCount">0</span>명
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 고객 목록 테이블 -->
-                    <div class="table-container">
-                        <table class="ds-table">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input type="checkbox" id="thCheckAll" class="ds-checkbox">
-                                    </th>
-                                    <th>고객명</th>
-                                    <th>번호</th>
-                                    <th class="hide-on-tablet">유형</th>
-                                    <th class="hide-on-mobile">성별</th>
-                                    <th class="hide-on-mobile">나이</th>
-                                    <th class="hide-on-mobile">생일 대상자</th>
-                                    <th>문자</th>
-                                    <th>카카오</th>
-                                    <th>이메일</th>
-                                </tr>
-                            </thead>
-                            <tbody id="customerTableBody">
-                                <!-- 자바스크립트 동적 주입 -->
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div id="recipientPagination" class="ds-pagination"></div>
+    <div layout:fragment="send-content" class="selector-layout send-layout">
+        <aside class="selector-filter-panel send-filter-panel">
+            <div class="selector-panel-section panel-section">
+                <div class="selector-panel-header panel-header">
+                    <h3 class="selector-panel-title panel-title">태그 선택</h3>
+                    <button type="button" id="btnResetTags" class="ds-button ds-button--ghost ds-button--sm btn-reset-tags">
+                        초기화
+                    </button>
                 </div>
-                
-        <!-- 1단계 전용 JS -->
+            </div>
+
+            <div class="selector-panel-section panel-section">
+                <h4 class="selector-section-title section-title">조건</h4>
+                <div class="ds-button-group w-100">
+                    <button type="button" id="btnConditionOr" class="ds-button ds-button--outline w-50 active">하나라도 해당</button>
+                    <button type="button" id="btnConditionAnd" class="ds-button ds-button--outline w-50">모두 해당</button>
+                </div>
+            </div>
+
+            <div class="selector-tag-scroll filter-scroll-container">
+                <div class="selector-panel-section panel-section filter-group" data-group="type">
+                    <div class="filter-group-header">
+                        <h4 class="selector-section-title section-title">고객 유형</h4>
+                    </div>
+                    <div class="selector-tag-cloud tag-cloud">
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="일반">일반</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="신규">신규</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="휴면">휴면</button>
+                    </div>
+                </div>
+
+                <div class="selector-panel-section panel-section filter-group" data-group="gender">
+                    <div class="filter-group-header">
+                        <h4 class="selector-section-title section-title">성별</h4>
+                    </div>
+                    <div class="selector-tag-cloud tag-cloud">
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="남자">남자</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="여자">여자</button>
+                    </div>
+                </div>
+
+                <div class="selector-panel-section panel-section filter-group" data-group="age">
+                    <div class="filter-group-header">
+                        <h4 class="selector-section-title section-title">나이</h4>
+                    </div>
+                    <div class="selector-tag-cloud tag-cloud">
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="10대">10대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="20대">20대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="30대">30대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="40대">40대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="50대">50대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="60대">60대</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="70대">70대</button>
+                    </div>
+                </div>
+
+                <div class="selector-panel-section panel-section filter-group" data-group="consent">
+                    <div class="filter-group-header">
+                        <h4 class="selector-section-title section-title">수신 동의</h4>
+                    </div>
+                    <div class="selector-tag-cloud tag-cloud">
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="카카오 동의">카카오 동의</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="sms 동의">sms 동의</button>
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="이메일 동의">이메일 동의</button>
+                    </div>
+                </div>
+
+                <div class="selector-panel-section panel-section filter-group" data-group="etc">
+                    <div class="filter-group-header">
+                        <h4 class="selector-section-title section-title">기타 태그</h4>
+                    </div>
+                    <div class="selector-tag-cloud tag-cloud">
+                        <button type="button" class="selector-tag-button tag-item-btn" data-tag="생일 대상자">생일 대상자</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="selector-main-panel send-main-panel">
+            <div class="selector-header-row main-header-row">
+                <div class="search-box flex-grow-1">
+                    <input type="text" id="customerSearchInput" class="ds-input" placeholder="고객명, 태그 검색" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="selector-table-control-bar table-control-bar">
+                <div class="selector-table-control-left table-control-left">
+                    <span class="selector-result-text search-result-text">검색 결과 <b><span id="lblCandidateCount">0</span></b>명</span>
+                </div>
+                <div class="selector-table-control-right table-control-right">
+                    <label class="ds-toggle-switch">
+                        <input type="checkbox" id="toggleShowSelected">
+                        <span class="ds-toggle-slider"></span>
+                        <span class="ds-toggle-label">선택한 회원만 보기</span>
+                    </label>
+
+                    <div class="divider"></div>
+
+                    <button type="button" id="btnAddAllFiltered" class="ds-button ds-button--outline ds-button--sm btn-add-all">
+                        필터 결과 일괄 추가
+                    </button>
+                    <button type="button" id="btnRemoveAllSelected" class="ds-button ds-button--outline ds-button--sm btn-remove-all" style="display: none;">
+                        수신 대상 전체 초기화
+                    </button>
+
+                    <div class="selected-summary-count-badge">
+                        선택 <span id="lblSelectedCount">0</span>명
+                    </div>
+                </div>
+            </div>
+
+            <div class="selector-table-container table-container">
+                <table class="ds-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="thCheckAll" class="ds-checkbox">
+                            </th>
+                            <th>고객명</th>
+                            <th>번호</th>
+                            <th class="hide-on-tablet">유형</th>
+                            <th class="hide-on-mobile">성별</th>
+                            <th class="hide-on-mobile">나이</th>
+                            <th class="hide-on-mobile">생일 대상자</th>
+                            <th>문자</th>
+                            <th>카카오</th>
+                            <th>이메일</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="recipientPagination" class="ds-pagination"></div>
+        </div>
+
         <script th:src="@{/js/pages/send-recipients.js(v=${#dates.createNow().getTime()})}"></script>
     </div>
 </body>
