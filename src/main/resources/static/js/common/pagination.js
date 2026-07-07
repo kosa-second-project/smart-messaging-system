@@ -87,7 +87,8 @@
 
         const page = Math.max(Number(config.page || 1), 1);
         const knownPages = Math.max(Number(config.knownPages || page), page);
-        const maxPage = Math.max(knownPages + (config.hasNext ? 1 : 0), page);
+        const canOpenNextPage = Boolean(config.hasNext) && page >= knownPages;
+        const maxPage = Math.max(knownPages + (canOpenNextPage ? 1 : 0), page);
         const start = Math.max(1, Math.min(page - 2, Math.max(maxPage - 4, 1)));
         const end = Math.min(maxPage, start + 4);
 
@@ -107,7 +108,7 @@
 
         for (let pageNumber = start; pageNumber <= end; pageNumber++) {
             const isKnownPage = pageNumber <= knownPages;
-            const isNextPage = pageNumber === page + 1 && config.hasNext;
+            const isNextPage = pageNumber === page + 1 && canOpenNextPage;
             pages.appendChild(button(String(pageNumber), {
                 active: pageNumber === page,
                 disabled: !isKnownPage && !isNextPage,

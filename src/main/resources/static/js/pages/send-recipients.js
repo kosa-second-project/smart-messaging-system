@@ -337,8 +337,10 @@ const RecipientSelector = {
                 if (pagedList.length === 0) {
                     $tbody.empty();
                     $tbody.append('<tr><td colspan="10" style="text-align: center; color: var(--muted-foreground); padding: 2rem;">검색 및 필터 조건에 부합하는 수신자가 없습니다.</td></tr>');
+                    SendPage.state.nextCursorId = null;
+                    SendPage.state.hasNext = false;
                     self.updatePaginationInfo(0, 0, 0);
-                    self.renderPaginationControls(0);
+                    self.renderPaginationControls(SendPage.state.currentCursorIndex + 1);
                     $("#thCheckAll").prop("checked", false);
                     $("#lblCandidateCount").text("0");
                     return;
@@ -444,7 +446,9 @@ const RecipientSelector = {
                 }
                 if (pageNumber === SendPage.state.currentCursorIndex + 2 && SendPage.state.hasNext) {
                     SendPage.state.currentCursorIndex++;
-                    SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
+                        SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    }
                     self.renderTableOnly();
                 }
             },
