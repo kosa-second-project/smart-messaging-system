@@ -86,16 +86,6 @@
                     </select>
                 </label>
 
-                <label class="history-filter__sort">
-                    <span class="visually-hidden">페이지 크기</span>
-                    <select class="ds-select" th:field="*{size}" data-auto-submit>
-                        <option value="10">10개</option>
-                        <option value="20">20개</option>
-                        <option value="50">50개</option>
-                        <option value="100">100개</option>
-                    </select>
-                </label>
-
                 <div class="ds-filter-period" aria-label="발송 기간">
                     <label>
                         <span class="visually-hidden">시작일</span>
@@ -181,20 +171,42 @@
         <nav class="ds-pagination" th:if="${historyPage.totalPages > 0}" aria-label="전송 기록 페이지">
             <span class="ds-pagination__summary"
                   th:text="'총 ' + ${#numbers.formatInteger(historyPage.totalElements, 1, 'COMMA')} + '건 중 ' + ${historyPage.startElement} + '-' + ${historyPage.endElement}">총 40건 중 1-10</span>
-            <div class="ds-pagination__pages">
-                <a class="ds-page-button" th:if="${historyPage.hasPrevious}" aria-label="이전 페이지"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${searchCondition.size},page=${historyPage.currentPage - 1})}">‹</a>
-                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasPrevious}" aria-hidden="true">‹</span>
+            <div class="ds-pagination__actions">
+                <div class="ds-pagination__pages">
+                    <a class="ds-page-button" th:if="${historyPage.hasPrevious}" aria-label="이전 페이지"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${historyPage.currentPage - 1})}">이전</a>
+                    <span class="ds-page-button is-disabled" th:unless="${historyPage.hasPrevious}" aria-hidden="true">이전</span>
 
-                <a class="ds-page-button" th:each="pageNumber : ${#numbers.sequence(historyPage.startPage, historyPage.endPage)}"
-                   th:classappend="${pageNumber == historyPage.currentPage} ? ' is-active'"
-                   th:text="${pageNumber}"
-                   th:aria-current="${pageNumber == historyPage.currentPage} ? 'page'"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${searchCondition.size},page=${pageNumber})}">1</a>
+                    <a class="ds-page-button" th:each="pageNumber : ${#numbers.sequence(historyPage.startPage, historyPage.endPage)}"
+                       th:classappend="${pageNumber == historyPage.currentPage} ? ' is-active'"
+                       th:text="${pageNumber}"
+                       th:aria-current="${pageNumber == historyPage.currentPage} ? 'page'"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${pageNumber})}">1</a>
 
-                <a class="ds-page-button" th:if="${historyPage.hasNext}" aria-label="다음 페이지"
-                   th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${searchCondition.size},page=${historyPage.currentPage + 1})}">›</a>
-                <span class="ds-page-button is-disabled" th:unless="${historyPage.hasNext}" aria-hidden="true">›</span>
+                    <a class="ds-page-button" th:if="${historyPage.hasNext}" aria-label="다음 페이지"
+                       th:href="@{/history(keyword=${searchCondition.keyword},channelIds=${searchCondition.channelIds},statuses=${searchCondition.statuses},purposes=${searchCondition.purposes},tagIds=${searchCondition.tagIds},startDate=${searchCondition.startDate},endDate=${searchCondition.endDate},sort=${searchCondition.sort},size=${historyPage.pageSize},page=${historyPage.currentPage + 1})}">다음</a>
+                    <span class="ds-page-button is-disabled" th:unless="${historyPage.hasNext}" aria-hidden="true">다음</span>
+                </div>
+
+                <form class="ds-pagination__size" method="get" th:action="@{/history}">
+                    <input type="hidden" name="keyword" th:value="${searchCondition.keyword}">
+                    <input type="hidden" name="sort" th:value="${searchCondition.sort}">
+                    <input type="hidden" name="startDate" th:value="${searchCondition.startDate}">
+                    <input type="hidden" name="endDate" th:value="${searchCondition.endDate}">
+                    <input type="hidden" name="page" value="1">
+                    <input th:each="channelId : ${searchCondition.channelIds}" type="hidden" name="channelIds" th:value="${channelId}">
+                    <input th:each="status : ${searchCondition.statuses}" type="hidden" name="statuses" th:value="${status}">
+                    <input th:each="purpose : ${searchCondition.purposes}" type="hidden" name="purposes" th:value="${purpose}">
+                    <input th:each="tagId : ${searchCondition.tagIds}" type="hidden" name="tagIds" th:value="${tagId}">
+                    <span>페이지 당 보기</span>
+                    <select class="ds-select ds-pagination__size-select" name="size" aria-label="페이지 크기"
+                            onchange="this.form.submit()">
+                        <option value="10" th:selected="${historyPage.pageSize == 10}">10개</option>
+                        <option value="20" th:selected="${historyPage.pageSize == 20}">20개</option>
+                        <option value="50" th:selected="${historyPage.pageSize == 50}">50개</option>
+                        <option value="100" th:selected="${historyPage.pageSize == 100}">100개</option>
+                    </select>
+                </form>
             </div>
         </nav>
     </section>
