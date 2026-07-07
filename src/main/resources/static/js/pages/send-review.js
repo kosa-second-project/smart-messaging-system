@@ -23,8 +23,8 @@ const MessageReviewer = {
         this.state.title = sessionStorage.getItem("messageTitle") || "";
         this.state.content = sessionStorage.getItem("messageContent") || "";
         this.state.purpose = sessionStorage.getItem("messagePurpose") || (this.state.content.includes("(\uAD11\uACE0)") ? "AD" : "INFO");
-        this.state.draftId = sessionStorage.getItem("draftId") || null;
-        this.state.totalCount = parseInt(sessionStorage.getItem("draftTotalCount") || "0", 10);
+        this.state.draftId = sessionStorage.getItem("draftId") || (window.SendPage && SendPage.state ? SendPage.state.draftId : null) || null;
+        this.state.totalCount = parseInt(sessionStorage.getItem("draftTotalCount") || (window.SendPage && SendPage.state ? SendPage.state.draftTotalCount : "0") || "0", 10);
 
         const channelStr = sessionStorage.getItem("routingChannelIds");
         if (channelStr) {
@@ -57,6 +57,11 @@ const MessageReviewer = {
 
     loadEstimateCost: function () {
         if (!this.state.draftId) {
+            console.warn("estimate-cost skipped: draftId is missing");
+            $("#cardTargetCount").text("0명");
+            $("#cardSendCost").text("대상 정보 없음");
+            $("#cardSavedCost").text("-");
+            $("#cardSavedCostFormula").text("수신자 선택 단계부터 다시 진행해주세요.");
             return;
         }
 
@@ -237,7 +242,7 @@ const MessageReviewer = {
                 alert("\uC608\uC57D \uBC1C\uC1A1\uC740 \uD604\uC7AC \uC2DC\uAC01 \uAE30\uC900 \uCD5C\uC18C 2\uBD84 \uC774\uD6C4\uBD80\uD130 \uC124\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
                 return;
             }
-            scheduledAtStr = targetDt.toISOString();
+            scheduledAtStr = `${dateVal}T${timeVal}:00`;
         }
 
         if (!confirm(`\uCD1D ${this.state.totalCount.toLocaleString()}\uBA85\uC5D0\uAC8C \uBA54\uC2DC\uC9C0 \uBC1C\uC1A1\uC744 \uC694\uCCAD\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`)) {
@@ -247,8 +252,11 @@ const MessageReviewer = {
         const $nextBtn = $("#btnNextStep");
         $nextBtn.prop("disabled", true).text("\uCC98\uB9AC \uC911...");
 
+        const savedLinkUrl = (sessionStorage.getItem("linkUrl") || "").trim();
         const urlMatches = this.state.content.match(/https?:\/\/[^\s]+/);
-        const originalUrl = urlMatches ? urlMatches[0] : null;
+        const originalUrl = savedLinkUrl || (urlMatches ? urlMatches[0] : null);
+        const savedButtonName = (sessionStorage.getItem("linkButtonName") || "").trim();
+        const savedLinkPurpose = sessionStorage.getItem("linkPurpose") || "CLICK";
 
         const payload = {
             draftId: this.state.draftId,
@@ -257,9 +265,9 @@ const MessageReviewer = {
             content: this.state.content,
             purpose: this.state.purpose,
             priorities: this.getPriorityNames(),
-            linkButtonName: originalUrl ? "\uC790\uC138\uD788 \uBCF4\uAE30" : null,
+            linkButtonName: originalUrl ? (savedButtonName || "\uC790\uC138\uD788 \uBCF4\uAE30") : null,
             linkUrl: originalUrl,
-            linkPurpose: originalUrl ? "CLICK" : null,
+            linkPurpose: originalUrl ? savedLinkPurpose : null,
             scheduledAt: scheduledAtStr
         };
 

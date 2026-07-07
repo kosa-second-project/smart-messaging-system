@@ -815,7 +815,7 @@ const MessageComposer = {
             this.openLinkSettings();
             return;
         }
-        if (!window.confirm("카카오 계정으로 테스트 메시지를 발송할까요?")) {
+        if (!window.confirm("테스트 메시지를 발송할까요?")) {
             return;
         }
 
@@ -860,8 +860,7 @@ const MessageComposer = {
             "대상: " + (res.customerName || "테스트 수신자"),
             "",
             this.formatChannelResult("SMS", res.smsResult, res.smsActionUrl),
-            this.formatChannelResult("이메일", res.emailResult, res.emailActionUrl),
-            this.formatChannelResult("카카오톡", res.kakaoResult, res.kakaoActionUrl)
+            this.formatChannelResult("이메일", res.emailResult, res.emailActionUrl)
         ];
         return lines.join("\n");
     },

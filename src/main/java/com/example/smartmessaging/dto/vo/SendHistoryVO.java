@@ -28,6 +28,10 @@ public class SendHistoryVO extends BaseVO {
     private BigDecimal estimatedCost;
     private BigDecimal estimatedSaving;
     private BigDecimal actualCost;
+    private String linkButtonName;
+    private String linkUrl;
+    private String linkPurpose;
+    private String kakaoAccessTokenEnc;
     private LocalDateTime scheduledAt;
     private LocalDateTime completedAt;
 }

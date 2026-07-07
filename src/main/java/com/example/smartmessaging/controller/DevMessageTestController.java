@@ -4,7 +4,6 @@ import com.example.smartmessaging.dto.request.DevTestSendRequest;
 import com.example.smartmessaging.dto.response.DevTestSendResponse;
 import com.example.smartmessaging.security.CustomUserDetails;
 import com.example.smartmessaging.service.DevTestMessageService;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -26,14 +25,11 @@ public class DevMessageTestController {
     @PostMapping("/message-test")
     public ResponseEntity<DevTestSendResponse> sendMessageTest(
             @Valid @RequestBody DevTestSendRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            HttpSession session
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
         DevTestSendResponse response = devTestMessageService.sendToMe(
                 userDetails.getUserId(),
                 userDetails.getName(),
-                kakaoAccessToken,
                 request
         );
         return ResponseEntity.ok(response);

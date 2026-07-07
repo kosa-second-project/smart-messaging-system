@@ -7,6 +7,7 @@ import com.example.smartmessaging.dto.response.CustomerStatResponseDTO;
 import com.example.smartmessaging.dto.response.RejectCustomerResponseDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.vo.CustomerVO;
+import com.example.smartmessaging.dto.vo.TagVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,6 +16,8 @@ import java.util.Map;
 
 @Mapper
 public interface CustomerMapper {
+
+    List<TagVO> findAllTags();
 
     List<CustomerResponseDTO> selectCustomerList(CustomerSearchDTO searchDTO);
 

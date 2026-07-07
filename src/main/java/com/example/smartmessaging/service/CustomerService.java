@@ -8,11 +8,14 @@ import com.example.smartmessaging.dto.response.PageResponse;
 import com.example.smartmessaging.dto.response.RejectCustomerResponseDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.PagedCustomerResponse;
+import com.example.smartmessaging.dto.vo.TagVO;
 
 import java.util.List;
 
 public interface CustomerService {
     PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO);
+
+    List<TagVO> getTags();
 
     CustomerStatResponseDTO getCustomerStats();
 

@@ -4,6 +4,7 @@ import com.example.smartmessaging.dto.request.CustomerSearchDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.*;
 import com.example.smartmessaging.dto.vo.CustomerVO;
+import com.example.smartmessaging.dto.vo.TagVO;
 import com.example.smartmessaging.service.repository.CustomerMapper;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.CustomerService;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +33,11 @@ public class CustomerServiceImpl implements CustomerService {
     // ==========================================
     // 1. 고객 관리 탭 비즈니스 로직 (Customer Management)
     // ==========================================
+
+    @Override
+    public List<TagVO> getTags() {
+        return customerMapper.findAllTags();
+    }
 
     @Override
     public PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO) {
@@ -70,6 +77,8 @@ public class CustomerServiceImpl implements CustomerService {
         log.debug("[CustomerService] 메시지 발송용 고객 목록 조회 요청 - ActiveTab: {}", request.getActiveTab());
 
         // 1. 고객 목록 조회
+        applySystemTagIds(request);
+
         List<CustomerVO> customers = customerMapper.findBySearch(request);
 
         // 2. 총 건수 조회 (페이징 계산용)
@@ -147,6 +156,27 @@ public class CustomerServiceImpl implements CustomerService {
     // 3. 내부 유틸리티 메서드
     // ==========================================
 
+
+    private void applySystemTagIds(CustomerSearchRequest request) {
+        List<TagVO> tags = customerMapper.findAllTags();
+        request.setDormantTagId(findTagId(tags, Set.of("휴면")));
+        request.setConsentTagIds(findTagIds(tags, Set.of("카카오 동의", "sms 동의", "SMS 동의", "이메일 동의")));
+    }
+
+    private Long findTagId(List<TagVO> tags, Set<String> names) {
+        return tags.stream()
+                .filter(tag -> tag.getName() != null && names.contains(tag.getName().trim()))
+                .map(TagVO::getId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private List<Long> findTagIds(List<TagVO> tags, Set<String> names) {
+        return tags.stream()
+                .filter(tag -> tag.getName() != null && names.contains(tag.getName().trim()))
+                .map(TagVO::getId)
+                .toList();
+    }
     private String maskPhoneNumber(String phone) {
         if (phone == null || phone.isBlank()) {
             return "-";
@@ -164,6 +194,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional(readOnly = true)
     public List<Long> getCustomerIds(CustomerSearchRequest request) {
+        applySystemTagIds(request);
         // 페이지네이션 없이 필터 조건에 맞는 전체 고객 ID 목록 반환
         // "필터 결과 전체 선택" 기능에서 사용
         return customerMapper.findIdsBySearch(request);

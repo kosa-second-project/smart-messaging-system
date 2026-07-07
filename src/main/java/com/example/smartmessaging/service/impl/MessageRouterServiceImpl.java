@@ -40,8 +40,11 @@ public class MessageRouterServiceImpl implements MessageRouterService {
         try {
             switch (currentChannel.toUpperCase()) {
                 case "KAKAO":
-                    boolean kakaoSuccess = kakaoMessageService.sendMemoMessage(
-                            "DUMMY_TOKEN",
+                    if (task.getKakaoAccessToken() == null || task.getKakaoAccessToken().isBlank()) {
+                        return SendResult.fail("KAKAO", "KAKAO_TOKEN_MISSING", "카카오 access token이 없어 친구 발송을 진행할 수 없습니다.");
+                    }
+                    boolean kakaoSuccess = kakaoMessageService.sendFeedMessageToAll(
+                            task.getKakaoAccessToken(),
                             task.getTitle(),
                             task.getContent(),
                             task.getActionButtonName(),
@@ -50,7 +53,7 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                     if (kakaoSuccess) {
                         return SendResult.success("KAKAO");
                     } else {
-                        return SendResult.fail("KAKAO", "KAKAO_SEND_FAIL", "카카오 메시지 발송 실패");
+                        return SendResult.fail("KAKAO", "KAKAO_SEND_FAIL", "카카오 친구 메시지 발송 실패");
                     }
                 case "SMS":
                 case "LMS":

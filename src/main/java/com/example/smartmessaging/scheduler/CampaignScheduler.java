@@ -10,6 +10,7 @@ import com.example.smartmessaging.dto.vo.SendTargetVO;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.RecipientChannelResolver;
 import com.example.smartmessaging.service.ShortUrlService;
+import com.example.smartmessaging.service.TokenCryptoService;
 import com.example.smartmessaging.service.queue.MessageQueuePublisher;
 import com.example.smartmessaging.service.repository.HistoryMapper;
 import com.example.smartmessaging.service.repository.SendPreparationMapper;
@@ -41,6 +42,7 @@ public class CampaignScheduler {
     private final RecipientChannelResolver recipientChannelResolver;
     private final ShortUrlService shortUrlService;
     private final MessageQueuePublisher messageQueuePublisher;
+    private final TokenCryptoService tokenCryptoService;
 
     @Scheduled(cron = "*/30 * * * * *")
     @Transactional
@@ -123,11 +125,10 @@ public class CampaignScheduler {
     }
 
     private MessageTaskDto buildTask(SendHistoryVO campaign, SendTargetVO target, RecipientSendPlan plan) {
-        String actionUrl = null;
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(campaign.getContent());
-        if (matcher.find()) {
-            actionUrl = shortUrlService.createTrackedUrl(target.getId(), matcher.group().trim(), ShortUrlPurpose.CLICK);
-        }
+        String originalUrl = resolveOriginalUrl(campaign.getLinkUrl(), campaign.getContent());
+        String actionUrl = hasText(originalUrl)
+                ? shortUrlService.createTrackedUrl(target.getId(), originalUrl, ShortUrlPurpose.from(campaign.getLinkPurpose()))
+                : null;
 
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(campaign, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
@@ -145,10 +146,11 @@ public class CampaignScheduler {
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())
                 .kakaoUserKey(plan.getRecipient().getKakaoUserKey())
+                .kakaoAccessToken(tokenCryptoService.decrypt(campaign.getKakaoAccessTokenEnc()))
                 .title(campaign.getTitle())
                 .content(campaign.getContent())
                 .purpose(campaign.getPurpose())
-                .actionButtonName("Detail")
+                .actionButtonName(resolveButtonName(campaign.getLinkButtonName()))
                 .actionUrl(actionUrl)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
@@ -156,6 +158,24 @@ public class CampaignScheduler {
                 .build();
     }
 
+    private String resolveOriginalUrl(String linkUrl, String content) {
+        if (hasText(linkUrl)) {
+            return linkUrl.trim();
+        }
+        if (!hasText(content)) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(content);
+        return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private String resolveButtonName(String linkButtonName) {
+        return hasText(linkButtonName) ? linkButtonName.trim() : "자세히 보기";
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
     private boolean shouldCreateUnsubscribeUrl(SendHistoryVO campaign, RecipientSendPlan plan) {
         if (campaign.getPurpose() == null || !"AD".equals(campaign.getPurpose().trim().toUpperCase(Locale.ROOT))) {
             return false;

@@ -12,15 +12,11 @@ public interface KakaoMessageService {
 
     List<KakaoFriendElement> getKakaoFriends(String accessToken);
 
-    String getMyProfileNickname(String accessToken);
 
     boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description);
 
     boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description, String buttonName, String actionUrl);
 
-    boolean sendMemoMessage(String accessToken, String title, String description);
-
-    boolean sendMemoMessage(String accessToken, String title, String description, String buttonName, String actionUrl);
 
     boolean sendFeedMessageToAll(String accessToken, String title, String description);
 

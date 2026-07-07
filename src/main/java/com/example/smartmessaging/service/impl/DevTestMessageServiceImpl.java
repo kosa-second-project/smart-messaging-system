@@ -14,7 +14,6 @@ import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.DevTestMessageService;
 import com.example.smartmessaging.service.EmailMessageService;
-import com.example.smartmessaging.service.KakaoMessageService;
 import com.example.smartmessaging.service.ShortUrlService;
 import com.example.smartmessaging.service.SmsMessageService;
 import com.example.smartmessaging.util.SmsMessageTypeResolver;
@@ -48,7 +47,6 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
     private final ShortUrlService shortUrlService;
     private final SmsMessageService smsMessageService;
     private final EmailMessageService emailMessageService;
-    private final KakaoMessageService kakaoMessageService;
 
     @Value("${app.dev-test.phone:01000000000}")
     private String testPhone;
@@ -61,7 +59,7 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
 
     @Override
     @Transactional
-    public DevTestSendResponse sendToMe(Long userId, String userName, String kakaoAccessToken, DevTestSendRequest request) {
+    public DevTestSendResponse sendToMe(Long userId, String userName, DevTestSendRequest request) {
         requireDevTestContactConfigured();
         CustomerVO customer = ensureTestCustomer(resolveCustomerName(userName));
         List<ChannelVO> activeChannels = channelService.getActiveChannels();
@@ -77,11 +75,9 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
 
         ChannelVO smsChannel = findChannel(activeChannels, "SMS").orElse(null);
         ChannelVO emailChannel = findChannel(activeChannels, "EMAIL").orElse(null);
-        ChannelVO kakaoChannel = findChannel(activeChannels, "KAKAO").orElse(null);
 
         ChannelSend sms = skipped("SMS", "카카오 테스트 발송에서는 SMS를 보내지 않습니다.");
         ChannelSend email = sendEmail(history, customer, emailChannel, title, content, buttonName, request.getLinkUrl(), linkPurpose);
-        ChannelSend kakao = sendKakao(history, customer, kakaoChannel, kakaoAccessToken, title, content, buttonName, request.getLinkUrl(), linkPurpose);
 
         return DevTestSendResponse.builder()
                 .customerId(customer.getId())
@@ -90,10 +86,8 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
                 .phone(customer.getPhone())
                 .smsActionUrl(sms.actionUrl())
                 .emailActionUrl(email.actionUrl())
-                .kakaoActionUrl(kakao.actionUrl())
                 .smsResult(sms.result())
                 .emailResult(email.result())
-                .kakaoResult(kakao.result())
                 .build();
     }
 
@@ -225,36 +219,6 @@ public class DevTestMessageServiceImpl implements DevTestMessageService {
         String emailContent = content + "\n\n" + buttonName + "\n" + actionUrl;
         SendResult result = emailMessageService.sendEmail(customer.getEmail(), title, emailContent);
         return new ChannelSend(actionUrl, result);
-    }
-
-    private ChannelSend sendKakao(
-            SendHistoryVO history,
-            CustomerVO customer,
-            ChannelVO kakaoChannel,
-            String kakaoAccessToken,
-            String title,
-            String content,
-            String buttonName,
-            String originalUrl,
-            ShortUrlPurpose linkPurpose
-    ) {
-        if (kakaoChannel == null) {
-            return new ChannelSend(null, SendResult.fail("KAKAO", "CHANNEL_DISABLED", "활성화된 카카오 채널이 없습니다."));
-        }
-        if (kakaoAccessToken == null || kakaoAccessToken.isBlank()) {
-            return new ChannelSend(null, SendResult.fail("KAKAO", "KAKAO_LOGIN_REQUIRED", "카카오 나에게 보내기는 카카오 로그인이 필요합니다."));
-        }
-
-        SendTargetVO target = createTarget(history, customer, kakaoChannel);
-        String actionUrl = shortUrlService.createTrackedUrl(target.getId(), originalUrl, linkPurpose);
-        try {
-            boolean success = kakaoMessageService.sendMemoMessage(kakaoAccessToken, title, content, buttonName, actionUrl);
-            return new ChannelSend(actionUrl, success
-                    ? SendResult.success("KAKAO")
-                    : SendResult.fail("KAKAO", "KAKAO_SEND_FAIL", "카카오 나에게 보내기에 실패했습니다."));
-        } catch (Exception e) {
-            return new ChannelSend(actionUrl, SendResult.fail("KAKAO", "KAKAO_SEND_FAIL", e.getMessage()));
-        }
     }
 
     private SendTargetVO createTarget(SendHistoryVO history, CustomerVO customer, ChannelVO channel) {

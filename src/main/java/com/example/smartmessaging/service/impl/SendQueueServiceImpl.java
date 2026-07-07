@@ -30,7 +30,7 @@ public class SendQueueServiceImpl implements SendQueueService {
 
     @Override
     @Transactional
-    public void queueKakaoMessages(Long userId, String creator, KakaoFeedMessageRequest request) {
+    public void queueKakaoMessages(Long userId, String creator, KakaoFeedMessageRequest request, String kakaoAccessToken) {
         List<String> targetUuids = request.getTargetUuids();
         if (targetUuids == null || targetUuids.isEmpty()) {
             throw new IllegalArgumentException("Target UUID list is empty.");
@@ -73,6 +73,7 @@ public class SendQueueServiceImpl implements SendQueueService {
                     .isRealCustomer(true)
                     .userId(userId)
                     .kakaoUserKey(uuid)
+                    .kakaoAccessToken(kakaoAccessToken)
                     .title(request.getTitle())
                     .content(request.getDescription())
                     .purpose("INFO")
@@ -92,7 +93,7 @@ public class SendQueueServiceImpl implements SendQueueService {
 
     @Override
     @Transactional
-    public void queueCampaignMessages(Long userId, String draftId, MessageSendRequestDTO request) {
+    public void queueCampaignMessages(Long userId, String draftId, MessageSendRequestDTO request, String kakaoAccessToken) {
         if (draftId == null || draftId.isBlank()) {
             throw new IllegalArgumentException("Draft ID is required.");
         }

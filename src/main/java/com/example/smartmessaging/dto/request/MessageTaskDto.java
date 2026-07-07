@@ -24,7 +24,8 @@ public class MessageTaskDto {
     private Long userId;         // 발송 요청 사용자 ID
     private String phoneNumber;      // 수신자 번호 (카카오, SMS용)
     private String email;            // 수신자 이메일
-    private String kakaoUserKey;     // 카카오 외부 식별자(있는 경우)
+    private String kakaoUserKey;     // 카카오 친구 UUID(있는 경우)
+    private String kakaoAccessToken; // 친구 메시지 발송용 access token
     private String title;            // 메시지 제목
     private String content;          // 메시지 본문
     private String purpose;          // 광고/정보 목적

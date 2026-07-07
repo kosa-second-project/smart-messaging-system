@@ -132,11 +132,10 @@ public class CampaignCommandConsumer {
     }
 
     private MessageTaskDto buildTask(CampaignCommandQueueDto command, SendTargetVO target, RecipientSendPlan plan) {
-        String actionUrl = null;
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(command.getContent());
-        if (matcher.find()) {
-            actionUrl = shortUrlService.createTrackedUrl(target.getId(), matcher.group().trim(), ShortUrlPurpose.CLICK);
-        }
+        String originalUrl = resolveOriginalUrl(command.getLinkUrl(), command.getContent());
+        String actionUrl = hasText(originalUrl)
+                ? shortUrlService.createTrackedUrl(target.getId(), originalUrl, ShortUrlPurpose.from(command.getLinkPurpose()))
+                : null;
 
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(command, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
@@ -154,10 +153,11 @@ public class CampaignCommandConsumer {
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())
                 .kakaoUserKey(plan.getRecipient().getKakaoUserKey())
+                .kakaoAccessToken(command.getKakaoAccessToken())
                 .title(command.getTitle())
                 .content(command.getContent())
                 .purpose(command.getPurpose())
-                .actionButtonName("Detail")
+                .actionButtonName(resolveButtonName(command.getLinkButtonName()))
                 .actionUrl(actionUrl)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
@@ -165,6 +165,24 @@ public class CampaignCommandConsumer {
                 .build();
     }
 
+    private String resolveOriginalUrl(String linkUrl, String content) {
+        if (hasText(linkUrl)) {
+            return linkUrl.trim();
+        }
+        if (!hasText(content)) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(content);
+        return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private String resolveButtonName(String linkButtonName) {
+        return hasText(linkButtonName) ? linkButtonName.trim() : "자세히 보기";
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
     private boolean shouldCreateUnsubscribeUrl(CampaignCommandQueueDto command, RecipientSendPlan plan) {
         if (command.getPurpose() == null || !"AD".equals(command.getPurpose().trim().toUpperCase(Locale.ROOT))) {
             return false;

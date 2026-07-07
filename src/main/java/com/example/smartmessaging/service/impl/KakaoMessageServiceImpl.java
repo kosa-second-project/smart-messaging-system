@@ -4,9 +4,9 @@ import com.example.smartmessaging.dto.response.KakaoFriendElement;
 import com.example.smartmessaging.dto.response.KakaoFriendsResponse;
 import com.example.smartmessaging.exception.KakaoApiException;
 import com.example.smartmessaging.service.KakaoMessageService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -20,6 +20,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,13 +33,18 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final String fallbackLinkUrl;
 
-    public KakaoMessageServiceImpl(RestTemplateBuilder restTemplateBuilder, ObjectMapper objectMapper) {
+    public KakaoMessageServiceImpl(
+            RestTemplateBuilder restTemplateBuilder,
+            ObjectMapper objectMapper,
+            @Value("${app.base-url:http://localhost:8080}") String fallbackLinkUrl) {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(5))
                 .build();
         this.objectMapper = objectMapper;
+        this.fallbackLinkUrl = fallbackLinkUrl;
     }
 
     @Override
@@ -74,32 +80,6 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
     }
 
     @Override
-    public String getMyProfileNickname(String accessToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        HttpEntity<String> request = new HttpEntity<>(headers);
-        try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    "https://kapi.kakao.com/v2/user/me",
-                    HttpMethod.GET,
-                    request,
-                    new ParameterizedTypeReference<Map<String, Object>>() {});
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("properties")) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> properties = (Map<String, Object>) body.get("properties");
-                if (properties != null && properties.containsKey("nickname")) {
-                    return (String) properties.get("nickname");
-                }
-            }
-            return "나";
-        } catch (Exception e) {
-            log.error("Failed to fetch Kakao user profile", e);
-            return "나";
-        }
-    }
-
-    @Override
     public boolean sendFeedMessage(String accessToken, List<String> receiverUuids, String title, String description) {
         return sendFeedMessage(accessToken, receiverUuids, title, description, "자세히 보기", null);
     }
@@ -113,6 +93,7 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
         String safeTitle = title != null ? title : "";
         String safeDescription = description != null ? description : "";
         String linkUrl = resolveTemplateLink(actionUrl);
+        boolean hasActionUrl = hasText(actionUrl);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -136,22 +117,12 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
                     String personalizedTitle = safeTitle.replace("#{고객명}", nickname);
                     String personalizedDescription = safeDescription.replace("#{고객명}", nickname);
 
-                    Map<String, Object> templateObject = Map.of(
-                            "object_type", "text",
-                            "text", personalizedTitle + "\n\n" + personalizedDescription,
-                            "link", Map.of(
-                                     "web_url", linkUrl,
-                                     "mobile_web_url", linkUrl
-                            ),
-                            "buttons", List.of(
-                                    Map.of(
-                                            "title", buttonName != null && !buttonName.isBlank() ? buttonName : "자세히 보기",
-                                            "link", Map.of(
-                                                    "web_url", linkUrl,
-                                                    "mobile_web_url", linkUrl
-                                            )
-                                    )
-                            )
+                    Map<String, Object> templateObject = createTextTemplateObject(
+                            personalizedTitle,
+                            personalizedDescription,
+                            buttonName,
+                            linkUrl,
+                            hasActionUrl
                     );
 
                     String templateJson = objectMapper.writeValueAsString(templateObject);
@@ -192,69 +163,6 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
     }
 
     @Override
-    public boolean sendMemoMessage(String accessToken, String title, String description) {
-        return sendMemoMessage(accessToken, title, description, "자세히 보기", null);
-    }
-
-    @Override
-    public boolean sendMemoMessage(String accessToken, String title, String description, String buttonName, String actionUrl) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
-
-        String safeTitle = title != null ? title : "알림";
-        String safeDescription = description != null ? description : "";
-        String linkUrl = resolveTemplateLink(actionUrl);
-
-        String myNickname = getMyProfileNickname(accessToken);
-        String personalizedTitle = safeTitle.replace("#{고객명}", myNickname);
-        String personalizedDescription = safeDescription.replace("#{고객명}", myNickname);
-
-        Map<String, Object> templateObject = Map.of(
-                "object_type", "text",
-                "text", personalizedTitle + "\n\n" + personalizedDescription,
-                "link", Map.of(
-                        "web_url", linkUrl,
-                        "mobile_web_url", linkUrl
-                ),
-                "buttons", List.of(
-                        Map.of(
-                                "title", buttonName != null && !buttonName.isBlank() ? buttonName : "자세히 보기",
-                                "link", Map.of(
-                                        "web_url", linkUrl,
-                                        "mobile_web_url", linkUrl
-                                )
-                        )
-                )
-        );
-
-        try {
-            String templateJson = objectMapper.writeValueAsString(templateObject);
-
-            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("template_object", templateJson);
-
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    "https://kapi.kakao.com/v2/api/talk/memo/default/send",
-                    HttpMethod.POST,
-                    request,
-                    new ParameterizedTypeReference<Map<String, Object>>() {});
-
-            log.info("카카오톡 나에게 보내기 결과: {}", response.getBody());
-            return true;
-
-        } catch (JsonProcessingException e) {
-            log.error("JSON parsing error", e);
-            throw new KakaoApiException("메시지 포맷 변환에 실패했습니다.", e);
-        } catch (RestClientException e) {
-            log.error("Kakao API send message error", e);
-            throw new KakaoApiException("나에게 메시지 발송에 실패했습니다.", e);
-        }
-    }
-
-    @Override
     public boolean sendFeedMessageToAll(String accessToken, String title, String description) {
         return sendFeedMessageToAll(accessToken, title, description, "자세히 보기", null);
     }
@@ -274,9 +182,43 @@ public class KakaoMessageServiceImpl implements KakaoMessageService {
     }
 
     private String resolveTemplateLink(String actionUrl) {
-        if (actionUrl == null || actionUrl.isBlank()) {
-            throw new KakaoApiException("카카오 메시지 링크 URL이 없습니다. short_url 생성 경로를 확인해주세요.");
+        if (hasText(actionUrl)) {
+            return actionUrl.trim();
         }
-        return actionUrl.trim();
+
+        return hasText(fallbackLinkUrl) ? fallbackLinkUrl.trim() : "http://localhost:8080";
+    }
+
+    private Map<String, Object> createTextTemplateObject(
+            String title,
+            String description,
+            String buttonName,
+            String linkUrl,
+            boolean includeButton) {
+        Map<String, Object> templateObject = new LinkedHashMap<>();
+        templateObject.put("object_type", "text");
+        templateObject.put("text", title + "\n\n" + description);
+        templateObject.put("link", Map.of(
+                "web_url", linkUrl,
+                "mobile_web_url", linkUrl
+        ));
+
+        if (includeButton) {
+            templateObject.put("buttons", List.of(
+                    Map.of(
+                            "title", hasText(buttonName) ? buttonName.trim() : "자세히 보기",
+                            "link", Map.of(
+                                    "web_url", linkUrl,
+                                    "mobile_web_url", linkUrl
+                            )
+                    )
+            ));
+        }
+
+        return templateObject;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

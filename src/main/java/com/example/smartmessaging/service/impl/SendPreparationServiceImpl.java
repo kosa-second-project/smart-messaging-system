@@ -12,6 +12,7 @@ import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.SendPreparationService;
+import com.example.smartmessaging.service.TokenCryptoService;
 import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -35,10 +36,11 @@ public class SendPreparationServiceImpl implements SendPreparationService {
     private final ChannelService channelService;
     private final SendPreparationMapper sendPreparationMapper;
     private final RabbitTemplate rabbitTemplate;
+    private final TokenCryptoService tokenCryptoService;
 
     @Override
     @Transactional
-    public SendPrepareResponseDTO prepare(Long userId, SendPrepareRequestDTO request) {
+    public SendPrepareResponseDTO prepare(Long userId, SendPrepareRequestDTO request, String kakaoAccessToken) {
         validate(request);
 
         List<Long> customerIds = draftService.getDraftCustomerIds(userId, request.getDraftId());
@@ -50,6 +52,9 @@ public class SendPreparationServiceImpl implements SendPreparationService {
         List<ChannelVO> routingChannels = orderRoutingChannels(activeChannels, request.getPriorities());
         if (routingChannels.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (containsKakaoChannel(routingChannels) && isBlank(kakaoAccessToken)) {
+            throw new BusinessException("카카오 연동 정보가 없습니다. 카카오 연동 후 다시 발송해주세요.", ErrorCode.INVALID_INPUT_VALUE);
         }
 
         LocalDateTime scheduledTime = request.getScheduledAt();
@@ -84,6 +89,10 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .estimatedCost(BigDecimal.ZERO)
                 .estimatedSaving(BigDecimal.ZERO)
                 .actualCost(BigDecimal.ZERO)
+                .linkButtonName(request.getLinkButtonName())
+                .linkUrl(request.getLinkUrl())
+                .linkPurpose(request.getLinkPurpose())
+                .kakaoAccessTokenEnc(tokenCryptoService.encrypt(kakaoAccessToken))
                 .scheduledAt(scheduledTime)
                 .build();
         sendPreparationMapper.insertSendHistory(history);
@@ -105,7 +114,11 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .content(request.getContent())
                 .purpose(normalizedPurpose)
                 .templateId(request.getTemplateId())
+                .linkButtonName(request.getLinkButtonName())
+                .linkUrl(request.getLinkUrl())
+                .linkPurpose(request.getLinkPurpose())
                 .routingChannelIds(routingChannels.stream().map(ChannelVO::getId).toList())
+                .kakaoAccessToken(kakaoAccessToken)
                 .build();
 
         rabbitTemplate.convertAndSend(
@@ -159,6 +172,12 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .toList();
     }
 
+    private boolean containsKakaoChannel(List<ChannelVO> channels) {
+        return channels.stream()
+                .map(ChannelVO::getChannelType)
+                .map(this::normalizeChannelType)
+                .anyMatch("KAKAO"::equals);
+    }
     private String normalizePurpose(String purpose) {
         String normalized = purpose.trim().toUpperCase(Locale.ROOT);
         if ("INFORMATIONAL".equals(normalized)) {
