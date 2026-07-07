@@ -94,6 +94,19 @@ public class CustomerApiController {
     }
 
     /**
+     * 단일 고객 상세 정보를 조회합니다.
+     */
+    @GetMapping("/{customerId}")
+    public ResponseEntity<CustomerResponseDTO> getCustomerDetail(@PathVariable("customerId") Long customerId) {
+        log.info("[CustomerApiController] 고객 상세 정보 API 호출 - CustomerID: {}", customerId);
+        CustomerResponseDTO response = customerService.getCustomerById(customerId);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 고객 유형별 집계 통계 수치를 조회합니다. (상단 카드 데이터용)
      */
     @GetMapping("/stats")

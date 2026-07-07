@@ -1,7 +1,7 @@
 spring:
   application:
     name: smart-messaging-system
-  
+
   # 기본 프로필을 local로 지정 (로컬 개발용)
   profiles:
     active: local
@@ -20,6 +20,29 @@ spring:
           content:
             enabled: true
             paths: /**
+  ai:
+    # 문맥 검사는 실패 시 서버 룰 결과로 대체하므로 장시간 재시도하지 않는다.
+    retry:
+      max-attempts: 1
+    model:
+      chat: google-genai
+    google:
+      genai:
+        chat:
+          options:
+            model: gemini-2.5-flash
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
+stats:
+  batch:
+    cron: "0 0 3 * * *"
+    zone: Asia/Seoul
+    system-user-id: 0
 
 # MyBatis 공통 설정
 mybatis:
@@ -27,15 +50,23 @@ mybatis:
   type-aliases-package: com.example.smartmessaging.dto   # dto 하위의 모든 패키지(vo, response, request) 자동 별칭 등록
   configuration:
     map-underscore-to-camel-case: true
+    default-fetch-size: 100
 
-# 콘솔 로그 설정 (개발 편의를 위해 MyBatis SQL 쿼리 및 파라미터 로깅 활성화)
+# 콘솔 로그 설정
 logging:
   level:
     root: info
-    com.example.smartmessaging.mapper: trace  # Mapper 패키지 하위 쿼리/바인딩 파라미터를 콘솔에 실시간 출력
+    com.example.smartmessaging.mapper: debug
 
 server:
   port: 8080
+
+openai:
+  moderation:
+    base-url: https://api.openai.com
+    api-key:
+    model: omni-moderation-latest
+    enabled: true
 
 app:
   base-url: http://localhost:8080

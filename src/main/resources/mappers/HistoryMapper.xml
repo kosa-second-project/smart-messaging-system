@@ -3,6 +3,69 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.smartmessaging.service.repository.HistoryMapper">
 
+    <resultMap id="historyListResponseMap" type="com.example.smartmessaging.dto.response.HistoryListResponseDTO">
+        <constructor>
+            <arg column="id" javaType="java.lang.Long"/>
+            <arg column="scheduled_at" javaType="java.time.LocalDateTime"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="purpose" javaType="java.lang.String"/>
+            <arg column="total_target_count" javaType="java.lang.Integer"/>
+            <arg column="success_count" javaType="java.lang.Integer"/>
+            <arg column="fail_count" javaType="java.lang.Integer"/>
+            <arg column="success_rate" javaType="java.math.BigDecimal"/>
+            <arg column="estimated_saving" javaType="java.math.BigDecimal"/>
+            <arg column="status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="historyDetailResponseMap" type="com.example.smartmessaging.dto.response.HistoryDetailResponseDTO">
+        <constructor>
+            <arg column="send_history_id" javaType="java.lang.Long"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="scheduled_at" javaType="java.time.LocalDateTime"/>
+            <arg column="purpose" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="total_target_count" javaType="java.lang.Integer"/>
+            <arg column="success_count" javaType="java.lang.Integer"/>
+            <arg column="fail_count" javaType="java.lang.Integer"/>
+            <arg column="actual_cost" javaType="java.math.BigDecimal"/>
+            <arg column="estimated_saving" javaType="java.math.BigDecimal"/>
+            <arg column="success_rate" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="historyAttemptFlowResponseMap" type="com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO">
+        <constructor>
+            <arg column="attempt_order" javaType="java.lang.Integer"/>
+            <arg column="channel_name" javaType="java.lang.String"/>
+            <arg column="request_count" javaType="java.lang.Integer"/>
+            <arg column="success_count" javaType="java.lang.Integer"/>
+            <arg column="fail_count" javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="historyChannelResponseMap" type="com.example.smartmessaging.dto.response.HistoryChannelResponseDTO">
+        <constructor>
+            <arg column="send_history_id" javaType="java.lang.Long"/>
+            <arg column="channel_name" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="historyTagResponseMap" type="com.example.smartmessaging.dto.response.HistoryTagResponseDTO">
+        <constructor>
+            <arg column="send_history_id" javaType="java.lang.Long"/>
+            <arg column="tag_name" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="historyFilterOptionMap" type="com.example.smartmessaging.dto.response.HistoryFilterOptionDTO">
+        <constructor>
+            <arg column="id" javaType="java.lang.Long"/>
+            <arg column="label" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
     <sql id="successRateExpression">
         CASE
             WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
@@ -71,7 +134,7 @@
 
     <select id="findHistories"
             parameterType="com.example.smartmessaging.dto.request.HistorySearchRequestDTO"
-            resultType="com.example.smartmessaging.dto.response.HistoryListResponseDTO">
+            resultMap="historyListResponseMap">
         SELECT
             sh.id,
             sh.scheduled_at,
@@ -107,7 +170,7 @@
 
 
     <select id="findHistoryDetailById"
-            resultType="com.example.smartmessaging.dto.response.HistoryDetailResponseDTO">
+            resultMap="historyDetailResponseMap">
         SELECT
             sh.id AS send_history_id,
             sh.title,
@@ -127,7 +190,7 @@
     </select>
 
     <select id="findAttemptFlowsByHistoryId"
-            resultType="com.example.smartmessaging.dto.response.HistoryAttemptFlowResponseDTO">
+            resultMap="historyAttemptFlowResponseMap">
         SELECT
             shr.priority_order AS attempt_order,
             c.channel_type AS channel_name,
@@ -161,7 +224,7 @@
     </select>
 
     <select id="findChannelsByHistoryIds"
-            resultType="com.example.smartmessaging.dto.response.HistoryChannelResponseDTO">
+            resultMap="historyChannelResponseMap">
         SELECT DISTINCT
             shr.send_history_id,
             c.channel_type AS channel_name
@@ -176,7 +239,7 @@
     </select>
 
     <select id="findTagsByHistoryIds"
-            resultType="com.example.smartmessaging.dto.response.HistoryTagResponseDTO">
+            resultMap="historyTagResponseMap">
         SELECT
             tag_rows.send_history_id,
             tag_rows.tag_name
@@ -197,7 +260,7 @@
     </select>
 
     <select id="findChannelOptions"
-            resultType="com.example.smartmessaging.dto.response.HistoryFilterOptionDTO">
+            resultMap="historyFilterOptionMap">
         SELECT id, channel_type AS label
         FROM channel
         WHERE NVL(is_deleted, 0) = 0
@@ -206,7 +269,7 @@
     </select>
 
     <select id="findTagOptions"
-            resultType="com.example.smartmessaging.dto.response.HistoryFilterOptionDTO">
+            resultMap="historyFilterOptionMap">
         SELECT id, name AS label
         FROM tag
         WHERE NVL(is_deleted, 0) = 0

@@ -1,9 +1,9 @@
 package com.example.smartmessaging.ai.service;
 
-import com.example.smartmessaging.ai.dto.request.AiReviewRequest;
-import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
-import com.example.smartmessaging.ai.dto.response.RuleCheckResult;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
+import com.example.smartmessaging.ai.dto.response.AiReviewResponseDTO;
+import com.example.smartmessaging.ai.dto.response.RuleCheckResultResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
@@ -26,8 +26,6 @@ import java.util.stream.Collectors;
 @Service
 public class RuleValidationService {
 
-    private static final String MISSING_AD_PREFIX = "MISSING_AD_PREFIX";
-    private static final String MISSING_OPT_OUT = "MISSING_OPT_OUT";
     private static final String INVALID_VARIABLE_FORMAT = "INVALID_VARIABLE_FORMAT";
     private static final String UNSUPPORTED_VARIABLE = "UNSUPPORTED_VARIABLE";
     private static final String PERSONAL_PHONE_NUMBER = "PERSONAL_PHONE_NUMBER";
@@ -59,10 +57,6 @@ public class RuleValidationService {
                     + "|#" + KNOWN_VARIABLE_NAME_PATTERN + "(?![가-힣A-Za-z0-9_])"
                     + "|\\[" + KNOWN_VARIABLE_NAME_PATTERN + "]"
     );
-    private static final Pattern OPT_OUT_PHONE_PATTERN = Pattern.compile(
-            "(?<!\\d)080-\\d{3,4}-\\d{4}(?!\\d)"
-    );
-
     // 본문에 직접 입력된 개인정보 형태의 패턴을 찾는다.
     // 순서대로 휴대폰 번호, 이메일, 주민등록번호 형태를 검사한다.
     private static final Pattern PHONE_PATTERN = Pattern.compile(
@@ -75,34 +69,45 @@ public class RuleValidationService {
             "(?<!\\d)\\d{6}-\\d{7}(?!\\d)"
     );
 
-    public AiReviewResponse review(AiReviewRequest request) {
+    public AiReviewResponseDTO review(AiReviewRequestDTO request) {
         // 필수값 검증
         validateRequiredFields(request);
 
         // 실제 룰 검사
-        RuleCheckResult result = validateRules(request);
+        RuleCheckResultResponseDTO result = validateRules(request);
 
         // 최종 status
-        ReviewStatus status = result.getStatus();
+        ReviewStatus status = result.status();
 
         // 문구 재작성은 추후 LLM 단계에서 제공 예정
-        return new AiReviewResponse(
+        return new AiReviewResponseDTO(
                 status,
                 summaryOf(status),
-                result.getIssues(),
+                result.issues(),
                 null,
                 status == ReviewStatus.FAIL
         );
     }
 
-    private void validateRequiredFields(AiReviewRequest request) {
+    private void validateRequiredFields(AiReviewRequestDTO request) {
         if (request == null) {
             throw invalidRequest("검사 요청은 필수입니다.");
         }
-        if (request.getMessageType() == null) {
+        if (request.contextType() == null) {
+            throw invalidRequest("검사 문맥 유형은 필수입니다.");
+        }
+        if (request.messageType() == null) {
             throw invalidRequest("메시지 유형은 필수입니다.");
         }
-        if (request.getContent() == null || request.getContent().isBlank()) {
+        if (request.channels() == null
+                || request.channels().isEmpty()
+                || request.channels().stream().anyMatch(java.util.Objects::isNull)) {
+            throw invalidRequest("검사 채널은 하나 이상 필요합니다.");
+        }
+        if (request.title() == null || request.title().isBlank()) {
+            throw invalidRequest("검사할 메시지 제목은 필수입니다.");
+        }
+        if (request.content() == null || request.content().isBlank()) {
             throw invalidRequest("검사할 메시지 내용은 필수입니다.");
         }
     }
@@ -111,58 +116,24 @@ public class RuleValidationService {
         return new BusinessException(message, ErrorCode.AI_REVIEW_INVALID_REQUEST);
     }
 
-    private RuleCheckResult validateRules(AiReviewRequest request) {
-        String content = request.getContent();
+    private RuleCheckResultResponseDTO validateRules(AiReviewRequestDTO request) {
+        String content = request.content();
         // 빈 issues 리스트 생성
-        List<ValidationIssue> issues = new ArrayList<>();
+        List<ValidationIssueResponseDTO> issues = new ArrayList<>();
 
         // 지정된 검사 실행
-        checkAdPrefix(request.getMessageType(), content, issues);
-        checkOptOut(request.getMessageType(), content, issues);
         checkVariableFormat(content, issues);
-        checkSupportedVariables(content, request.getAvailableVariables(), issues);
+        checkSupportedVariables(content, request.availableVariables(), issues);
         checkPersonalInformation(content, issues);
 
-        return new RuleCheckResult(determineStatus(issues), issues);
-    }
-
-    // 광고성 메세지인 경우 '(광고)' 문구가 들어있는지 확인
-    private void checkAdPrefix(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType == MessageType.AD && !content.trim().startsWith("(광고)")) {
-            issues.add(new ValidationIssue(
-                    MISSING_AD_PREFIX,
-                    IssueSeverity.HIGH,
-                    "광고성 메시지에는 본문 시작부에 '(광고)' 문구가 필요합니다.",
-                    null,
-                    "본문 시작부에 '(광고)'를 추가하세요."
-            ));
-        }
-    }
-
-    // 광고성 메시지는 수신거부 문구와 실제 080 번호가 모두 있어야 한다.
-    private void checkOptOut(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType != MessageType.AD) {
-            return;
-        }
-
-        boolean hasOptOutText = content.contains("무료수신거부") || content.contains("수신거부");
-        boolean hasOptOutPhone = OPT_OUT_PHONE_PATTERN.matcher(content).find();
-        if (!hasOptOutText || !hasOptOutPhone) {
-            issues.add(new ValidationIssue(
-                    MISSING_OPT_OUT,
-                    IssueSeverity.HIGH,
-                    "광고성 메시지에는 무료수신거부 방법이 필요합니다.",
-                    null,
-                    "본문 하단에 '무료수신거부 080-000-0000' 형식의 수신거부 문구를 추가하세요."
-            ));
-        }
+        return new RuleCheckResultResponseDTO(determineStatus(issues), issues);
     }
 
     // 변수 형식 검사
-    private void checkVariableFormat(String content, List<ValidationIssue> issues) {
+    private void checkVariableFormat(String content, List<ValidationIssueResponseDTO> issues) {
         String invalidVariable = findInvalidVariable(content);
         if (invalidVariable != null) {
-            issues.add(new ValidationIssue(
+            issues.add(new ValidationIssueResponseDTO(
                     INVALID_VARIABLE_FORMAT,
                     IssueSeverity.HIGH,
                     "템플릿 변수는 '#{변수명}' 형식으로 작성해야 합니다.",
@@ -196,7 +167,7 @@ public class RuleValidationService {
     private void checkSupportedVariables(
             String content,
             List<String> availableVariables,
-            List<ValidationIssue> issues
+            List<ValidationIssueResponseDTO> issues
     ) {
         // null/empty는 현재 화면 컨텍스트에서 허용된 변수가 없다는 의미다.
         // 표준 변수라도 이 목록에 없으면 화면별 변수 사용 범위를 지키기 위해 허용하지 않는다.
@@ -208,7 +179,7 @@ public class RuleValidationService {
         while (matcher.find()) {
             String variable = matcher.group();
             if (!SUPPORTED_VARIABLES.contains(variable) || !availableVariableSet.contains(variable)) {
-                issues.add(new ValidationIssue(
+                issues.add(new ValidationIssueResponseDTO(
                         UNSUPPORTED_VARIABLE,
                         IssueSeverity.HIGH,
                         "허용되지 않은 템플릿 변수가 사용되었습니다.",
@@ -221,7 +192,7 @@ public class RuleValidationService {
     }
 
     // 개인정보 패턴 검사
-    private void checkPersonalInformation(String content, List<ValidationIssue> issues) {
+    private void checkPersonalInformation(String content, List<ValidationIssueResponseDTO> issues) {
         // 실제 개인정보인지 DB로 확인하지 않고 본문에 직접 입력된 패턴만 찾는다. #{고객명} 같은 변수는 대상이 아니다.
         addPatternIssue(
                 content,
@@ -255,11 +226,11 @@ public class RuleValidationService {
             String ruleId,
             IssueSeverity severity,
             String message,
-            List<ValidationIssue> issues
+            List<ValidationIssueResponseDTO> issues
     ) {
         Matcher matcher = pattern.matcher(content);
         if (matcher.find()) {
-            issues.add(new ValidationIssue(
+            issues.add(new ValidationIssueResponseDTO(
                     ruleId,
                     severity,
                     message,
@@ -271,17 +242,17 @@ public class RuleValidationService {
 
     // 최종 검사 결과 상태를 결정하는 메서드
     // 각 검사 항목의 심각도(severity)를 기준으로 판단
-    private ReviewStatus determineStatus(List<ValidationIssue> issues) {
+    private ReviewStatus determineStatus(List<ValidationIssueResponseDTO> issues) {
         // HIGH가 하나라도 있을 경우 FAIL
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.HIGH)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.HIGH)) {
             return ReviewStatus.FAIL;
         }
         // HIGH는 없지만 MEDIUM이 있을 경우 WARNING
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.MEDIUM)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.MEDIUM)) {
             return ReviewStatus.WARNING;
         }
         // HIGH, MEDIUM은 없지만 LOW가 있을 경우 NOTICE
-        if (issues.stream().anyMatch(issue -> issue.getSeverity() == IssueSeverity.LOW)) {
+        if (issues.stream().anyMatch(issue -> issue.severity() == IssueSeverity.LOW)) {
             return ReviewStatus.NOTICE;
         }
         // issue가 없을 경우 PASS

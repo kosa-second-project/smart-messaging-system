@@ -3,6 +3,118 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.smartmessaging.service.repository.DashboardMapper">
 
+    <resultMap id="messageStatResultMap" type="MessageStatVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
+    <resultMap id="messageStatByDegreeResultMap" type="MessageStatByDegreeVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
+    <resultMap id="customerStatResultMap" type="CustomerStatVO" autoMapping="true">
+        <result property="date" column="stat_date"/>
+    </resultMap>
+
+    <sql id="messageStatFilter">
+        ms.is_deleted = 0
+        <if test="from != null">
+          AND ms.stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND ms.stat_date &lt;= #{to}
+        </if>
+    </sql>
+
+    <select id="selectMessageSummary" parameterType="StatSearchRequest" resultMap="messageStatResultMap">
+        SELECT
+            SUM(COALESCE(ms.total_send_count, 0)) AS total_send_count,
+            SUM(COALESCE(ms.total_success_count, 0)) AS total_success_count,
+            SUM(COALESCE(ms.billing_cost, 0)) AS billing_cost,
+            SUM(COALESCE(ms.max_cost, 0)) AS max_cost
+        FROM message_stat ms
+        WHERE <include refid="messageStatFilter"/>
+    </select>
+
+    <select id="selectMessageTrend" parameterType="StatSearchRequest" resultMap="messageStatResultMap">
+        SELECT
+            trend.stat_date,
+            trend.total_send_count,
+            trend.total_success_count,
+            trend.billing_cost,
+            trend.max_cost
+        FROM (
+            SELECT
+                ms.stat_date,
+                ms.total_send_count,
+                ms.total_success_count,
+                ms.billing_cost,
+                ms.max_cost
+            FROM message_stat ms
+            WHERE <include refid="messageStatFilter"/>
+            ORDER BY ms.stat_date DESC
+            FETCH FIRST 7 ROWS ONLY
+        ) trend
+        ORDER BY trend.stat_date
+    </select>
+
+    <select id="selectChannelSendSummary" parameterType="StatSearchRequest" resultMap="messageStatByDegreeResultMap">
+        SELECT
+            msbd.channel_id,
+            SUM(COALESCE(msbd.send_count, 0)) AS send_count,
+            SUM(COALESCE(msbd.success_count, 0)) AS success_count
+        FROM message_stat_by_degree msbd
+        INNER JOIN channel c
+                ON c.id = msbd.channel_id
+               AND c.is_deleted = 0
+        WHERE msbd.is_deleted = 0
+        <if test="from != null">
+          AND msbd.stat_date &gt;= #{from}
+        </if>
+        <if test="to != null">
+          AND msbd.stat_date &lt;= #{to}
+        </if>
+        <if test="channel != null and channel != ''">
+          AND c.channel_type = #{channel}
+        </if>
+        GROUP BY msbd.channel_id
+        ORDER BY msbd.channel_id
+    </select>
+
+    <select id="selectLatestCustomerStat" parameterType="StatSearchRequest" resultMap="customerStatResultMap">
+        SELECT
+            latest_customer.stat_date,
+            latest_customer.total_customer_count,
+            latest_customer.normal_customer_count,
+            latest_customer.new_customer_count,
+            latest_customer.dormant_customer_count,
+            latest_customer.sms_consent_count,
+            latest_customer.kakao_consent_count,
+            latest_customer.email_consent_count,
+            latest_customer.joined_customer_count
+        FROM (
+            SELECT
+                cs.stat_date,
+                cs.total_customer_count,
+                cs.normal_customer_count,
+                cs.new_customer_count,
+                cs.dormant_customer_count,
+                cs.sms_consent_count,
+                cs.kakao_consent_count,
+                cs.email_consent_count,
+                cs.joined_customer_count
+            FROM customer_stat cs
+            WHERE cs.is_deleted = 0
+            <if test="from != null">
+              AND cs.stat_date &gt;= #{from}
+            </if>
+            <if test="to != null">
+              AND cs.stat_date &lt;= #{to}
+            </if>
+            ORDER BY cs.stat_date DESC
+            FETCH FIRST 1 ROW ONLY
+        ) latest_customer
+    </select>
+
     <select id="selectRecentSends" resultType="SendHistoryVO">
         SELECT
             sh.id,

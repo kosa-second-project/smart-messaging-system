@@ -21,6 +21,8 @@ public interface CustomerMapper {
 
     List<CustomerResponseDTO> selectCustomerList(CustomerSearchDTO searchDTO);
 
+    CustomerResponseDTO selectCustomerById(@Param("customerId") Long customerId);
+
     int selectCustomerCount(CustomerSearchDTO searchDTO);
 
     CustomerStatResponseDTO selectCustomerStats();

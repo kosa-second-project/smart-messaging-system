@@ -125,10 +125,6 @@ public class CampaignScheduler {
     }
 
     private MessageTaskDto buildTask(SendHistoryVO campaign, SendTargetVO target, RecipientSendPlan plan) {
-        String originalUrl = resolveOriginalUrl(campaign.getLinkUrl(), campaign.getContent());
-        String actionUrl = hasText(originalUrl)
-                ? shortUrlService.createTrackedUrl(target.getId(), originalUrl, ShortUrlPurpose.from(campaign.getLinkPurpose()))
-                : null;
 
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(campaign, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
@@ -150,31 +146,12 @@ public class CampaignScheduler {
                 .title(campaign.getTitle())
                 .content(campaign.getContent())
                 .purpose(campaign.getPurpose())
-                .actionButtonName(resolveButtonName(campaign.getLinkButtonName()))
-                .actionUrl(actionUrl)
+                .actionButtonName(null)
+                .actionUrl(null)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
                 .currentStep(0)
                 .build();
-    }
-
-    private String resolveOriginalUrl(String linkUrl, String content) {
-        if (hasText(linkUrl)) {
-            return linkUrl.trim();
-        }
-        if (!hasText(content)) {
-            return null;
-        }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(content);
-        return matcher.find() ? matcher.group().trim() : null;
-    }
-
-    private String resolveButtonName(String linkButtonName) {
-        return hasText(linkButtonName) ? linkButtonName.trim() : "자세히 보기";
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
     private boolean shouldCreateUnsubscribeUrl(SendHistoryVO campaign, RecipientSendPlan plan) {
         if (campaign.getPurpose() == null || !"AD".equals(campaign.getPurpose().trim().toUpperCase(Locale.ROOT))) {

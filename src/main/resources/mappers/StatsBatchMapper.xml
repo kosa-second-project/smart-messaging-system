@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    namespace는 Java Mapper 인터페이스의 전체 경로와 같아야 한다.
+    그래야 StatsBatchMapper의 메서드 호출이 아래 SQL id와 연결된다.
+-->
+<mapper namespace="com.example.smartmessaging.service.repository.StatsBatchMapper">
+
+    <!--
+        특정 날짜의 기존 message_stat 활성 row를 soft-delete 처리한다.
+
+        DB unique index는 is_deleted = 0인 stat_date에만 적용되므로,
+        기존 활성 row를 비활성화한 뒤 같은 날짜의 새 활성 row를 insert할 수 있다.
+    -->
+    <update id="softDeleteMessageStat">
+        UPDATE message_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        send_history에서 하루치 발송 통계를 집계해서 message_stat에 insert 한다.
+
+        message_stat.id는 Oracle identity 컬럼이므로 insert 컬럼 목록에서 제외한다.
+        softDeleteMessageStat 이후 실행되므로, 같은 날짜를 재실행해도 활성 통계 row는 최신 1건만 남는다.
+    -->
+    <insert id="insertMessageStat">
+        INSERT INTO message_stat (
+            total_send_count,
+            total_success_count,
+            billing_cost,
+            max_cost,
+            stat_date,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            NVL(SUM(sh.total_target_count), 0),
+            NVL(SUM(sh.success_count), 0),
+            NVL(SUM(sh.actual_cost), 0),
+            NVL(SUM(sh.estimated_cost), 0),
+            #{statDate},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM send_history sh
+        WHERE sh.status = 'SENT'
+          AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+          AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+          AND NVL(sh.is_deleted, 0) = 0
+    </insert>
+
+    <!--
+        특정 날짜의 기존 message_stat_by_degree 활성 row를 soft-delete 처리한다.
+    -->
+    <update id="softDeleteMessageStatByDegree">
+        UPDATE message_stat_by_degree
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        send_attempt에서 하루치 차수/채널별 발송 통계를 집계해서 message_stat_by_degree에 insert 한다.
+
+        조인하는 테이블의 역할:
+        - send_history: 발송 묶음/캠페인 정보. 발송 상태와 완료일자를 기준으로 통계 대상 날짜를 고른다.
+        - send_target: 해당 발송 묶음의 대상 고객 정보. send_history와 send_attempt를 연결하는 중간 테이블이다.
+        - send_attempt: 대상 고객에게 실제 몇 차에 어떤 채널로 발송을 시도했는지 저장한다.
+        - channel: 채널 정보와 채널별 단가를 저장한다.
+
+        degree는 send_attempt.attempt_order를 사용한다.
+        cost는 성공한 시도에 대해서만 channel.cost_per_msg를 합산한다.
+    -->
+    <insert id="insertMessageStatByDegree">
+        INSERT INTO message_stat_by_degree (
+            degree,
+            send_count,
+            success_count,
+            stat_date,
+            cost,
+            channel_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            -- 몇 차 발송인지. 예: 1차, 2차
+            sa.attempt_order,
+
+            -- 해당 차수/채널로 발송을 시도한 전체 건수
+            COUNT(sa.id),
+
+            -- 해당 차수/채널 발송 시도 중 성공한 건수
+            SUM(CASE WHEN sa.is_succeeded = 1 THEN 1 ELSE 0 END),
+
+            -- 배치가 집계하는 기준 날짜
+            #{statDate},
+
+            -- 성공한 발송 시도에 대해서만 채널 단가를 합산한 비용
+            NVL(SUM(CASE WHEN sa.is_succeeded = 1 THEN c.cost_per_msg ELSE 0 END), 0),
+
+            -- 발송 시도에 사용된 채널
+            sa.channel_id,
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM send_attempt sa
+        -- send_attempt는 send_target_id를 통해 발송 대상과 연결된다.
+        INNER JOIN send_target st
+                ON st.id = sa.send_target_id
+               AND NVL(st.is_deleted, 0) = 0
+        -- send_target은 send_history_id를 통해 발송 묶음과 연결된다.
+        INNER JOIN send_history sh
+                ON sh.id = st.send_history_id
+               AND NVL(sh.is_deleted, 0) = 0
+        -- channel은 채널 단가(cost_per_msg)를 계산하기 위해 연결한다.
+        INNER JOIN channel c
+                ON c.id = sa.channel_id
+               AND NVL(c.is_deleted, 0) = 0
+        -- 완료된 발송 묶음만 통계에 포함한다.
+        WHERE sh.status = 'SENT'
+          -- completed_at은 시간까지 포함하므로 당일 시작 이상, 다음날 시작 미만으로 비교한다.
+          AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+          AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+          AND NVL(sa.is_deleted, 0) = 0
+        -- 차수와 채널별로 한 row씩 집계한다.
+        GROUP BY sa.attempt_order, sa.channel_id
+    </insert>
+
+    <!--
+        특정 날짜의 기존 customer_stat 활성 row를 soft-delete 처리한다.
+
+        customer_stat도 같은 날짜를 재집계할 수 있어야 하므로,
+        기존 활성 row를 비활성화한 뒤 새 스냅샷 row를 insert 한다.
+    -->
+    <update id="softDeleteCustomerStat">
+        UPDATE customer_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        customer_stat 하루치 고객 스냅샷 통계를 insert 한다.
+
+        수집 기준:
+        - total_customer_count: statDate까지 가입한 삭제되지 않은 전체 고객 수
+        - normal_customer_count: 가입 7일 이후이고, 휴면 기준에는 걸리지 않은 고객 수
+        - new_customer_count: statDate 기준 최근 7일 이내 가입 고객 수
+        - dormant_customer_count: 가입 7일 이후이고, 마지막 활동이 12개월보다 오래된 고객 수
+        - *_consent_count: 채널별 수신 동의가 켜져 있는 고객 수
+        - joined_customer_count: statDate 당일 가입 고객 수
+
+        고객 수 계열은 customer_counts에서 한 번에 조건부 집계하고,
+        채널 동의 수 계열은 consent_counts에서 한 번에 조건부 집계한다.
+    -->
+    <insert id="insertCustomerStat">
+        INSERT INTO customer_stat (
+            stat_date,
+            total_customer_count,
+            normal_customer_count,
+            new_customer_count,
+            dormant_customer_count,
+            sms_consent_count,
+            kakao_consent_count,
+            email_consent_count,
+            joined_customer_count,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        WITH customer_counts AS (
+            SELECT
+                COUNT(*) AS total_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                     AND (
+                            c.last_active_at IS NULL
+                            OR c.last_active_at &gt;= ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
+                         )
+                    THEN 1
+                    ELSE 0
+                END) AS normal_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                    THEN 1
+                    ELSE 0
+                END) AS new_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) - INTERVAL '7' DAY
+                     AND c.last_active_at &lt; ADD_MONTHS(CAST(#{statDate} AS TIMESTAMP), -12)
+                    THEN 1
+                    ELSE 0
+                END) AS dormant_customer_count,
+                SUM(CASE
+                    WHEN c.joined_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                     AND c.joined_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+                    THEN 1
+                    ELSE 0
+                END) AS joined_customer_count
+            FROM customer c
+            WHERE NVL(c.is_deleted, 0) = 0
+              AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+        ),
+        consent_counts AS (
+            SELECT
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'SMS' THEN ccc.customer_id END) AS sms_consent_count,
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'KAKAO' THEN ccc.customer_id END) AS kakao_consent_count,
+                COUNT(DISTINCT CASE WHEN ch.channel_type = 'EMAIL' THEN ccc.customer_id END) AS email_consent_count
+            FROM customer_channel_consent ccc
+            INNER JOIN customer c
+                    ON c.id = ccc.customer_id
+                   AND NVL(c.is_deleted, 0) = 0
+                   AND c.joined_at &lt; CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+            INNER JOIN channel ch
+                    ON ch.id = ccc.channel_id
+                   AND NVL(ch.is_deleted, 0) = 0
+            WHERE NVL(ccc.is_deleted, 0) = 0
+              AND NVL(ccc.is_consented, 0) = 1
+        )
+        SELECT
+            #{statDate},
+            NVL(customer_counts.total_customer_count, 0),
+            NVL(customer_counts.normal_customer_count, 0),
+            NVL(customer_counts.new_customer_count, 0),
+            NVL(customer_counts.dormant_customer_count, 0),
+            NVL(consent_counts.sms_consent_count, 0),
+            NVL(consent_counts.kakao_consent_count, 0),
+            NVL(consent_counts.email_consent_count, 0),
+            NVL(customer_counts.joined_customer_count, 0),
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM customer_counts customer_counts
+        CROSS JOIN consent_counts consent_counts
+    </insert>
+
+    <!--
+        기존 channel_stat 활성 row를 전부 soft-delete 처리한다.
+
+        channel_stat에는 stat_date가 없기 때문에 특정 날짜 row만 지우는 것이 아니라
+        현재 활성 채널 성과 스냅샷 전체를 교체한다.
+    -->
+    <update id="softDeleteChannelStat">
+        UPDATE channel_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        채널별 성과 통계를 insert 한다.
+
+        수집 기준:
+        - click_target_count: short_url이 발급된 대상 수
+        - click_count: short_url을 실제 클릭한 수
+        - conversion_target_count: 전환 측정 대상 수. 현재는 short_url 발급 대상을 전환 대상과 동일하게 본다.
+        - conversion_count: short_url에서 전환 처리된 수
+        - consent_target_count: 해당 채널 수신 동의 설정 row가 있는 고객 수
+        - consent_count: 그중 수신 동의가 켜져 있는 고객 수
+
+        short_url은 send_target_id만 가지고 있으므로,
+        send_target.final_channel_id를 통해 어떤 채널의 성과인지 판단한다.
+    -->
+    <insert id="insertChannelStat">
+        INSERT INTO channel_stat (
+            click_target_count,
+            click_count,
+            conversion_target_count,
+            conversion_count,
+            consent_target_count,
+            consent_count,
+            channel_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            NVL(url_stat.click_target_count, 0),
+            NVL(url_stat.click_count, 0),
+            NVL(url_stat.conversion_target_count, 0),
+            NVL(url_stat.conversion_count, 0),
+            NVL(consent_stat.consent_target_count, 0),
+            NVL(consent_stat.consent_count, 0),
+            ch.id,
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM channel ch
+        LEFT JOIN (
+            SELECT
+                st.final_channel_id AS channel_id,
+                COUNT(su.id) AS click_target_count,
+                SUM(CASE WHEN su.is_clicked = 1 THEN 1 ELSE 0 END) AS click_count,
+                COUNT(su.id) AS conversion_target_count,
+                SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) AS conversion_count
+            FROM short_url su
+            INNER JOIN send_target st
+                    ON st.id = su.send_target_id
+                   AND NVL(st.is_deleted, 0) = 0
+            INNER JOIN send_history sh
+                    ON sh.id = st.send_history_id
+                   AND NVL(sh.is_deleted, 0) = 0
+            WHERE NVL(su.is_deleted, 0) = 0
+              AND sh.status = 'SENT'
+              AND st.final_channel_id IS NOT NULL
+            GROUP BY st.final_channel_id
+        ) url_stat
+               ON url_stat.channel_id = ch.id
+        LEFT JOIN (
+            SELECT
+                ccc.channel_id,
+                COUNT(DISTINCT ccc.customer_id) AS consent_target_count,
+                COUNT(DISTINCT CASE WHEN NVL(ccc.is_consented, 0) = 1 THEN ccc.customer_id END) AS consent_count
+            FROM customer_channel_consent ccc
+            INNER JOIN customer c
+                    ON c.id = ccc.customer_id
+                   AND NVL(c.is_deleted, 0) = 0
+            WHERE NVL(ccc.is_deleted, 0) = 0
+            GROUP BY ccc.channel_id
+        ) consent_stat
+               ON consent_stat.channel_id = ch.id
+        WHERE NVL(ch.is_deleted, 0) = 0
+    </insert>
+
+    <!--
+        특정 날짜의 기존 click_stat 활성 row를 soft-delete 처리한다.
+
+        click_stat은 stat_date + channel_id 기준으로 하루치 시간대 클릭 분포를 저장한다.
+        같은 날짜를 재집계할 수 있도록 기존 활성 row를 비활성화한 뒤 새 row를 insert 한다.
+    -->
+    <update id="softDeleteClickStat">
+        UPDATE click_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        short_url 클릭 이력을 기준으로 채널별 시간대 클릭 통계를 insert 한다.
+
+        수집 기준:
+        - short_url.is_clicked = 1
+        - short_url.clicked_at의 날짜가 statDate인 클릭
+        - send_target.final_channel_id 기준 채널 분류
+        - hour_00 ~ hour_23은 clicked_at의 시(hour)를 펼친 값
+
+        클릭이 없는 채널도 0으로 채운 row를 만들기 위해 channel을 기준 테이블로 두고
+        클릭 집계 결과를 LEFT JOIN 한다.
+    -->
+    <insert id="insertClickStat">
+        INSERT INTO click_stat (
+            id,
+            stat_date,
+            channel_id,
+            hour_00,
+            hour_01,
+            hour_02,
+            hour_03,
+            hour_04,
+            hour_05,
+            hour_06,
+            hour_07,
+            hour_08,
+            hour_09,
+            hour_10,
+            hour_11,
+            hour_12,
+            hour_13,
+            hour_14,
+            hour_15,
+            hour_16,
+            hour_17,
+            hour_18,
+            hour_19,
+            hour_20,
+            hour_21,
+            hour_22,
+            hour_23,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        SELECT
+            CLICK_STAT_SEQ.NEXTVAL,
+            aggregated.stat_date,
+            aggregated.channel_id,
+            aggregated.hour_00,
+            aggregated.hour_01,
+            aggregated.hour_02,
+            aggregated.hour_03,
+            aggregated.hour_04,
+            aggregated.hour_05,
+            aggregated.hour_06,
+            aggregated.hour_07,
+            aggregated.hour_08,
+            aggregated.hour_09,
+            aggregated.hour_10,
+            aggregated.hour_11,
+            aggregated.hour_12,
+            aggregated.hour_13,
+            aggregated.hour_14,
+            aggregated.hour_15,
+            aggregated.hour_16,
+            aggregated.hour_17,
+            aggregated.hour_18,
+            aggregated.hour_19,
+            aggregated.hour_20,
+            aggregated.hour_21,
+            aggregated.hour_22,
+            aggregated.hour_23,
+            aggregated.created_at,
+            aggregated.updated_at,
+            aggregated.created_by,
+            aggregated.updated_by,
+            aggregated.is_deleted
+        FROM (
+            SELECT
+                #{statDate} AS stat_date,
+                ch.id AS channel_id,
+                NVL(SUM(CASE WHEN click_hour = 0 THEN click_count ELSE 0 END), 0) AS hour_00,
+                NVL(SUM(CASE WHEN click_hour = 1 THEN click_count ELSE 0 END), 0) AS hour_01,
+                NVL(SUM(CASE WHEN click_hour = 2 THEN click_count ELSE 0 END), 0) AS hour_02,
+                NVL(SUM(CASE WHEN click_hour = 3 THEN click_count ELSE 0 END), 0) AS hour_03,
+                NVL(SUM(CASE WHEN click_hour = 4 THEN click_count ELSE 0 END), 0) AS hour_04,
+                NVL(SUM(CASE WHEN click_hour = 5 THEN click_count ELSE 0 END), 0) AS hour_05,
+                NVL(SUM(CASE WHEN click_hour = 6 THEN click_count ELSE 0 END), 0) AS hour_06,
+                NVL(SUM(CASE WHEN click_hour = 7 THEN click_count ELSE 0 END), 0) AS hour_07,
+                NVL(SUM(CASE WHEN click_hour = 8 THEN click_count ELSE 0 END), 0) AS hour_08,
+                NVL(SUM(CASE WHEN click_hour = 9 THEN click_count ELSE 0 END), 0) AS hour_09,
+                NVL(SUM(CASE WHEN click_hour = 10 THEN click_count ELSE 0 END), 0) AS hour_10,
+                NVL(SUM(CASE WHEN click_hour = 11 THEN click_count ELSE 0 END), 0) AS hour_11,
+                NVL(SUM(CASE WHEN click_hour = 12 THEN click_count ELSE 0 END), 0) AS hour_12,
+                NVL(SUM(CASE WHEN click_hour = 13 THEN click_count ELSE 0 END), 0) AS hour_13,
+                NVL(SUM(CASE WHEN click_hour = 14 THEN click_count ELSE 0 END), 0) AS hour_14,
+                NVL(SUM(CASE WHEN click_hour = 15 THEN click_count ELSE 0 END), 0) AS hour_15,
+                NVL(SUM(CASE WHEN click_hour = 16 THEN click_count ELSE 0 END), 0) AS hour_16,
+                NVL(SUM(CASE WHEN click_hour = 17 THEN click_count ELSE 0 END), 0) AS hour_17,
+                NVL(SUM(CASE WHEN click_hour = 18 THEN click_count ELSE 0 END), 0) AS hour_18,
+                NVL(SUM(CASE WHEN click_hour = 19 THEN click_count ELSE 0 END), 0) AS hour_19,
+                NVL(SUM(CASE WHEN click_hour = 20 THEN click_count ELSE 0 END), 0) AS hour_20,
+                NVL(SUM(CASE WHEN click_hour = 21 THEN click_count ELSE 0 END), 0) AS hour_21,
+                NVL(SUM(CASE WHEN click_hour = 22 THEN click_count ELSE 0 END), 0) AS hour_22,
+                NVL(SUM(CASE WHEN click_hour = 23 THEN click_count ELSE 0 END), 0) AS hour_23,
+                SYSTIMESTAMP AS created_at,
+                SYSTIMESTAMP AS updated_at,
+                #{systemUserId} AS created_by,
+                #{systemUserId} AS updated_by,
+                0 AS is_deleted
+            FROM channel ch
+            LEFT JOIN (
+                SELECT
+                    st.final_channel_id AS channel_id,
+                    EXTRACT(HOUR FROM su.clicked_at) AS click_hour,
+                    COUNT(*) AS click_count
+                FROM short_url su
+                INNER JOIN send_target st
+                        ON st.id = su.send_target_id
+                       AND NVL(st.is_deleted, 0) = 0
+                INNER JOIN send_history sh
+                        ON sh.id = st.send_history_id
+                       AND NVL(sh.is_deleted, 0) = 0
+                WHERE NVL(su.is_deleted, 0) = 0
+                  AND su.is_clicked = 1
+                  AND su.clicked_at IS NOT NULL
+                  AND su.clicked_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                  AND su.clicked_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+                  AND sh.status = 'SENT'
+                  AND st.final_channel_id IS NOT NULL
+                GROUP BY st.final_channel_id, EXTRACT(HOUR FROM su.clicked_at)
+            ) click_hour_stat
+                   ON click_hour_stat.channel_id = ch.id
+            WHERE NVL(ch.is_deleted, 0) = 0
+            GROUP BY ch.id
+        ) aggregated
+    </insert>
+
+</mapper>

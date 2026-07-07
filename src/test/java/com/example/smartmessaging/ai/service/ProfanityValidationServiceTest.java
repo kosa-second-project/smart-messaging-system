@@ -1,8 +1,8 @@
 package com.example.smartmessaging.ai.service;
 
 import com.example.smartmessaging.ai.client.ProfanityFilterClient;
-import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponse;
-import com.example.smartmessaging.ai.dto.response.ValidationIssue;
+import com.example.smartmessaging.ai.dto.response.ProfanityFilterResponseDTO;
+import com.example.smartmessaging.ai.dto.response.ValidationIssueResponseDTO;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * ProfanityFilterClient를 mock 처리해 외부 API 호출 없이 응답 판정과 예외 복구 정책을 검증한다.
+ * 실제 API key를 사용하는 연동 확인은 구현 완료 후 Postman 또는 로컬 실행으로 별도 진행한다.
+ */
 class ProfanityValidationServiceTest {
 
     private ProfanityFilterClient profanityFilterClient;
@@ -52,15 +56,15 @@ class ProfanityValidationServiceTest {
                         "***은 유지되지 않습니다"
                 )));
 
-        List<ValidationIssue> issues = profanityValidationService.validate("원문은 유지됩니다");
+        List<ValidationIssueResponseDTO> issues = profanityValidationService.validate("원문은 유지됩니다");
 
         assertThat(issues).hasSize(1);
-        ValidationIssue issue = issues.get(0);
-        assertThat(issue.getRuleId()).isEqualTo("PROFANITY_DETECTED");
-        assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.HIGH);
-        assertThat(issue.getMessage()).isEqualTo("본문에 부적절한 표현이 포함되어 있습니다.");
-        assertThat(issue.getTargetText()).isEqualTo("나쁜말, 부적절어");
-        assertThat(issue.getSuggestion()).isEqualTo("부적절한 표현을 제거하거나 완화된 표현으로 수정하세요.");
+        ValidationIssueResponseDTO issue = issues.get(0);
+        assertThat(issue.ruleId()).isEqualTo("PROFANITY_DETECTED");
+        assertThat(issue.severity()).isEqualTo(IssueSeverity.HIGH);
+        assertThat(issue.message()).isEqualTo("본문에 부적절한 표현이 포함되어 있습니다.");
+        assertThat(issue.targetText()).isEqualTo("나쁜말, 부적절어");
+        assertThat(issue.suggestion()).isEqualTo("부적절한 표현을 제거하거나 완화된 표현으로 수정하세요.");
     }
 
     @Test
@@ -107,24 +111,16 @@ class ProfanityValidationServiceTest {
         );
     }
 
-    private ProfanityFilterResponse response(
+    private ProfanityFilterResponseDTO response(
             int statusCode,
-            List<ProfanityFilterResponse.DetectedWord> detected,
+            List<ProfanityFilterResponseDTO.DetectedWord> detected,
             String filtered
     ) {
-        ProfanityFilterResponse.Status status = new ProfanityFilterResponse.Status();
-        status.setCode(statusCode);
-
-        ProfanityFilterResponse response = new ProfanityFilterResponse();
-        response.setStatus(status);
-        response.setDetected(detected);
-        response.setFiltered(filtered);
-        return response;
+        ProfanityFilterResponseDTO.Status status = new ProfanityFilterResponseDTO.Status(statusCode, null, null);
+        return new ProfanityFilterResponseDTO(null, status, detected, filtered, null);
     }
 
-    private ProfanityFilterResponse.DetectedWord detected(String word) {
-        ProfanityFilterResponse.DetectedWord detectedWord = new ProfanityFilterResponse.DetectedWord();
-        detectedWord.setFilteredWord(word);
-        return detectedWord;
+    private ProfanityFilterResponseDTO.DetectedWord detected(String word) {
+        return new ProfanityFilterResponseDTO.DetectedWord(null, word);
     }
 }

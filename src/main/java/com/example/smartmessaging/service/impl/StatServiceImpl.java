@@ -9,7 +9,7 @@ import com.example.smartmessaging.dto.response.StatTableResponse;
 import com.example.smartmessaging.dto.vo.ChannelStatVO;
 import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.ClickStatVO;
-import com.example.smartmessaging.dto.vo.CustomerChannelConsentVO;
+import com.example.smartmessaging.dto.vo.CustomerChannelConsentSummaryVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
@@ -46,14 +46,15 @@ public class StatServiceImpl implements StatService {
     public StatPageResponse getDeliveryStats(StatSearchRequest request) {
         List<MessageStatVO> messageStats = statMapper.selectMessageStats(request);
         List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
+        DegreeStatsSummary degreeSummary = summarizeDegreeStats(degreeStats);
         Map<Long, String> channelNames = channelNames();
 
         return StatPageResponse.builder()
                 .cards(buildDeliveryCards(request, messageStats))
                 .charts(List.of(
-                        buildChannelTrendChart(degreeStats, channelNames, "channelTrend", "채널별 발송 현황", "bar"),
+                        buildChannelTrendChart(degreeSummary, channelNames, "channelTrend", "채널별 발송 현황", "bar"),
                         buildSendSuccessTrendChart(messageStats),
-                        buildFallbackSuccessChart(degreeStats, channelNames)
+                        buildFallbackSuccessChart(degreeSummary, channelNames)
                 ))
                 .tables(List.of())
                 .build();
@@ -62,16 +63,17 @@ public class StatServiceImpl implements StatService {
     @Override
     public StatPageResponse getChannelStats(StatSearchRequest request) {
         List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
+        DegreeStatsSummary degreeSummary = summarizeDegreeStats(degreeStats);
         Map<Long, String> channelNames = channelNames();
 
         return StatPageResponse.builder()
                 .cards(List.of())
                 .charts(List.of(
-                        buildChannelSuccessRateChart(degreeStats, channelNames),
-                        buildChannelTrendChart(degreeStats, channelNames, "channelTrend", "채널별 추이", "line"),
-                        buildChannelShareChart(degreeStats, channelNames)
+                        buildChannelSuccessRateChart(degreeSummary, channelNames),
+                        buildChannelTrendChart(degreeSummary, channelNames, "channelTrend", "채널별 추이", "line"),
+                        buildChannelShareChart(degreeSummary, channelNames)
                 ))
-                .tables(List.of(buildChannelCostTable(degreeStats, channelNames)))
+                .tables(List.of(buildChannelCostTable(degreeSummary, channelNames)))
                 .build();
     }
 
@@ -93,7 +95,7 @@ public class StatServiceImpl implements StatService {
     @Override
     public StatPageResponse getCustomerStats(StatSearchRequest request) {
         List<CustomerStatVO> customerStats = statMapper.selectCustomerStats(request);
-        List<CustomerChannelConsentVO> consents = statMapper.selectCustomerChannelConsents(request);
+        List<CustomerChannelConsentSummaryVO> consents = statMapper.selectCustomerChannelConsents(request);
         Map<Long, String> channelNames = channelNames();
 
         return StatPageResponse.builder()
@@ -206,86 +208,66 @@ public class StatServiceImpl implements StatService {
                 .build();
     }
 
-    private StatChartResponse buildChannelTrendChart(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames,
+    private StatChartResponse buildChannelTrendChart(DegreeStatsSummary summary, Map<Long, String> channelNames,
                                                      String chartId, String title, String type) {
-        List<LocalDate> dates = sortedDates(stats);
-        List<Long> channelIds = sortedChannelIds(stats);
-
         return StatChartResponse.builder()
                 .chartId(chartId)
                 .title(title)
                 .type(type)
-                .labels(dates.stream().map(this::dateLabel).toList())
-                .datasets(channelIds.stream()
-                        .map(channelId -> dataset(channelName(channelNames, channelId), dates.stream()
-                                .map(date -> (Number) sumSendByDateAndChannel(stats, date, channelId))
+                .labels(summary.dates().stream().map(this::dateLabel).toList())
+                .datasets(summary.channelIds().stream()
+                        .map(channelId -> dataset(channelName(channelNames, channelId), summary.dates().stream()
+                                .map(date -> (Number) summary.sendByDateAndChannel(date, channelId))
                                 .toList()))
                         .toList())
                 .build();
     }
 
-    private StatChartResponse buildFallbackSuccessChart(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames) {
-        List<Integer> degrees = stats.stream()
-                .map(MessageStatByDegreeVO::getDegree)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted()
-                .toList();
-        List<Long> channelIds = sortedChannelIds(stats);
-
+    private StatChartResponse buildFallbackSuccessChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
         return StatChartResponse.builder()
                 .chartId("fallbackSuccess")
                 .title("Fallback 채널별 성공률")
                 .type("bar")
-                .labels(degrees.stream().map(degree -> degree + "차").toList())
-                .datasets(channelIds.stream()
-                        .map(channelId -> dataset(channelName(channelNames, channelId), degrees.stream()
-                                .map(degree -> (Number) round(successRateByDegreeAndChannel(stats, degree, channelId)))
+                .labels(summary.degrees().stream().map(degree -> degree + "차").toList())
+                .datasets(summary.channelIds().stream()
+                        .map(channelId -> dataset(channelName(channelNames, channelId), summary.degrees().stream()
+                                .map(degree -> (Number) round(summary.successRateByDegreeAndChannel(degree, channelId)))
                                 .toList()))
                         .toList())
                 .build();
     }
 
-    private StatChartResponse buildChannelSuccessRateChart(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames) {
-        List<Long> channelIds = sortedChannelIds(stats);
-
+    private StatChartResponse buildChannelSuccessRateChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
         return StatChartResponse.builder()
                 .chartId("channelSuccessRate")
                 .title("채널별 성공률")
                 .type("bar")
-                .labels(channelIds.stream().map(channelId -> channelName(channelNames, channelId)).toList())
-                .datasets(List.of(dataset("성공률", channelIds.stream()
-                        .map(channelId -> (Number) round(successRateByChannel(stats, channelId)))
+                .labels(summary.channelIds().stream().map(channelId -> channelName(channelNames, channelId)).toList())
+                .datasets(List.of(dataset("성공률", summary.channelIds().stream()
+                        .map(channelId -> (Number) round(summary.successRateByChannel(channelId)))
                         .toList())))
                 .build();
     }
 
-    private StatChartResponse buildChannelShareChart(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames) {
-        List<Long> channelIds = sortedChannelIds(stats);
-        long totalSend = stats.stream().mapToLong(stat -> n(stat.getSendCount())).sum();
-
+    private StatChartResponse buildChannelShareChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
         return StatChartResponse.builder()
                 .chartId("channelShare")
                 .title("채널별 발송 비중")
                 .type("doughnut")
-                .labels(channelIds.stream().map(channelId -> channelName(channelNames, channelId)).toList())
-                .datasets(List.of(dataset("발송 비중", channelIds.stream()
-                        .map(channelId -> (Number) round(rate(sumSendByChannel(stats, channelId), totalSend)))
+                .labels(summary.channelIds().stream().map(channelId -> channelName(channelNames, channelId)).toList())
+                .datasets(List.of(dataset("발송 비중", summary.channelIds().stream()
+                        .map(channelId -> (Number) round(rate(summary.sendByChannel(channelId), summary.totalSend())))
                         .toList())))
                 .build();
     }
 
-    private StatTableResponse buildChannelCostTable(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames) {
-        List<List<String>> rows = sortedChannelIds(stats).stream()
+    private StatTableResponse buildChannelCostTable(DegreeStatsSummary summary, Map<Long, String> channelNames) {
+        List<List<String>> rows = summary.channelIds().stream()
                 .map(channelId -> List.of(
                         channelName(channelNames, channelId),
-                        formatNumber(sumSendByChannel(stats, channelId)) + "건",
-                        formatRate(successRateByChannel(stats, channelId)) + "%",
-                        formatWon(stats.stream()
-                                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                                .map(MessageStatByDegreeVO::getCost)
-                                .filter(Objects::nonNull)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add))
+                        formatNumber(summary.sendByChannel(channelId)) + "건",
+                        formatRate(summary.successRateByChannel(channelId)) + "%",
+                        formatWon(summary.costByChannel(channelId))
                 ))
                 .toList();
 
@@ -342,18 +324,17 @@ public class StatServiceImpl implements StatService {
                 .build();
     }
 
-    private StatTableResponse buildCustomerConsentTable(List<CustomerChannelConsentVO> consents, Map<Long, String> channelNames) {
-        Map<Long, List<CustomerChannelConsentVO>> byChannel = consents.stream()
+    private StatTableResponse buildCustomerConsentTable(List<CustomerChannelConsentSummaryVO> consents, Map<Long, String> channelNames) {
+        List<List<String>> rows = consents.stream()
                 .filter(consent -> consent.getChannelId() != null)
-                .collect(Collectors.groupingBy(CustomerChannelConsentVO::getChannelId, LinkedHashMap::new, Collectors.toList()));
-
-        List<List<String>> rows = byChannel.entrySet().stream()
-                .map(entry -> {
-                    long total = entry.getValue().size();
-                    long consented = entry.getValue().stream().filter(consent -> Boolean.TRUE.equals(consent.getIsConsented())).count();
-                    long rejected = Math.max(total - consented, 0);
+                .map(consent -> {
+                    long total = n(consent.getTotalCount());
+                    long consented = n(consent.getConsentedCount());
+                    long rejected = consent.getRejectedCount() == null
+                            ? Math.max(total - consented, 0)
+                            : n(consent.getRejectedCount());
                     return List.of(
-                            channelName(channelNames, entry.getKey()),
+                            channelName(channelNames, consent.getChannelId()),
                             formatNumber(consented) + "명",
                             formatNumber(rejected) + "명",
                             formatRate(rate(consented, total)) + "%"
@@ -510,45 +491,111 @@ public class StatServiceImpl implements StatService {
         return channelType;
     }
 
-    private long sumSendByDateAndChannel(List<MessageStatByDegreeVO> stats, LocalDate date, Long channelId) {
-        return stats.stream()
-                .filter(stat -> Objects.equals(stat.getDate(), date))
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSendCount()))
-                .sum();
+    private DegreeStatsSummary summarizeDegreeStats(List<MessageStatByDegreeVO> stats) {
+        List<LocalDate> dates = sortedDates(stats);
+        List<Long> channelIds = sortedChannelIds(stats);
+        List<Integer> degrees = stats.stream()
+                .map(MessageStatByDegreeVO::getDegree)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+        Map<DateChannelKey, Long> sendByDateAndChannel = new LinkedHashMap<>();
+        Map<Long, Long> sendByChannel = new LinkedHashMap<>();
+        Map<Long, Long> successByChannel = new LinkedHashMap<>();
+        Map<Long, BigDecimal> costByChannel = new LinkedHashMap<>();
+        Map<DegreeChannelKey, Long> sendByDegreeAndChannel = new LinkedHashMap<>();
+        Map<DegreeChannelKey, Long> successByDegreeAndChannel = new LinkedHashMap<>();
+        long totalSend = 0;
+
+        for (MessageStatByDegreeVO stat : stats) {
+            long sendCount = n(stat.getSendCount());
+            long successCount = n(stat.getSuccessCount());
+            totalSend += sendCount;
+
+            Long channelId = stat.getChannelId();
+            if (channelId != null) {
+                sendByChannel.merge(channelId, sendCount, Long::sum);
+                successByChannel.merge(channelId, successCount, Long::sum);
+                costByChannel.merge(channelId, n(stat.getCost()), BigDecimal::add);
+            }
+
+            LocalDate date = stat.getDate();
+            if (date != null && channelId != null) {
+                sendByDateAndChannel.merge(new DateChannelKey(date, channelId), sendCount, Long::sum);
+            }
+
+            Integer degree = stat.getDegree();
+            if (degree != null && channelId != null) {
+                DegreeChannelKey key = new DegreeChannelKey(degree, channelId);
+                sendByDegreeAndChannel.merge(key, sendCount, Long::sum);
+                successByDegreeAndChannel.merge(key, successCount, Long::sum);
+            }
+        }
+
+        return new DegreeStatsSummary(
+                dates,
+                channelIds,
+                degrees,
+                sendByDateAndChannel,
+                sendByChannel,
+                successByChannel,
+                costByChannel,
+                sendByDegreeAndChannel,
+                successByDegreeAndChannel,
+                totalSend
+        );
     }
 
-    private long sumSendByChannel(List<MessageStatByDegreeVO> stats, Long channelId) {
-        return stats.stream()
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSendCount()))
-                .sum();
+    private record DateChannelKey(LocalDate date, Long channelId) {
     }
 
-    private double successRateByChannel(List<MessageStatByDegreeVO> stats, Long channelId) {
-        long send = stats.stream()
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSendCount()))
-                .sum();
-        long success = stats.stream()
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSuccessCount()))
-                .sum();
-        return rate(success, send);
+    private record DegreeChannelKey(Integer degree, Long channelId) {
     }
 
-    private double successRateByDegreeAndChannel(List<MessageStatByDegreeVO> stats, Integer degree, Long channelId) {
-        long send = stats.stream()
-                .filter(stat -> Objects.equals(stat.getDegree(), degree))
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSendCount()))
-                .sum();
-        long success = stats.stream()
-                .filter(stat -> Objects.equals(stat.getDegree(), degree))
-                .filter(stat -> Objects.equals(stat.getChannelId(), channelId))
-                .mapToLong(stat -> n(stat.getSuccessCount()))
-                .sum();
-        return rate(success, send);
+    private record DegreeStatsSummary(
+            List<LocalDate> dates,
+            List<Long> channelIds,
+            List<Integer> degrees,
+            Map<DateChannelKey, Long> sendByDateAndChannel,
+            Map<Long, Long> sendByChannel,
+            Map<Long, Long> successByChannel,
+            Map<Long, BigDecimal> costByChannel,
+            Map<DegreeChannelKey, Long> sendByDegreeAndChannel,
+            Map<DegreeChannelKey, Long> successByDegreeAndChannel,
+            long totalSend
+    ) {
+
+        long sendByDateAndChannel(LocalDate date, Long channelId) {
+            return sendByDateAndChannel.getOrDefault(new DateChannelKey(date, channelId), 0L);
+        }
+
+        long sendByChannel(Long channelId) {
+            return sendByChannel.getOrDefault(channelId, 0L);
+        }
+
+        double successRateByChannel(Long channelId) {
+            return rate(successByChannel.getOrDefault(channelId, 0L), sendByChannel(channelId));
+        }
+
+        double successRateByDegreeAndChannel(Integer degree, Long channelId) {
+            DegreeChannelKey key = new DegreeChannelKey(degree, channelId);
+            return rate(
+                    successByDegreeAndChannel.getOrDefault(key, 0L),
+                    sendByDegreeAndChannel.getOrDefault(key, 0L)
+            );
+        }
+
+        BigDecimal costByChannel(Long channelId) {
+            return costByChannel.getOrDefault(channelId, BigDecimal.ZERO);
+        }
+
+        private double rate(long numerator, long denominator) {
+            if (denominator == 0) {
+                return 0;
+            }
+            return ((double) numerator / denominator) * 100;
+        }
     }
 
     private CustomerStatVO latestCustomerStat(List<CustomerStatVO> stats) {
@@ -655,6 +702,10 @@ public class StatServiceImpl implements StatService {
     }
 
     private int n(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private long n(Long value) {
         return value == null ? 0 : value;
     }
 

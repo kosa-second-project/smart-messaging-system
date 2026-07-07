@@ -41,6 +41,7 @@ class SendPreparationServiceTest {
     private MessageQueuePublisher messageQueuePublisher;
     private ShortUrlService shortUrlService;
     private RabbitTemplate rabbitTemplate;
+    private TokenCryptoService tokenCryptoService;
     private SendPreparationService sendPreparationService;
 
     @BeforeEach
@@ -51,11 +52,13 @@ class SendPreparationServiceTest {
         messageQueuePublisher = mock(MessageQueuePublisher.class);
         shortUrlService = mock(ShortUrlService.class);
         rabbitTemplate = mock(RabbitTemplate.class);
+        tokenCryptoService = mock(TokenCryptoService.class);
         sendPreparationService = new SendPreparationServiceImpl(
                 draftService,
                 channelService,
                 sendPreparationMapper,
-                rabbitTemplate
+                rabbitTemplate,
+                tokenCryptoService
         );
     }
 
@@ -67,7 +70,7 @@ class SendPreparationServiceTest {
         request.setPriorities(List.of("SMS"));
         request.setScheduledAt(LocalDateTime.now().minusMinutes(1));
 
-        assertThatThrownBy(() -> sendPreparationService.prepare(10L, request))
+        assertThatThrownBy(() -> sendPreparationService.prepare(10L, request, null))
                 .isInstanceOf(BusinessException.class);
 
         verify(sendPreparationMapper, never()).insertSendHistory(any(SendHistoryVO.class));
@@ -116,7 +119,9 @@ class SendPreparationServiceTest {
         when(shortUrlService.createTrackedUrl(1200L, null, ShortUrlPurpose.UNSUBSCRIBE))
                 .thenReturn("http://localhost:8080/u/unsub200");
 
-        SendPrepareResponseDTO response = sendPreparationService.prepare(10L, request);
+        when(tokenCryptoService.encrypt("kakao-token")).thenReturn("encrypted-token");
+
+        SendPrepareResponseDTO response = sendPreparationService.prepare(10L, request, "kakao-token");
 
         ArgumentCaptor<SendHistoryVO> historyCaptor = ArgumentCaptor.forClass(SendHistoryVO.class);
         verify(sendPreparationMapper).insertSendHistory(historyCaptor.capture());

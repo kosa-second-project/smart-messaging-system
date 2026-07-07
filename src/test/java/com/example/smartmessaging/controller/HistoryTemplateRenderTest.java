@@ -65,26 +65,24 @@ class HistoryTemplateRenderTest {
 
     @Test
     void 데이터와_페이지네이션이_있는_Thymeleaf_템플릿을_렌더링한다() throws Exception {
-        HistoryListResponseDTO history = new HistoryListResponseDTO();
-        history.setId(1L);
-        history.setTitle("테스트 전송");
-        history.setPurpose("INFO");
-        history.setStatus("SENT   ");
-        history.setTotalTargetCount(10);
-        history.setSuccessCount(8);
-        history.setFailCount(2);
-        history.setSuccessRate(new BigDecimal("80"));
-        history.setTags(List.of("10대", "30대", "sms 동의", "휴면", "일반", "이메일 동의", "신규"));
+        HistoryListResponseDTO history = new HistoryListResponseDTO(
+                1L,
+                null,
+                "테스트 전송",
+                "INFO",
+                10,
+                8,
+                2,
+                new BigDecimal("80"),
+                null,
+                "SENT   "
+        ).withTags(List.of("10대", "30대", "sms 동의", "휴면", "일반", "이메일 동의", "신규"));
 
         when(historyService.getHistories(any(HistorySearchRequestDTO.class)))
                 .thenReturn(PageResponseDTO.of(List.of(history), 1, 10, 11));
         when(historyService.getChannelOptions()).thenReturn(List.of());
-        HistoryFilterOptionDTO tag1 = new HistoryFilterOptionDTO();
-        tag1.setId(1L);
-        tag1.setLabel("10대");
-        HistoryFilterOptionDTO tag2 = new HistoryFilterOptionDTO();
-        tag2.setId(2L);
-        tag2.setLabel("20대");
+        HistoryFilterOptionDTO tag1 = new HistoryFilterOptionDTO(1L, "10대");
+        HistoryFilterOptionDTO tag2 = new HistoryFilterOptionDTO(2L, "20대");
         when(historyService.getTagOptions()).thenReturn(List.of(tag1, tag2));
         when(historyService.getStatusOptions()).thenReturn(List.of());
         when(historyService.getPurposeOptions()).thenReturn(List.of());

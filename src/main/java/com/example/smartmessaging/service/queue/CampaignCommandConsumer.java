@@ -132,10 +132,6 @@ public class CampaignCommandConsumer {
     }
 
     private MessageTaskDto buildTask(CampaignCommandQueueDto command, SendTargetVO target, RecipientSendPlan plan) {
-        String originalUrl = resolveOriginalUrl(command.getLinkUrl(), command.getContent());
-        String actionUrl = hasText(originalUrl)
-                ? shortUrlService.createTrackedUrl(target.getId(), originalUrl, ShortUrlPurpose.from(command.getLinkPurpose()))
-                : null;
 
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(command, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
@@ -157,31 +153,12 @@ public class CampaignCommandConsumer {
                 .title(command.getTitle())
                 .content(command.getContent())
                 .purpose(command.getPurpose())
-                .actionButtonName(resolveButtonName(command.getLinkButtonName()))
-                .actionUrl(actionUrl)
+                .actionButtonName(null)
+                .actionUrl(null)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
                 .currentStep(0)
                 .build();
-    }
-
-    private String resolveOriginalUrl(String linkUrl, String content) {
-        if (hasText(linkUrl)) {
-            return linkUrl.trim();
-        }
-        if (!hasText(content)) {
-            return null;
-        }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("https?://[^\\s]+").matcher(content);
-        return matcher.find() ? matcher.group().trim() : null;
-    }
-
-    private String resolveButtonName(String linkButtonName) {
-        return hasText(linkButtonName) ? linkButtonName.trim() : "자세히 보기";
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
     private boolean shouldCreateUnsubscribeUrl(CampaignCommandQueueDto command, RecipientSendPlan plan) {
         if (command.getPurpose() == null || !"AD".equals(command.getPurpose().trim().toUpperCase(Locale.ROOT))) {

@@ -1,9 +1,6 @@
 package com.example.smartmessaging.dto.response;
 
 import com.example.smartmessaging.dto.type.SendHistoryStatus;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -11,36 +8,114 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
-@NoArgsConstructor
-public class HistoryDetailResponseDTO {
-    private Long sendHistoryId;
-    private String title;
-    private String content;
-    private LocalDateTime scheduledAt;
-    private String purpose;
-    private String status;
-    private Integer totalTargetCount;
-    private Integer successCount;
-    private Integer failCount;
-    private BigDecimal actualCost;
-    private BigDecimal estimatedSaving;
-    private BigDecimal successRate;
-    private List<String> channels = new ArrayList<>();
-    private List<String> tags = new ArrayList<>();
-    private List<HistoryAttemptFlowResponseDTO> attemptFlows = new ArrayList<>();
-
-    public void setChannels(List<String> channels) {
-        this.channels = channels == null ? new ArrayList<>() : new ArrayList<>(channels);
+public record HistoryDetailResponseDTO(
+        Long sendHistoryId,
+        String title,
+        String content,
+        LocalDateTime scheduledAt,
+        String purpose,
+        String status,
+        Integer totalTargetCount,
+        Integer successCount,
+        Integer failCount,
+        BigDecimal actualCost,
+        BigDecimal estimatedSaving,
+        BigDecimal successRate,
+        List<String> channels,
+        List<String> tags,
+        List<HistoryAttemptFlowResponseDTO> attemptFlows
+) {
+    public HistoryDetailResponseDTO(
+            Long sendHistoryId,
+            String title,
+            String content,
+            LocalDateTime scheduledAt,
+            String purpose,
+            String status,
+            Integer totalTargetCount,
+            Integer successCount,
+            Integer failCount,
+            BigDecimal actualCost,
+            BigDecimal estimatedSaving,
+            BigDecimal successRate
+    ) {
+        this(
+                sendHistoryId,
+                title,
+                content,
+                scheduledAt,
+                purpose,
+                status,
+                totalTargetCount,
+                successCount,
+                failCount,
+                actualCost,
+                estimatedSaving,
+                successRate,
+                List.of(),
+                List.of(),
+                List.of()
+        );
     }
 
-    public void setTags(List<String> tags) {
-        this.tags = tags == null ? new ArrayList<>() : new ArrayList<>(tags);
+    public HistoryDetailResponseDTO withChannels(List<String> channels) {
+        return new HistoryDetailResponseDTO(
+                sendHistoryId,
+                title,
+                content,
+                scheduledAt,
+                purpose,
+                status,
+                totalTargetCount,
+                successCount,
+                failCount,
+                actualCost,
+                estimatedSaving,
+                successRate,
+                copyOrEmpty(channels),
+                tags,
+                attemptFlows
+        );
     }
 
-    public void setAttemptFlows(List<HistoryAttemptFlowResponseDTO> attemptFlows) {
-        this.attemptFlows = attemptFlows == null ? new ArrayList<>() : new ArrayList<>(attemptFlows);
+    public HistoryDetailResponseDTO withTags(List<String> tags) {
+        return new HistoryDetailResponseDTO(
+                sendHistoryId,
+                title,
+                content,
+                scheduledAt,
+                purpose,
+                status,
+                totalTargetCount,
+                successCount,
+                failCount,
+                actualCost,
+                estimatedSaving,
+                successRate,
+                channels,
+                copyOrEmpty(tags),
+                attemptFlows
+        );
+    }
+
+    public HistoryDetailResponseDTO withAttemptFlows(List<HistoryAttemptFlowResponseDTO> attemptFlows) {
+        return new HistoryDetailResponseDTO(
+                sendHistoryId,
+                title,
+                content,
+                scheduledAt,
+                purpose,
+                status,
+                totalTargetCount,
+                successCount,
+                failCount,
+                actualCost,
+                estimatedSaving,
+                successRate,
+                channels,
+                tags,
+                attemptFlows == null ? List.of() : List.copyOf(attemptFlows)
+        );
     }
 
     public BigDecimal getDisplaySuccessRate() {
@@ -55,5 +130,9 @@ public class HistoryDetailResponseDTO {
 
     public String getStatusLabel() {
         return SendHistoryStatus.labelOf(status);
+    }
+
+    private static List<String> copyOrEmpty(List<String> values) {
+        return values == null ? new ArrayList<>() : new ArrayList<>(values);
     }
 }

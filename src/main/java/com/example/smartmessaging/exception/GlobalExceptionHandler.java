@@ -25,6 +25,22 @@ import java.util.Set;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> handleValidationException(
+            MethodArgumentNotValidException exception
+    ) {
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        log.warn("Request validation failed: errorCount={}",
+                exception.getBindingResult().getErrorCount());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", errorCode.getStatus());
+        response.put("code", errorCode.getCode());
+        response.put("message", errorCode.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     // 1. 공통 비즈니스 예외(BusinessException) 통합 처리
     @ExceptionHandler(BusinessException.class)
     public Object handleBusinessException(BusinessException e, HttpServletRequest request, Model model) {
@@ -97,20 +113,6 @@ public class GlobalExceptionHandler {
 
     // 2. 일반 웹 화면(Thymeleaf) 요청 도중 발생한 기타 예외 처리
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException e) {
-        log.warn("Validation failed: {}", e.getMessage());
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("message", e.getBindingResult().getFieldErrors().stream()
-                .findFirst()
-                .map(error -> error.getField() + "은(는) " + error.getDefaultMessage())
-                .orElse("요청 값이 올바르지 않습니다."));
-
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
     @ExceptionHandler(Exception.class)
     public String handleWebException(Exception e, Model model) {
         log.error("Web Request Exception: ", e);

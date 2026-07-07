@@ -7,6 +7,10 @@ plugins {
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 
+ext {
+    set('springAiVersion', '1.1.8')
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -25,6 +29,12 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}
+
 dependencies {
     // Web & Thymeleaf
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -39,10 +49,16 @@ dependencies {
     // AOP (Aspect Oriented Programming - 공통 로깅)
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    // Spring AI / Google GenAI (Gemini)
+    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+
 
     // Database & MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc11' // Oracle JDBC (JDK 17 호환)
+
+    // Batch
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
     
     // Redis (RedisConfig 및 CampaignDraftService 컴파일용 필수 의존성 추가)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
@@ -69,6 +85,7 @@ dependencies {
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 

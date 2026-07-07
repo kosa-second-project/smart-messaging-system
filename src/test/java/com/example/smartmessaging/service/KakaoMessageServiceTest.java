@@ -1,30 +1,33 @@
 package com.example.smartmessaging.service;
 
-import com.example.smartmessaging.exception.KakaoApiException;
+import com.example.smartmessaging.service.impl.KakaoMessageServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 
-import com.example.smartmessaging.service.impl.KakaoMessageServiceImpl;
+import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class KakaoMessageServiceTest {
 
     private final KakaoMessageService kakaoMessageService = new KakaoMessageServiceImpl(
             new RestTemplateBuilder(),
-            new ObjectMapper()
+            new ObjectMapper(),
+            "http://localhost:8080"
     );
 
     @Test
-    void 카카오_메시지는_링크URL이_없으면_서비스_기본URL로_대체하지_않는다() {
-        assertThatThrownBy(() -> kakaoMessageService.sendMemoMessage(
+    void sendFeedMessageReturnsFalseWhenReceiversAreEmpty() {
+        boolean result = kakaoMessageService.sendFeedMessage(
                 "token",
-                "제목",
-                "내용",
-                "자세히 보기",
+                List.of(),
+                "title",
+                "content",
+                "button",
                 null
-        )).isInstanceOf(KakaoApiException.class)
-                .hasMessageContaining("링크 URL이 없습니다");
+        );
+
+        assertThat(result).isFalse();
     }
 }

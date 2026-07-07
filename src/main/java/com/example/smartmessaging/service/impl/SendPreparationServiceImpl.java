@@ -89,9 +89,6 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .estimatedCost(BigDecimal.ZERO)
                 .estimatedSaving(BigDecimal.ZERO)
                 .actualCost(BigDecimal.ZERO)
-                .linkButtonName(request.getLinkButtonName())
-                .linkUrl(request.getLinkUrl())
-                .linkPurpose(request.getLinkPurpose())
                 .kakaoAccessTokenEnc(tokenCryptoService.encrypt(kakaoAccessToken))
                 .scheduledAt(scheduledTime)
                 .build();
@@ -114,9 +111,6 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .content(request.getContent())
                 .purpose(normalizedPurpose)
                 .templateId(request.getTemplateId())
-                .linkButtonName(request.getLinkButtonName())
-                .linkUrl(request.getLinkUrl())
-                .linkPurpose(request.getLinkPurpose())
                 .routingChannelIds(routingChannels.stream().map(ChannelVO::getId).toList())
                 .kakaoAccessToken(kakaoAccessToken)
                 .build();

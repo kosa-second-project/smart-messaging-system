@@ -34,7 +34,6 @@ class DevTestMessageServiceImplTest {
     private final ShortUrlService shortUrlService = mock(ShortUrlService.class);
     private final SmsMessageService smsMessageService = mock(SmsMessageService.class);
     private final EmailMessageService emailMessageService = mock(EmailMessageService.class);
-    private final KakaoMessageService kakaoMessageService = mock(KakaoMessageService.class);
 
     private DevTestMessageServiceImpl service;
 
@@ -46,8 +45,7 @@ class DevTestMessageServiceImplTest {
                 sendPreparationMapper,
                 shortUrlService,
                 smsMessageService,
-                emailMessageService,
-                kakaoMessageService
+                emailMessageService
         );
         ReflectionTestUtils.setField(service, "testPhone", "010-1234-5678");
         ReflectionTestUtils.setField(service, "testEmail", "me@example.com");
@@ -99,7 +97,7 @@ class DevTestMessageServiceImplTest {
                 "Body Tester\n\nRead more\nhttps://kosa.kr/r/test"
         )).thenReturn(SendResult.success("EMAIL"));
 
-        DevTestSendResponse response = service.sendToMe(1L, "Tester", null, request);
+        DevTestSendResponse response = service.sendToMe(1L, "Tester", request);
 
         assertThat(response.getEmail()).isEqualTo("me@example.com");
         assertThat(response.getEmailActionUrl()).isEqualTo("https://kosa.kr/r/test");
@@ -109,6 +107,6 @@ class DevTestMessageServiceImplTest {
                 "Hello Tester",
                 "Body Tester\n\nRead more\nhttps://kosa.kr/r/test"
         );
-        verifyNoInteractions(smsMessageService, kakaoMessageService);
+        verifyNoInteractions(smsMessageService);
     }
 }
