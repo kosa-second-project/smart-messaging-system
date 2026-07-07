@@ -5,7 +5,7 @@
 .template-page {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: clamp(0.75rem, 1.4vw, var(--space-4));
     height: 100%;
     min-height: 0;
     padding: var(--space-3);
@@ -107,7 +107,7 @@
 }
 
 .template-table {
-    min-width: 54rem;
+    min-width: 48rem;
 }
 
 .template-table tbody tr {
@@ -312,7 +312,7 @@
 }
 
 .template-message-box {
-    min-height: 26rem;
+    min-height: clamp(16rem, 48vh, 26rem);
     padding: var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -535,7 +535,7 @@
 .template-ai-suggestions {
     display: grid;
     gap: var(--space-2);
-    max-height: 26rem;
+    max-height: min(26rem, 46vh);
     overflow-y: auto;
 }
 
@@ -673,6 +673,36 @@
 }
 
 @media (max-width: 1023.98px) {
+    .template-form-preview,
+    .template-detail-preview {
+        max-width: 22rem;
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+    .template-page {
+        padding: 0.75rem;
+    }
+
+    .template-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .template-toolbar__filters {
+        width: 100%;
+    }
+
+    .template-search {
+        flex: 1 1 16rem;
+    }
+
+    .template-form-layout,
+    .template-detail__content {
+        grid-template-columns: 1fr;
+    }
+
     .template-form-preview,
     .template-detail-preview {
         max-width: 22rem;

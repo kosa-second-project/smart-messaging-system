@@ -2,7 +2,7 @@
   min-height: 0;
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
   gap: 0.75rem;
 }
 
@@ -47,7 +47,7 @@
 .stats-analysis-stack {
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(16rem, 1fr) minmax(13rem, 0.9fr);
+  grid-template-rows: minmax(13rem, 1fr) minmax(11rem, 0.9fr);
   gap: 0.75rem;
 }
 
@@ -66,7 +66,7 @@
 }
 
 .stats-analysis-card--primary {
-  min-height: 18rem;
+  min-height: 15rem;
 }
 
 .stats-analysis-card__head {
@@ -279,6 +279,28 @@
   }
 
   .stats-analysis-card {
-    min-height: 16rem;
+    min-height: 14rem;
+  }
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+  .stats-analysis-layout,
+  .stats-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-analysis-stack {
+    grid-template-rows: auto;
+  }
+
+  .stats-analysis-card,
+  .stats-analysis-card--primary,
+  .stats-analysis-card--wide {
+    min-height: 12rem;
+  }
+
+  .stats-analysis-card__head,
+  .stats-analysis-toolbar {
+    flex-wrap: wrap;
   }
 }

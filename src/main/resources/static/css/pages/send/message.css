@@ -1,5 +1,5 @@
 .message-step-container {
-    padding: 0 1rem 2rem 1rem;
+    padding: 0 clamp(0rem, 1vw, 1rem) 1rem;
     display: flex;
     flex-direction: column;
     min-height: 100%;
@@ -9,8 +9,8 @@
 .top-cards-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    gap: clamp(0.75rem, 1.5vw, 1.5rem);
+    margin-bottom: clamp(0.75rem, 1.5vw, 1.5rem);
 }
 
 .top-cards-grid--message {
@@ -53,7 +53,7 @@
 .message-composer-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    gap: clamp(0.75rem, 1.5vw, 1.5rem);
     min-height: 0;
     align-items: stretch;
 }
@@ -969,7 +969,7 @@
 
 .preview-section #phonePreviewBox {
     width: min(320px, 100%);
-    height: clamp(460px, 58dvh, 620px);
+    height: clamp(360px, 52dvh, 620px);
 }
 
 .preview-section .preview-status-bar {
@@ -1029,6 +1029,45 @@
 
     .channel-info {
         gap: 0.75rem;
+    }
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+    .message-step-container {
+        padding: 0 0 0.75rem;
+    }
+
+    .top-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .message-composer-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
+    }
+
+    .composer-column:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+
+    .channel-card {
+        padding: 0.75rem 1rem;
+    }
+
+    .textarea-wrapper textarea,
+    .message-textarea {
+        min-height: 10rem;
+    }
+
+    .template-list-container {
+        max-height: 18rem;
+    }
+
+    .cost-distribution-list {
+        flex-wrap: wrap;
+    }
+
+    .preview-section #phonePreviewBox {
+        height: clamp(22rem, 48dvh, 34rem);
     }
 }
 

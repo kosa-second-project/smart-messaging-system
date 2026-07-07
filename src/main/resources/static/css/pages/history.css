@@ -1,8 +1,8 @@
 .history-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem;
+  gap: clamp(0.75rem, 1.4vw, 1.25rem);
+  padding: clamp(0.75rem, 1.6vw, 1.5rem);
   font-family: "Pretendard", "Inter", sans-serif;
 }
 
@@ -123,7 +123,7 @@
 
 .history-table .ds-table {
   width: 100%;
-  min-width: 83rem;
+  min-width: 72rem;
   table-layout: fixed;
   font-size: 0.875rem;
   line-height: 1rem;
@@ -748,4 +748,35 @@ body.history-modal-open {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+  .history-filter__controls {
+    align-items: stretch;
+  }
+
+  .history-search {
+    flex: 1 1 18rem;
+    width: auto;
+  }
+
+  .history-filter__select,
+  .history-filter__sort,
+  .history-filter__period .ds-input {
+    width: min(100%, 8.5rem);
+  }
+
+  .history-table th,
+  .history-table td {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .history-modal {
+    padding: 1rem;
+  }
+
+  .history-modal__body {
+    padding: 1rem;
+  }
 }

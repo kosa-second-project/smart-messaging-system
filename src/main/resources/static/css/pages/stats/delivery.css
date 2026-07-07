@@ -8,8 +8,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
+  padding: clamp(0.5rem, 1vw, 0.75rem);
   overflow: hidden;
 }
 
@@ -350,7 +350,7 @@
 
 .stats-canvas-wrap {
   min-height: 0;
-  height: 15rem;
+  height: clamp(11rem, 26vh, 15rem);
   flex: 1 1 auto;
 }
 
@@ -410,6 +410,32 @@
 
   .stats-chart-card {
     min-height: 16.25rem;
+  }
+
+  .stats-queue-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+  .stats-overview-page {
+    overflow-y: auto;
+  }
+
+  .stats-overview {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .stats-chart-layout,
+  .stats-chart-stack {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .stats-chart-card {
+    min-height: 13rem;
   }
 
   .stats-queue-grid {

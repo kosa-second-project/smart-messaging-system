@@ -1,7 +1,7 @@
 /* 스마트폰 목업 래퍼 */
 #phonePreviewBox {
-    width: 320px;
-    height: 640px;
+    width: min(320px, 100%);
+    height: clamp(420px, 66dvh, 640px);
     background-color: #abc1d1;
     /* 기본(카카오 등) 배경 */
     border: 12px solid #1c1c1e;
@@ -24,7 +24,7 @@
 
 /* 상단 상태바 */
 .preview-status-bar {
-    height: 90px;
+    height: clamp(72px, 10dvh, 90px);
     /* 타이틀 영역 포함 */
     display: flex;
     flex-direction: column;
@@ -302,4 +302,18 @@
     left: 50%;
     transform: translateX(-50%);
     opacity: 0.8;
+}
+
+@media (max-width: 1100px), (max-width: 1280px) and (max-height: 800px) {
+    #phonePreviewBox {
+        height: clamp(360px, 58dvh, 560px);
+    }
+
+    .preview-status-bar {
+        height: 72px;
+    }
+
+    .preview-body {
+        padding: 12px;
+    }
 }
