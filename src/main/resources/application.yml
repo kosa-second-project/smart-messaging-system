@@ -39,6 +39,7 @@ mybatis:
   type-aliases-package: com.example.smartmessaging.dto   # dto 하위의 모든 패키지(vo, response, request) 자동 별칭 등록
   configuration:
     map-underscore-to-camel-case: true
+    default-fetch-size: 100
 
 # 콘솔 로그 설정
 logging:

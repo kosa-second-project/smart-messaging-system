@@ -70,7 +70,7 @@ public class DevTestMessageService {
         ChannelVO kakaoChannel = findChannel(activeChannels, "KAKAO").orElse(null);
 
         ChannelSend sms = skipped("SMS", "카카오 테스트 발송에서는 SMS를 보내지 않습니다.");
-        ChannelSend email = skipped("EMAIL", "카카오 테스트 발송에서는 이메일을 보내지 않습니다.");
+        ChannelSend email = sendEmail(history, customer, emailChannel, title, content, buttonName, request.getLinkUrl(), linkPurpose);
         ChannelSend kakao = sendKakao(history, customer, kakaoChannel, kakaoAccessToken, title, content, buttonName, request.getLinkUrl(), linkPurpose);
 
         return DevTestSendResponse.builder()

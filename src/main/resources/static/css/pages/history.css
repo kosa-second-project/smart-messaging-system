@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 1.25rem;
   padding: 1.5rem;
-  font-family: "Pretendard Variable", "Pretendard", "Inter", sans-serif;
+  font-family: "Pretendard", "Inter", sans-serif;
 }
 
 .history-page > .history-filter,
