@@ -38,15 +38,8 @@ public class CustomerServiceImpl implements CustomerService {
     public PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO) {
         log.debug("[CustomerService] 고객 목록 조회 요청 - 필터: {}", searchDTO);
 
-        // DB 쿼리를 병렬로 비동기 실행하여 RTT 레이턴시를 1회분으로 단축합니다.
-        java.util.concurrent.CompletableFuture<List<CustomerResponseDTO>> listFuture = 
-            java.util.concurrent.CompletableFuture.supplyAsync(() -> customerMapper.selectCustomerList(searchDTO));
-            
-        java.util.concurrent.CompletableFuture<Integer> countFuture = 
-            java.util.concurrent.CompletableFuture.supplyAsync(() -> customerMapper.selectCustomerCount(searchDTO));
-            
-        List<CustomerResponseDTO> list = listFuture.join();
-        int totalCount = countFuture.join();
+        List<CustomerResponseDTO> list = customerMapper.selectCustomerList(searchDTO);
+        int totalCount = customerMapper.selectCustomerCount(searchDTO);
 
         if (!list.isEmpty()) {
             List<Long> customerIds = list.stream().map(CustomerResponseDTO::getCustomerId).collect(Collectors.toList());
