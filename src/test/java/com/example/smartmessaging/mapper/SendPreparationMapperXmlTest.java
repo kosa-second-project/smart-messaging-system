@@ -23,16 +23,16 @@ class SendPreparationMapperXmlTest {
         parseMapper(configuration, RESOURCE);
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.findRecipientCandidatesByCustomerIds"
+                "com.example.smartmessaging.service.repository.SendPreparationMapper.findRecipientCandidatesByCustomerIds"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistory"
+                "com.example.smartmessaging.service.repository.SendPreparationMapper.insertSendHistory"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendHistoryRouting"
+                "com.example.smartmessaging.service.repository.SendPreparationMapper.insertSendHistoryRouting"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.SendPreparationMapper.insertSendTarget"
+                "com.example.smartmessaging.service.repository.SendPreparationMapper.insertSendTarget"
         )).isTrue();
     }
 
@@ -45,7 +45,7 @@ class SendPreparationMapperXmlTest {
 
         assertThat(mapperXml)
                 .contains("INSERT INTO send_history",
-                        "#{templateId,jdbcType=NUMERIC}",
+                        "#{templateId, jdbcType=BIGINT}",
                         "INSERT INTO send_history_routing",
                         "INSERT INTO send_target",
                         "FROM customer_channel_consent")

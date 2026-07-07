@@ -4,6 +4,7 @@ import com.example.smartmessaging.dto.request.SendPrepareRequestDTO;
 import com.example.smartmessaging.dto.response.SendPrepareResponseDTO;
 import com.example.smartmessaging.security.CustomUserDetails;
 import com.example.smartmessaging.service.SendPreparationService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,9 +25,11 @@ public class SendRequestApiController {
     @PostMapping
     public ResponseEntity<SendPrepareResponseDTO> prepareSendRequest(
             @Valid @RequestBody SendPrepareRequestDTO request,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpSession session
     ) {
-        SendPrepareResponseDTO response = sendPreparationService.prepare(userDetails.getUserId(), request);
+        String kakaoAccessToken = (String) session.getAttribute("kakaoAccessToken");
+        SendPrepareResponseDTO response = sendPreparationService.prepare(userDetails.getUserId(), request, kakaoAccessToken);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

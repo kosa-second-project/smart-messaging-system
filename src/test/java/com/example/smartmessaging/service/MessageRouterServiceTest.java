@@ -27,7 +27,7 @@ class MessageRouterServiceTest {
     private EmailMessageService emailMessageService;
 
     @InjectMocks
-    private MessageRouterService messageRouterService;
+    private com.example.smartmessaging.service.impl.MessageRouterServiceImpl messageRouterService;
 
     @Test
     @DisplayName("EMAIL 채널이면 EmailMessageService.sendEmail을 호출한다")

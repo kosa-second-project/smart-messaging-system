@@ -48,4 +48,7 @@ tmp/
 # Local sensitive properties
 src/main/resources/application-local.yml
 
+# Compiled class files
+*.class
+
 AGENTS.md

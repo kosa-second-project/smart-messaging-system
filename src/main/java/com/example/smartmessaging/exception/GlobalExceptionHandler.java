@@ -112,6 +112,7 @@ public class GlobalExceptionHandler {
     }
 
     // 2. 일반 웹 화면(Thymeleaf) 요청 도중 발생한 기타 예외 처리
+
     @ExceptionHandler(Exception.class)
     public String handleWebException(Exception e, Model model) {
         log.error("Web Request Exception: ", e);

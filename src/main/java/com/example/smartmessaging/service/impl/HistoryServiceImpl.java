@@ -9,7 +9,7 @@ import com.example.smartmessaging.dto.response.HistoryStatusOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
 import com.example.smartmessaging.dto.response.PageResponseDTO;
 import com.example.smartmessaging.dto.type.SendHistoryStatus;
-import com.example.smartmessaging.mapper.HistoryMapper;
+import com.example.smartmessaging.service.repository.HistoryMapper;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.service.HistoryService;

@@ -21,16 +21,16 @@ class StatsBatchMapperXmlTest {
         parseMapper(configuration, RESOURCE);
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.StatsBatchMapper.insertMessageStat"
+                "com.example.smartmessaging.service.repository.StatsBatchMapper.insertMessageStat"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.StatsBatchMapper.insertMessageStatByDegree"
+                "com.example.smartmessaging.service.repository.StatsBatchMapper.insertMessageStatByDegree"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.StatsBatchMapper.insertCustomerStat"
+                "com.example.smartmessaging.service.repository.StatsBatchMapper.insertCustomerStat"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.StatsBatchMapper.insertClickStat"
+                "com.example.smartmessaging.service.repository.StatsBatchMapper.insertClickStat"
         )).isTrue();
     }
 
@@ -96,3 +96,4 @@ class StatsBatchMapperXmlTest {
         return count;
     }
 }
+

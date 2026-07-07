@@ -3,11 +3,13 @@ package com.example.smartmessaging.service;
 import com.example.smartmessaging.dto.type.ShortUrlPurpose;
 import com.example.smartmessaging.dto.vo.ShortUrlTargetVO;
 import com.example.smartmessaging.dto.vo.ShortUrlVO;
-import com.example.smartmessaging.mapper.ShortUrlMapper;
-import com.example.smartmessaging.mapper.UnsubscribeMapper;
+import com.example.smartmessaging.service.repository.ShortUrlMapper;
+import com.example.smartmessaging.service.repository.UnsubscribeMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import com.example.smartmessaging.service.impl.ShortUrlServiceImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -20,7 +22,7 @@ class ShortUrlServiceTest {
 
     private final ShortUrlMapper shortUrlMapper = mock(ShortUrlMapper.class);
     private final UnsubscribeMapper unsubscribeMapper = mock(UnsubscribeMapper.class);
-    private final ShortUrlService shortUrlService = new ShortUrlService(shortUrlMapper, unsubscribeMapper);
+    private final ShortUrlService shortUrlService = new ShortUrlServiceImpl(shortUrlMapper, unsubscribeMapper);
 
     @Test
     void 추적링크는_kosa_짧은도메인과_8자리_코드를_사용한다() {

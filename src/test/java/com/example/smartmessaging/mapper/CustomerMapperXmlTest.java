@@ -22,10 +22,10 @@ class CustomerMapperXmlTest {
         parseMapper(configuration, "mappers/common-mapper.xml");
         parseMapper(configuration, RESOURCE);
 
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.findByPhone")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.insertTestCustomer")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.updateTestCustomer")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.CustomerMapper.upsertChannelConsent")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.CustomerMapper.findByPhone")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.CustomerMapper.insertTestCustomer")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.CustomerMapper.updateTestCustomer")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.CustomerMapper.upsertChannelConsent")).isTrue();
     }
 
     @Test

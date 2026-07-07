@@ -51,6 +51,10 @@ const _request = {
 const CustomerApi = {
 
     /** 고객 목록 조회 (페이징 + 태그/키워드 필터) */
+    getTags: function() {
+        return _request.json('GET', '/api/customers/tags', {});
+    },
+
     search: function(params) {
         return _request.json('GET', '/api/customers', params);
     },

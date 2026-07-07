@@ -1,7 +1,7 @@
 package com.example.smartmessaging.security;
 
 import com.example.smartmessaging.dto.vo.UsersVO;
-import com.example.smartmessaging.mapper.UserMapper;
+import com.example.smartmessaging.service.repository.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
