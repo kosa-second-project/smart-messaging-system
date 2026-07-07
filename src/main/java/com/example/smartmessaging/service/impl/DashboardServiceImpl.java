@@ -15,10 +15,12 @@ import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
+import com.example.smartmessaging.dw.DwStatDataProvider;
 import com.example.smartmessaging.service.repository.DashboardMapper;
 import com.example.smartmessaging.service.repository.StatMapper;
 import com.example.smartmessaging.service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -31,8 +33,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
@@ -44,15 +48,36 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final StatMapper statMapper;
     private final DashboardMapper dashboardMapper;
+    private final DwStatDataProvider dwStatDataProvider;
 
     @Override
     public DashboardSummaryResponse getSummary(StatSearchRequest request) {
-        MessageStatVO messageSummary = dashboardMapper.selectMessageSummary(request);
-        List<MessageStatVO> messageTrend = dashboardMapper.selectMessageTrend(request);
-        List<MessageStatByDegreeVO> channelSendSummary = dashboardMapper.selectChannelSendSummary(request);
-        CustomerStatVO latestCustomerStat = dashboardMapper.selectLatestCustomerStat(request);
+        MessageStatVO messageSummary = fromDwOrMapper(
+                "dashboard message summary",
+                () -> dwStatDataProvider.selectMessageSummary(request),
+                () -> dashboardMapper.selectMessageSummary(request)
+        );
+        List<MessageStatVO> messageTrend = fromDwOrMapper(
+                "dashboard message trend",
+                () -> dwStatDataProvider.selectMessageTrend(request),
+                () -> dashboardMapper.selectMessageTrend(request)
+        );
+        List<MessageStatByDegreeVO> channelSendSummary = fromDwOrMapper(
+                "dashboard channel send summary",
+                () -> dwStatDataProvider.selectChannelSendSummary(request),
+                () -> dashboardMapper.selectChannelSendSummary(request)
+        );
+        CustomerStatVO latestCustomerStat = fromDwOrMapper(
+                "dashboard latest customer stat",
+                () -> dwStatDataProvider.selectLatestCustomerStat(request),
+                () -> dashboardMapper.selectLatestCustomerStat(request)
+        );
         List<SendHistoryVO> recentSends = dashboardMapper.selectRecentSends();
-        List<TemplatePerformance> templateTop = dashboardMapper.selectTemplatePerformanceTop(request);
+        List<TemplatePerformance> templateTop = fromDwOrMapper(
+                "dashboard template performance",
+                () -> dwStatDataProvider.selectTemplatePerformanceTop(request),
+                () -> dashboardMapper.selectTemplatePerformanceTop(request)
+        );
         Map<Long, String> channelNames = channelNames();
 
         return DashboardSummaryResponse.builder()
@@ -190,12 +215,30 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Map<Long, String> channelNames() {
-        return statMapper.selectActiveChannels().stream()
+        return fromDwOrMapper(
+                "dashboard active channels",
+                dwStatDataProvider::selectActiveChannels,
+                statMapper::selectActiveChannels
+        ).stream()
                 .filter(channel -> channel.getId() != null)
                 .collect(Collectors.toMap(ChannelVO::getId,
                         channel -> displayChannelName(channel.getChannelType()),
                         (left, right) -> left,
                         LinkedHashMap::new));
+    }
+
+    private <T> T fromDwOrMapper(String label, Supplier<java.util.Optional<T>> dwSupplier, Supplier<T> mapperSupplier) {
+        try {
+            java.util.Optional<T> dwResult = dwSupplier.get();
+            if (dwResult.isPresent()) {
+                return dwResult.get();
+            }
+        } catch (RuntimeException exception) {
+            log.warn("DW {} unavailable. Falling back to primary mapper: exceptionType={}",
+                    label,
+                    exception.getClass().getSimpleName());
+        }
+        return mapperSupplier.get();
     }
 
     private String normalizeStatus(String status) {

@@ -11,6 +11,8 @@ import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.service.repository.HistoryMapper;
 import com.example.smartmessaging.service.impl.HistoryServiceImpl;
+import com.example.smartmessaging.service.queue.MessageQueuePublisher;
+import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +35,15 @@ class HistoryServiceTest {
     @BeforeEach
     void setUp() {
         historyMapper = mock(HistoryMapper.class);
-        historyService = new HistoryServiceImpl(historyMapper);
+        historyService = new HistoryServiceImpl(
+                historyMapper,
+                mock(SendPreparationMapper.class),
+                mock(ChannelService.class),
+                mock(RecipientChannelResolver.class),
+                mock(ShortUrlService.class),
+                mock(MessageQueuePublisher.class),
+                mock(TokenCryptoService.class)
+        );
     }
 
     @Test

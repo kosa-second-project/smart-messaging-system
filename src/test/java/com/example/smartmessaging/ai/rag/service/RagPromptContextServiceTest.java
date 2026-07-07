@@ -7,6 +7,7 @@ import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.TemplateCategory;
 import com.example.smartmessaging.ai.rag.config.RagProperties;
+import com.example.smartmessaging.dw.DwAiInsightService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 
@@ -151,6 +152,43 @@ class RagPromptContextServiceTest {
 
         assertThat(context.promptText()).isEmpty();
         assertThat(context.references()).isEmpty();
+    }
+
+    @Test
+    void suggestionContext_appendsDwInsightsAfterRagReferences() {
+        RagSearchService ragSearchService = mock(RagSearchService.class);
+        DwAiInsightService dwAiInsightService = mock(DwAiInsightService.class);
+        AiSuggestionRequestDTO request = new AiSuggestionRequestDTO(
+                AiContextType.MESSAGE_SEND,
+                MessageType.AD,
+                List.of(ChannelType.SMS),
+                List.of("VIP"),
+                "coupon",
+                TemplateCategory.BENEFIT,
+                List.of()
+        );
+        when(ragSearchService.similaritySearch(anyString(), anyInt()))
+                .thenReturn(List.of(document()));
+        when(dwAiInsightService.buildSuggestionPromptContext(request))
+                .thenReturn(new DwAiInsightService.DwPromptContext(
+                        "\n[BigQuery DW Insights]\n- SMS benefit templates clicked 12.5%.\n",
+                        List.of("template:sms-benefit")
+                ));
+        RagPromptContextService service = new RagPromptContextService(
+                ragSearchService,
+                new RagProperties(),
+                dwAiInsightService
+        );
+
+        RagPromptContextService.RagPromptContext context = service.buildSuggestionPromptContext(request);
+
+        assertThat(context.promptText())
+                .contains("[참고자료 / RAG Reference Materials]")
+                .contains("[BigQuery DW Insights]")
+                .contains("SMS benefit templates clicked 12.5%");
+        assertThat(context.references())
+                .extracting(RagPromptContextService.RagReferenceLog::docId)
+                .contains("hmall-campaign-001", "dw:template:sms-benefit");
     }
 
     private Document document() {

@@ -9,6 +9,7 @@ version = '0.0.1-SNAPSHOT'
 
 ext {
     set('springAiVersion', '1.1.8')
+    set('googleCloudLibrariesBomVersion', '26.84.0')
 }
 
 java {
@@ -32,6 +33,7 @@ repositories {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+        mavenBom "com.google.cloud:libraries-bom:${googleCloudLibrariesBomVersion}"
     }
 }
 
@@ -57,6 +59,9 @@ dependencies {
     // Database & MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc11' // Oracle JDBC (JDK 17 호환)
+
+    // Data Warehouse / BigQuery
+    implementation 'com.google.cloud:google-cloud-bigquery'
 
     // Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
@@ -96,4 +101,11 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('backfillBigQuery', JavaExec) {
+    group = 'data warehouse'
+    description = 'Copies Oracle statistics tables into the configured BigQuery dataset.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.smartmessaging.dw.BigQueryBackfillRunner'
 }

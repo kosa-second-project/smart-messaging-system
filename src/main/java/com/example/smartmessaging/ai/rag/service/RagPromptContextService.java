@@ -3,9 +3,10 @@ package com.example.smartmessaging.ai.rag.service;
 import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
 import com.example.smartmessaging.ai.dto.request.AiSuggestionRequestDTO;
 import com.example.smartmessaging.ai.rag.config.RagProperties;
-import lombok.RequiredArgsConstructor;
+import com.example.smartmessaging.dw.DwAiInsightService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,7 +17,6 @@ import java.util.StringJoiner;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RagPromptContextService {
 
     // 프롬프트가 너무 길어지면 Gemini 응답 품질이 흔들릴 수 있어 문서 본문은 짧게 잘라 넣는다.
@@ -25,6 +25,22 @@ public class RagPromptContextService {
 
     private final RagSearchService ragSearchService;
     private final RagProperties ragProperties;
+    private final DwAiInsightService dwAiInsightService;
+
+    @Autowired
+    public RagPromptContextService(
+            RagSearchService ragSearchService,
+            RagProperties ragProperties,
+            DwAiInsightService dwAiInsightService
+    ) {
+        this.ragSearchService = ragSearchService;
+        this.ragProperties = ragProperties;
+        this.dwAiInsightService = dwAiInsightService;
+    }
+
+    RagPromptContextService(RagSearchService ragSearchService, RagProperties ragProperties) {
+        this(ragSearchService, ragProperties, null);
+    }
 
     public String buildSuggestionContext(AiSuggestionRequestDTO request) {
         return buildSuggestionPromptContext(request).promptText();
@@ -32,7 +48,8 @@ public class RagPromptContextService {
 
     public RagPromptContext buildSuggestionPromptContext(AiSuggestionRequestDTO request) {
         String query = buildSuggestionQuery(request);
-        return buildContextSafely(query, "suggestion");
+        RagPromptContext ragContext = buildContextSafely(query, "suggestion");
+        return appendDwContext(ragContext, buildSuggestionDwContext(request));
     }
 
     public String buildReviewContext(AiReviewRequestDTO request) {
@@ -41,7 +58,8 @@ public class RagPromptContextService {
 
     public RagPromptContext buildReviewPromptContext(AiReviewRequestDTO request) {
         String query = buildReviewQuery(request);
-        return buildContextSafely(query, "review");
+        RagPromptContext ragContext = buildContextSafely(query, "review");
+        return appendDwContext(ragContext, buildReviewDwContext(request));
     }
 
     String buildSuggestionQuery(AiSuggestionRequestDTO request) {
@@ -123,6 +141,53 @@ public class RagPromptContextService {
                     exception.getMessage());
             return RagPromptContext.empty();
         }
+    }
+
+    private DwAiInsightService.DwPromptContext buildSuggestionDwContext(AiSuggestionRequestDTO request) {
+        if (dwAiInsightService == null) {
+            return DwAiInsightService.DwPromptContext.empty();
+        }
+        try {
+            return dwAiInsightService.buildSuggestionPromptContext(request);
+        } catch (RuntimeException exception) {
+            log.warn("DW context unavailable for AI suggestion. Continuing without DW context: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            return DwAiInsightService.DwPromptContext.empty();
+        }
+    }
+
+    private DwAiInsightService.DwPromptContext buildReviewDwContext(AiReviewRequestDTO request) {
+        if (dwAiInsightService == null) {
+            return DwAiInsightService.DwPromptContext.empty();
+        }
+        try {
+            return dwAiInsightService.buildReviewPromptContext(request);
+        } catch (RuntimeException exception) {
+            log.warn("DW context unavailable for AI review. Continuing without DW context: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            return DwAiInsightService.DwPromptContext.empty();
+        }
+    }
+
+    private RagPromptContext appendDwContext(
+            RagPromptContext ragContext,
+            DwAiInsightService.DwPromptContext dwContext
+    ) {
+        if (dwContext == null || dwContext.promptText() == null || dwContext.promptText().isBlank()) {
+            return ragContext;
+        }
+        List<RagReferenceLog> references = new ArrayList<>(ragContext.references());
+        references.addAll(dwContext.references().stream()
+                .map(reference -> new RagReferenceLog(dwReferenceId(reference), null, "bigquery_dw", null, List.of("performance_context"), null, ""))
+                .toList());
+        return new RagPromptContext(ragContext.promptText() + dwContext.promptText(), List.copyOf(references));
+    }
+
+    private String dwReferenceId(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return "dw:unknown";
+        }
+        return reference.startsWith("dw:") ? reference : "dw:" + reference;
     }
 
     private RagReferenceLog toReferenceLog(Document document) {

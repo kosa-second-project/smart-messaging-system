@@ -59,6 +59,24 @@ stats:
     zone: Asia/Seoul
     system-user-id: 0
 
+dw:
+  bigquery:
+    enabled: ${BIGQUERY_DW_ENABLED:false}
+    project-id: ${BIGQUERY_PROJECT_ID:}
+    dataset: ${BIGQUERY_DATASET:}
+    use-query-cache: ${BIGQUERY_USE_QUERY_CACHE:true}
+    tables:
+      channel: ${BIGQUERY_TABLE_CHANNEL:channel}
+      message-stat: ${BIGQUERY_TABLE_MESSAGE_STAT:message_stat}
+      message-stat-by-degree: ${BIGQUERY_TABLE_MESSAGE_STAT_BY_DEGREE:message_stat_by_degree}
+      channel-stat: ${BIGQUERY_TABLE_CHANNEL_STAT:channel_stat}
+      customer-stat: ${BIGQUERY_TABLE_CUSTOMER_STAT:customer_stat}
+      customer-channel-consent: ${BIGQUERY_TABLE_CUSTOMER_CHANNEL_CONSENT:customer_channel_consent}
+      click-stat: ${BIGQUERY_TABLE_CLICK_STAT:click_stat}
+      template: ${BIGQUERY_TABLE_TEMPLATE:template}
+      template-stat: ${BIGQUERY_TABLE_TEMPLATE_STAT:template_stat}
+      ai-marketing-insight: ${BIGQUERY_TABLE_AI_MARKETING_INSIGHT:ai_marketing_insight}
+
 # MyBatis 공통 설정
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml
@@ -112,4 +130,3 @@ rag:
 security:
   crypto:
     secret-key: ${TOKEN_CRYPTO_SECRET:smart-messaging-local-token-secret}
-

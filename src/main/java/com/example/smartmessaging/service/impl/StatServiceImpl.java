@@ -13,9 +13,11 @@ import com.example.smartmessaging.dto.vo.CustomerChannelConsentSummaryVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
 import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
+import com.example.smartmessaging.dw.DwStatDataProvider;
 import com.example.smartmessaging.service.repository.StatMapper;
 import com.example.smartmessaging.service.StatService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,8 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatServiceImpl implements StatService {
@@ -41,11 +45,20 @@ public class StatServiceImpl implements StatService {
     private static final DateTimeFormatter DATE_LABEL_FORMATTER = DateTimeFormatter.ofPattern("M/d");
 
     private final StatMapper statMapper;
+    private final DwStatDataProvider dwStatDataProvider;
 
     @Override
     public StatPageResponse getDeliveryStats(StatSearchRequest request) {
-        List<MessageStatVO> messageStats = statMapper.selectMessageStats(request);
-        List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
+        List<MessageStatVO> messageStats = fromDwOrMapper(
+                "message stats",
+                () -> dwStatDataProvider.selectMessageStats(request),
+                () -> statMapper.selectMessageStats(request)
+        );
+        List<MessageStatByDegreeVO> degreeStats = fromDwOrMapper(
+                "delivery stats by degree",
+                () -> dwStatDataProvider.selectDeliveryMessageStatByDegrees(request),
+                () -> statMapper.selectDeliveryMessageStatByDegrees(request)
+        );
         DegreeStatsSummary degreeSummary = summarizeDegreeStats(degreeStats);
         Map<Long, String> channelNames = channelNames();
 
@@ -62,7 +75,11 @@ public class StatServiceImpl implements StatService {
 
     @Override
     public StatPageResponse getChannelStats(StatSearchRequest request) {
-        List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
+        List<MessageStatByDegreeVO> degreeStats = fromDwOrMapper(
+                "channel stats by degree",
+                () -> dwStatDataProvider.selectDeliveryMessageStatByDegrees(request),
+                () -> statMapper.selectDeliveryMessageStatByDegrees(request)
+        );
         DegreeStatsSummary degreeSummary = summarizeDegreeStats(degreeStats);
         Map<Long, String> channelNames = channelNames();
 
@@ -79,8 +96,16 @@ public class StatServiceImpl implements StatService {
 
     @Override
     public StatPageResponse getCostStats(StatSearchRequest request) {
-        List<MessageStatVO> messageStats = statMapper.selectMessageStats(request);
-        List<MessageStatByDegreeVO> degreeStats = statMapper.selectDeliveryMessageStatByDegrees(request);
+        List<MessageStatVO> messageStats = fromDwOrMapper(
+                "cost message stats",
+                () -> dwStatDataProvider.selectMessageStats(request),
+                () -> statMapper.selectMessageStats(request)
+        );
+        List<MessageStatByDegreeVO> degreeStats = fromDwOrMapper(
+                "cost stats by degree",
+                () -> dwStatDataProvider.selectDeliveryMessageStatByDegrees(request),
+                () -> statMapper.selectDeliveryMessageStatByDegrees(request)
+        );
 
         return StatPageResponse.builder()
                 .cards(buildCostCards(messageStats, degreeStats))
@@ -94,8 +119,16 @@ public class StatServiceImpl implements StatService {
 
     @Override
     public StatPageResponse getCustomerStats(StatSearchRequest request) {
-        List<CustomerStatVO> customerStats = statMapper.selectCustomerStats(request);
-        List<CustomerChannelConsentSummaryVO> consents = statMapper.selectCustomerChannelConsents(request);
+        List<CustomerStatVO> customerStats = fromDwOrMapper(
+                "customer stats",
+                () -> dwStatDataProvider.selectCustomerStats(request),
+                () -> statMapper.selectCustomerStats(request)
+        );
+        List<CustomerChannelConsentSummaryVO> consents = fromDwOrMapper(
+                "customer channel consents",
+                () -> dwStatDataProvider.selectCustomerChannelConsents(request),
+                () -> statMapper.selectCustomerChannelConsents(request)
+        );
         Map<Long, String> channelNames = channelNames();
 
         return StatPageResponse.builder()
@@ -107,8 +140,16 @@ public class StatServiceImpl implements StatService {
 
     @Override
     public StatPageResponse getPerformanceStats(StatSearchRequest request) {
-        List<ChannelStatVO> channelStats = statMapper.selectChannelStats(request);
-        List<ClickStatVO> clickStats = statMapper.selectPerformanceClickStats(request);
+        List<ChannelStatVO> channelStats = fromDwOrMapper(
+                "performance channel stats",
+                () -> dwStatDataProvider.selectChannelStats(request),
+                () -> statMapper.selectChannelStats(request)
+        );
+        List<ClickStatVO> clickStats = fromDwOrMapper(
+                "performance click stats",
+                () -> dwStatDataProvider.selectPerformanceClickStats(request),
+                () -> statMapper.selectPerformanceClickStats(request)
+        );
 
         return StatPageResponse.builder()
                 .cards(buildPerformanceCards(channelStats))
@@ -409,12 +450,30 @@ public class StatServiceImpl implements StatService {
     }
 
     private Map<Long, String> channelNames() {
-        return statMapper.selectActiveChannels().stream()
+        return fromDwOrMapper(
+                "active channels",
+                dwStatDataProvider::selectActiveChannels,
+                statMapper::selectActiveChannels
+        ).stream()
                 .filter(channel -> channel.getId() != null)
                 .collect(Collectors.toMap(ChannelVO::getId,
                         channel -> displayChannelName(channel.getChannelType()),
                         (left, right) -> left,
                         LinkedHashMap::new));
+    }
+
+    private <T> T fromDwOrMapper(String label, Supplier<java.util.Optional<T>> dwSupplier, Supplier<T> mapperSupplier) {
+        try {
+            java.util.Optional<T> dwResult = dwSupplier.get();
+            if (dwResult.isPresent()) {
+                return dwResult.get();
+            }
+        } catch (RuntimeException exception) {
+            log.warn("DW {} unavailable. Falling back to primary mapper: exceptionType={}",
+                    label,
+                    exception.getClass().getSimpleName());
+        }
+        return mapperSupplier.get();
     }
 
     private StatCardResponse card(String title, String value, String subText) {

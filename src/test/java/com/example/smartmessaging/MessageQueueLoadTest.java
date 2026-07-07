@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Random;
 
 @SpringBootTest
+@Disabled("Manual benchmark only")
 public class MessageQueueLoadTest {
 
     @Autowired
@@ -21,7 +22,6 @@ public class MessageQueueLoadTest {
     private final Random random = new Random();
 
     @Test
-    @Disabled("Manual benchmark only")
     @DisplayName("RabbitMQ message.send.queue 100k enqueue benchmark")
     public void test100kQueueLoadingBenchmark() {
         int count = 100000;
