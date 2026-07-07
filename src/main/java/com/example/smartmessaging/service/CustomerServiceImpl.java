@@ -37,9 +37,35 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public PageResponse<CustomerResponseDTO> getCustomerList(CustomerSearchDTO searchDTO) {
         log.debug("[CustomerService] 고객 목록 조회 요청 - 필터: {}", searchDTO);
+
         List<CustomerResponseDTO> list = customerMapper.selectCustomerList(searchDTO);
         int totalCount = customerMapper.selectCustomerCount(searchDTO);
+
+        if (!list.isEmpty()) {
+            List<Long> customerIds = list.stream().map(CustomerResponseDTO::getCustomerId).collect(Collectors.toList());
+            List<Map<String, Object>> tagRows = customerMapper.findTagsByCustomerIds(customerIds);
+
+            Map<Long, List<String>> tagMap = tagRows.stream()
+                    .collect(Collectors.groupingBy(
+                            row -> ((Number) row.get("CUSTOMER_ID")).longValue(),
+                            Collectors.mapping(row -> (String) row.get("TAG_NAME"), Collectors.toList())
+                    ));
+
+            list.forEach(dto -> dto.setTags(tagMap.getOrDefault(dto.getCustomerId(), Collections.emptyList())));
+        }
+
         return new PageResponse<>(list, totalCount, searchDTO.getPage(), searchDTO.getSize());
+    }
+
+    @Override
+    public CustomerResponseDTO getCustomerById(Long customerId) {
+        log.debug("[CustomerService] 단일 고객 상세 조회 요청 - ID: {}", customerId);
+        CustomerResponseDTO dto = customerMapper.selectCustomerById(customerId);
+        if (dto != null) {
+            List<String> tags = customerMapper.selectCustomerTags(customerId);
+            dto.setTags(tags != null ? tags : Collections.emptyList());
+        }
+        return dto;
     }
 
     @Override

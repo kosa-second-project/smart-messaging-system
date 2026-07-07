@@ -15,9 +15,48 @@
         <result property="kakaoConsent" column="kakaoConsent"/>
         <result property="rcsConsent" column="rcsConsent"/>
         <result property="emailConsent" column="emailConsent"/>
-        <!-- tags 필드에 selectCustomerTags 쿼리 결과를 자동으로 List<String> 바인딩 -->
-        <collection property="tags" column="customerId" select="selectCustomerTags"/>
     </resultMap>
+
+    <!-- 1-1. 단일 고객 상세 조회 -->
+    <select id="selectCustomerById" resultMap="CustomerResultMap" parameterType="long">
+        SELECT
+            c.id AS customerId,
+            c.name AS name,
+            c.phone AS phone,
+            CASE
+                WHEN c.joined_at >= SYSTIMESTAMP - 7 THEN '신규'
+                WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '휴면'
+                ELSE '일반'
+                END AS customerType,
+            TO_CHAR(c.joined_at, 'YYYY-MM-DD') AS joinedAt,
+            (
+                SELECT TO_CHAR(MAX(sh.created_at), 'YYYY-MM-DD')
+                FROM send_target st
+                JOIN send_history sh ON st.send_history_id = sh.id
+                WHERE st.customer_id = c.id
+                  AND st.is_deleted = 0
+                  AND sh.is_deleted = 0
+            ) AS lastSend,
+            NVL(ccc.sms_consent, 0) AS smsConsent,
+            NVL(ccc.kakao_consent, 0) AS kakaoConsent,
+            NVL(ccc.rcs_consent, 0) AS rcsConsent,
+            NVL(ccc.email_consent, 0) AS emailConsent
+        FROM customer c
+                 LEFT JOIN (
+            SELECT
+                sub_ccc.customer_id,
+                MAX(CASE WHEN sub_ch.channel_type = 'SMS' THEN sub_ccc.is_consented ELSE 0 END) AS sms_consent,
+                MAX(CASE WHEN sub_ch.channel_type = 'KAKAO_ALIM' THEN sub_ccc.is_consented ELSE 0 END) AS kakao_consent,
+                MAX(CASE WHEN sub_ch.channel_type = 'RCS' THEN sub_ccc.is_consented ELSE 0 END) AS rcs_consent,
+                MAX(CASE WHEN sub_ch.channel_type = 'EMAIL' THEN sub_ccc.is_consented ELSE 0 END) AS email_consent
+            FROM customer_channel_consent sub_ccc
+                     JOIN channel sub_ch ON sub_ccc.channel_id = sub_ch.id
+            WHERE sub_ccc.is_deleted = 0 AND sub_ch.is_deleted = 0
+            GROUP BY sub_ccc.customer_id
+        ) ccc ON c.id = ccc.customer_id
+        WHERE c.id = #{customerId}
+          AND c.is_deleted = 0
+    </select>
 
     <!-- 2. 필터 조건 및 페이징을 적용한 고객 목록 조회 -->
     <select id="selectCustomerList" resultMap="CustomerResultMap" parameterType="CustomerSearchDTO">
@@ -31,15 +70,7 @@
         ELSE '일반'
         END AS customerType,
         TO_CHAR(c.joined_at, 'YYYY-MM-DD') AS joinedAt,
-        TO_CHAR(
-        (SELECT MAX(sh.completed_at)
-        FROM send_target st
-        JOIN send_history sh ON st.send_history_id = sh.id
-        WHERE st.customer_id = c.id
-        AND st.is_deleted = 0
-        AND sh.is_deleted = 0),
-        'YYYY-MM-DD HH24:MI'
-        ) AS lastSend,
+        NULL AS lastSend,
         NVL(ccc.sms_consent, 0) AS smsConsent,
         NVL(ccc.kakao_consent, 0) AS kakaoConsent,
         NVL(ccc.rcs_consent, 0) AS rcsConsent,
@@ -121,18 +152,6 @@
     <select id="selectCustomerCount" resultType="int" parameterType="CustomerSearchDTO">
         SELECT COUNT(*)
         FROM customer c
-        LEFT JOIN (
-        SELECT
-        sub_ccc.customer_id,
-        MAX(CASE WHEN sub_ch.channel_type = 'SMS' THEN sub_ccc.is_consented ELSE 0 END) AS sms_consent,
-        MAX(CASE WHEN sub_ch.channel_type = 'KAKAO_ALIM' THEN sub_ccc.is_consented ELSE 0 END) AS kakao_consent,
-        MAX(CASE WHEN sub_ch.channel_type = 'RCS' THEN sub_ccc.is_consented ELSE 0 END) AS rcs_consent,
-        MAX(CASE WHEN sub_ch.channel_type = 'EMAIL' THEN sub_ccc.is_consented ELSE 0 END) AS email_consent
-        FROM customer_channel_consent sub_ccc
-        JOIN channel sub_ch ON sub_ccc.channel_id = sub_ch.id
-        WHERE sub_ccc.is_deleted = 0 AND sub_ch.is_deleted = 0
-        GROUP BY sub_ccc.customer_id
-        ) ccc ON c.id = ccc.customer_id
         WHERE c.is_deleted = 0
 
         <if test="isRejectedOnly == true">
@@ -199,18 +218,15 @@
             sh.title AS templateName,
             ch.channel_type AS channel,
             st.status AS status,
-            (SELECT fr.description
-             FROM send_attempt sa
-                      JOIN fail_reason fr ON sa.id = fr.send_attempt_id
-             WHERE sa.send_target_id = st.id
-               AND sa.is_succeeded = 0
-               AND ROWNUM = 1) AS failReason
+            NULL AS failReason
         FROM send_target st
                  JOIN send_history sh ON st.send_history_id = sh.id AND sh.is_deleted = 0
                  LEFT JOIN channel ch ON st.final_channel_id = ch.id AND ch.is_deleted = 0
         WHERE st.customer_id = #{customerId}
           AND st.is_deleted = 0
+          AND sh.created_at >= SYSTIMESTAMP - 90
         ORDER BY sh.created_at DESC
+        FETCH FIRST 40 ROWS ONLY
     </select>
 
     <!-- 6. 080 수신 거부 등록된 고객 목록 조회 -->

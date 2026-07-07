@@ -2,7 +2,7 @@
   color-scheme: light;
 
   --font-size: 14px;
-  --font-sans: "Pretendard Variable", "Pretendard", "Inter", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Pretendard", "Inter", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-weight-normal: 400;
   --font-weight-medium: 600;
   --font-weight-bold: 700;
