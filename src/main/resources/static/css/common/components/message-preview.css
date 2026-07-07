@@ -20,6 +20,32 @@
     background: #f5f5f7;
 }
 
+#phonePreviewBox,
+.preview-phone-frame {
+    max-width: 100%;
+}
+
+.preview-phone-frame {
+    --message-preview-scale: var(--send-preview-scale, var(--template-preview-scale, 1));
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: calc(393px * var(--message-preview-scale));
+    height: calc(852px * var(--message-preview-scale));
+    min-width: 0;
+    overflow: visible;
+}
+
+.preview-phone-frame #phonePreviewBox {
+    width: 393px;
+    flex: 0 0 393px;
+    max-width: none;
+    aspect-ratio: 393 / 852;
+    height: 852px;
+    transform: scale(var(--message-preview-scale));
+    transform-origin: top center;
+}
+
 #phonePreviewBox.mode-kakao {
     background: #bacee0;
 }
@@ -128,29 +154,40 @@
 
 .bubble {
     box-sizing: border-box;
-    width: 236px;
+    width: 220px;
+    flex: 0 0 236px;
     min-height: 0;
-    padding: 6px 10px;
+    padding: 7px 10px;
     font-size: 13px;
-    line-height: 1.34;
+    line-height: 1.2;
     word-break: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
 }
 
 .bubble-title {
-    margin-bottom: 3px;
+    margin-bottom: 1px;
     font-size: 13px;
     font-weight: 700;
+    line-height: 1.2;
+}
+
+.bubble-text {
+    line-height: 1.2;
 }
 
 .bubble-link-area,
 .bubble-unsubscribe {
-    margin-top: 6px;
-    padding-top: 4px;
-    font-size: 11px;
-    line-height: 1.35;
+    margin-top: 2px;
+    padding-top: 0;
+    font-size: 12px;
+    line-height: 1.2;
     white-space: pre-wrap;
+}
+
+.bubble-link-area:empty,
+.bubble-unsubscribe:empty {
+    display: none;
 }
 
 .bubble-link-area {
@@ -163,7 +200,7 @@
 
 .view-sms {
     background: #f5f5f7;
-    padding: 0 12px 72px;
+    padding: 0 12px 24px;
 }
 
 .sms-app-bar {
@@ -254,11 +291,11 @@
 
 .sms-compose-bar,
 .kakao-compose-bar {
+    display: none !important;
     position: absolute;
     left: 0;
     right: 0;
     bottom: 18px;
-    display: flex;
     align-items: center;
     gap: 9px;
     padding: 9px 13px 10px;
@@ -302,7 +339,7 @@
 
 .view-kakao {
     background: #bacee0;
-    padding: 0 13px 70px;
+    padding: 0 13px 24px;
 }
 
 .kakao-app-bar {
@@ -365,6 +402,7 @@
 .kakao-bubble {
     position: relative;
     width: 228px;
+    flex-basis: 228px;
     max-width: 228px;
     background: #ffffff;
     color: #191919;
@@ -488,8 +526,8 @@
 
 .email-body-box {
     color: #202124;
-    font-size: 14px;
-    line-height: 1.58;
+    font-size: 13px;
+    line-height: 1.24;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -526,7 +564,7 @@
 
 @media (max-width: 480px) {
     #phonePreviewBox {
-        border-width: 8px;
-        border-radius: 42px;
+        border-width: 10px;
+        border-radius: 48px;
     }
 }

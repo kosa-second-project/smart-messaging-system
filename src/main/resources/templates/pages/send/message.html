@@ -137,7 +137,9 @@
                     <span class="preview-ad-badge">광고성</span>
                 </div>
                 <div class="ds-card__body preview-body-container">
-                    <div th:replace="~{fragments/components/message-preview :: preview}"></div>
+                    <div class="preview-phone-frame">
+                        <div th:replace="~{fragments/components/message-preview :: preview}"></div>
+                    </div>
                 </div>
             </div>
         </div>

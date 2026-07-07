@@ -114,7 +114,7 @@
             const isNextPage = pageNumber === page + 1 && canOpenNextPage;
             pages.appendChild(button(String(pageNumber), {
                 active: pageNumber === page,
-                disabled: !isKnownPage && !isNextPage,
+                disabled: !isKnownPage && !isNextPage && !config.allowUnknownPages,
                 onClick: () => config.onPageChange?.(pageNumber)
             }));
         }

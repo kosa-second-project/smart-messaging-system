@@ -436,6 +436,7 @@ const RecipientSelector = {
             knownPages: SendPage.state.cursorHistory.length,
             hasPrevious: SendPage.state.currentCursorIndex > 0,
             hasNext: SendPage.state.hasNext,
+            allowUnknownPages: true,
             onPageChange: function(pageNumber) {
                 const targetIndex = pageNumber - 1;
                 if (targetIndex === SendPage.state.currentCursorIndex) {
@@ -444,6 +445,10 @@ const RecipientSelector = {
                 if (targetIndex < SendPage.state.cursorHistory.length) {
                     SendPage.state.currentCursorIndex = targetIndex;
                     self.renderTableOnly();
+                    return;
+                }
+                if (targetIndex > SendPage.state.currentCursorIndex) {
+                    self.jumpToCursorPage(targetIndex);
                     return;
                 }
                 if (pageNumber === SendPage.state.currentCursorIndex + 2 && SendPage.state.hasNext) {
@@ -476,6 +481,63 @@ const RecipientSelector = {
                 self.renderAll();
             }
         });
+    },
+
+    // Cursor-based pagination requires walking through intermediate cursors before a distant page can render.
+    jumpToCursorPage: function (targetIndex) {
+        const self = this;
+        const totalPages = Math.ceil((SendPage.state.paginationTotalCount || 0) / SendPage.state.pageSize);
+
+        if (totalPages > 0 && targetIndex + 1 > totalPages) {
+            return;
+        }
+
+        if (targetIndex < SendPage.state.cursorHistory.length) {
+            SendPage.state.currentCursorIndex = targetIndex;
+            self.renderTableOnly();
+            return;
+        }
+
+        if (!SendPage.state.hasNext || !SendPage.state.nextCursorId) {
+            return;
+        }
+
+        if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex + 1) {
+            SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+        }
+
+        const prefetchNextCursor = function () {
+            if (SendPage.state.cursorHistory.length > targetIndex) {
+                SendPage.state.currentCursorIndex = targetIndex;
+                self.renderTableOnly();
+                return;
+            }
+
+            const cursorId = SendPage.state.cursorHistory[SendPage.state.cursorHistory.length - 1];
+            if (!cursorId) {
+                return;
+            }
+
+            const params = self.getQueryParams(false);
+            params.size = SendPage.state.pageSize;
+            params.cursorId = cursorId;
+
+            CustomerApi.search(params)
+                .done(function (response) {
+                    if (!response || !response.hasNext || !response.nextCursorId) {
+                        SendPage.state.hasNext = false;
+                        SendPage.state.nextCursorId = response ? response.nextCursorId : null;
+                        return;
+                    }
+
+                    SendPage.state.cursorHistory.push(response.nextCursorId);
+                    SendPage.state.hasNext = response.hasNext;
+                    SendPage.state.nextCursorId = response.nextCursorId;
+                    prefetchNextCursor();
+                });
+        };
+
+        prefetchNextCursor();
     },
 
     // 4. 선택 카운트만 갱신 (API 호출 없음)

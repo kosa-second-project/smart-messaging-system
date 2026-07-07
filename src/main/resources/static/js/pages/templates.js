@@ -573,7 +573,10 @@ function createCommonMessagePreview(title, content, mode) {
     setPreviewText(preview, "#previewSmsUnsubscribe", "");
     setPreviewText(preview, "#previewKakaoUnsubscribe", "");
 
-    return preview;
+    const frame = document.createElement("div");
+    frame.className = "preview-phone-frame";
+    frame.appendChild(preview);
+    return frame;
 }
 
 function setPreviewText(root, selector, text) {

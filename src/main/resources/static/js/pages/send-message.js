@@ -27,6 +27,7 @@ const MessageComposer = {
     init: function () {
         this.loadChannels();
         this.bindEvents();
+        this.setupPreviewScale();
         // 1?④퀎?먯꽌 媛?몄삩 珥???????뚮뜑留?
         const shouldRestoreMessageDraft = sessionStorage.getItem("messageEntrySource") === "review";
         if (shouldRestoreMessageDraft) {
@@ -48,6 +49,29 @@ const MessageComposer = {
         this.restoreSelectedTemplate();
         $("#messageTitle").trigger("input");
         $("#messageContent").trigger("input");
+    },
+
+    setupPreviewScale: function () {
+        const frame = document.querySelector(".preview-phone-frame");
+        if (!frame) {
+            return;
+        }
+
+        const updateScale = () => {
+            const width = frame.parentElement ? frame.parentElement.clientWidth : frame.clientWidth;
+            const scale = Math.min(0.84, Math.max(0.48, width / 393));
+            frame.style.setProperty("--send-preview-scale", scale.toFixed(3));
+        };
+
+        updateScale();
+
+        if (typeof ResizeObserver === "undefined") {
+            window.addEventListener("resize", updateScale);
+            return;
+        }
+
+        const observer = new ResizeObserver(updateScale);
+        observer.observe(frame.parentElement || frame);
     },
 
     getByteLength: function (text) {
@@ -129,13 +153,17 @@ const MessageComposer = {
     },
 
     refreshMessagePreview: function () {
-        const title = $("#messageTitle").val() || "메시지 제목";
+        const title = this.normalizePreviewText($("#messageTitle").val()) || "메시지 제목";
         $("#previewSmsTitle").text(title);
         $("#previewKakaoTitle").text(title);
         $("#previewEmailTitle").text(title);
         this.updatePurposeNotice();
         this.updatePreviewContent();
         this.updateMessageMetrics();
+    },
+
+    normalizePreviewText: function (text) {
+        return (text || "").replace(/^\s+|\s+$/g, "");
     },
 
     enforceMessageLength: function () {
@@ -387,8 +415,9 @@ const MessageComposer = {
 
             const html = `
                 <li class="channel-card" draggable="true" data-index="${index}" data-id="${ch.id}">
+                    <div class="drag-handle" aria-hidden="true">::</div>
+                    <div class="channel-rank">${index + 1}</div>
                     <div class="channel-info">
-                        <div class="drag-handle">::</div>
                         <div class="channel-name">${safeName}</div>
                         <div class="channel-meta">건당 ${safeCostStr}</div>
                     </div>
@@ -482,7 +511,7 @@ const MessageComposer = {
         // ?쒕ぉ ?낅젰 ?ㅼ떆媛?誘몃━蹂닿린 ?숆린??
         $("#messageTitle").on("input", function () {
             const rawVal = $(this).val() || "";
-            const title = rawVal || "메시지 제목";
+            const title = self.normalizePreviewText(rawVal) || "메시지 제목";
             $("#previewSmsTitle").text(title);
             $("#previewKakaoTitle").text(title);
             $("#previewEmailTitle").text(title);
@@ -769,10 +798,10 @@ const MessageComposer = {
         const parts = this.buildPreviewParts(usePlaceholder);
         let text = parts.body;
         if (parts.actionLink) {
-            text += "\n\n" + parts.actionLink;
+            text += "\n" + parts.actionLink;
         }
         if (parts.unsubscribe) {
-            text += "\n\n" + parts.unsubscribe;
+            text += "\n" + parts.unsubscribe;
         }
         return text;
     },
@@ -787,7 +816,7 @@ const MessageComposer = {
     },
 
     buildPreviewParts: function (usePlaceholder) {
-        const body = $("#messageContent").val() || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
+        const body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
         const buttonName = ($("#linkButtonName").val() || "자세히 보기").trim();
         const linkUrl = ($("#linkUrl").val() || "").trim();
         const purpose = $(".purpose-btn.active").data("val") || "INFO";
