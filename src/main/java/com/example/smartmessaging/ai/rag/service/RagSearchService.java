@@ -27,8 +27,16 @@ public class RagSearchService {
 
     public RagSearchResponseDTO search(String query) {
         int topK = ragProperties.getSearch().getTopK();
+        // Swagger 테스트 API용 응답은 Document를 DTO로 변환해 content와 metadata를 그대로 확인할 수 있게 한다.
+        List<RagSearchResultDTO> results = similaritySearch(query, topK).stream()
+                .map(this::toResult)
+                .toList();
+        return new RagSearchResponseDTO(query, topK, results);
+    }
+
+    public List<Document> similaritySearch(String query, int topK) {
         try {
-            // VectorStore는 lazy bean이라 검색 요청이 들어온 시점에 실제 Qdrant 연결을 시도한다.
+            // VectorStore는 lazy bean이라 실제 Qdrant 연결은 검색이 필요한 시점에만 시도된다.
             VectorStore vectorStore = vectorStoreProvider.getObject();
             List<Document> documents = vectorStore.similaritySearch(
                     SearchRequest.builder()
@@ -37,13 +45,9 @@ public class RagSearchService {
                             .build()
             );
 
-            List<RagSearchResultDTO> results = documents.stream()
-                    .map(this::toResult)
-                    .toList();
-
             log.info("RAG search completed: queryLength={}, topK={}, resultCount={}",
-                    query.length(), topK, results.size());
-            return new RagSearchResponseDTO(query, topK, results);
+                    query.length(), topK, documents.size());
+            return documents;
         } catch (Exception exception) {
             Throwable rootCause = rootCause(exception);
             log.warn("RAG search failed: queryLength={}, exception={}, message={}, rootCause={}, rootMessage={}",
@@ -59,7 +63,7 @@ public class RagSearchService {
     RagSearchResultDTO toResult(Document document) {
         Map<String, Object> metadata = document.getMetadata();
         Object docId = metadata.get("doc_id");
-        // 내부 UUID 대신 seed 원본 doc_id를 API 응답에 노출한다.
+        // Spring AI 내부 ID보다 seed 원본 doc_id가 운영 확인과 Swagger 테스트에 더 읽기 쉽다.
         return new RagSearchResultDTO(
                 docId == null ? document.getId() : docId.toString(),
                 document.getText(),
