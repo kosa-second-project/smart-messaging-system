@@ -31,6 +31,21 @@ spring:
         chat:
           options:
             model: gemini-2.5-flash
+        embedding:
+          options:
+            model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
+            output-dimensionality: ${GEMINI_EMBEDDING_DIMENSIONS:3072}
+            batch-size: ${GEMINI_EMBEDDING_BATCH_SIZE:5}
+            max-attempts: ${GEMINI_EMBEDDING_MAX_ATTEMPTS:2}
+    # VectorDB Qdrant 설정
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST:localhost}
+        port: ${QDRANT_PORT:6334}
+        api-key: ${QDRANT_API_KEY:}
+        collection-name: ${QDRANT_COLLECTION_NAME:smart-message-rag}
+        use-tls: ${QDRANT_USE_TLS:false}
+        initialize-schema: true
 
   batch:
     job:
@@ -86,3 +101,10 @@ solapi:
   api-key: ${SOLAPI_API_KEY:}
   api-secret: ${SOLAPI_API_SECRET:}
   from-number: ${SOLAPI_FROM_NUMBER:}
+
+rag:
+  seed:
+    path: classpath:rag-seed/marketing-rag.jsonl
+    auto-ingest: false
+  search:
+    top-k: 5
