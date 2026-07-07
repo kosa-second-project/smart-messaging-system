@@ -10,6 +10,9 @@ import com.example.smartmessaging.ai.dto.type.IssueSeverity;
 import com.example.smartmessaging.ai.dto.type.IssueSource;
 import com.example.smartmessaging.ai.dto.type.MessageType;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagPromptContext;
+import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagReferenceLog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,6 +144,7 @@ class LlmReviewServiceTest {
                 List.of(serverIssue, profanityIssue, moderationIssue)
         );
 
+        // SERVER_RULE은 HIGH 유지, 필터/Moderation만 POSSIBLE_FALSE_POSITIVE일 때 한 단계 완화된다.
         assertThat(result.existingIssues())
                 .extracting(ValidationIssueResponseDTO::severity)
                 .containsExactly(IssueSeverity.HIGH, IssueSeverity.MEDIUM, IssueSeverity.LOW);
@@ -177,6 +181,41 @@ class LlmReviewServiceTest {
                 .extracting(ValidationIssueResponseDTO::severity)
                 .containsExactly(IssueSeverity.HIGH, IssueSeverity.MEDIUM);
         assertThat(result.suggestedRewrite()).isEqualTo("더 중립적인 안내 문구입니다.");
+    }
+
+    @Test
+    void RAG_context_isIncludedInLlmUserPrompt() {
+        RagPromptContextService ragPromptContextService = mock(RagPromptContextService.class);
+        LlmReviewService serviceWithRag = new LlmReviewService(
+                geminiReviewClient,
+                new ObjectMapper(),
+                ragPromptContextService
+        );
+        // RAG는 LLM user prompt의 참고자료로만 들어가고, 별도 응답 DTO로 사용자에게 노출하지 않는다.
+        when(ragPromptContextService.buildReviewPromptContext(request()))
+                .thenReturn(new RagPromptContext(
+                        "\n[RAG Reference Materials]\n- brand tone reference\n",
+                        List.of(new RagReferenceLog(
+                                "hmall-campaign-001",
+                                0.82,
+                                "campaign_copy",
+                                List.of("coupon"),
+                                List.of("tone_reference"),
+                                List.of("100%"),
+                                "Hmall coupon reference preview"
+                        ))
+                ));
+        when(geminiReviewClient.review(anyString(), anyString()))
+                .thenReturn(new LlmReviewResponseDTO(List.of(), List.of(), null));
+
+        serviceWithRag.review(request(), List.of());
+
+        ArgumentCaptor<String> userPrompt = ArgumentCaptor.forClass(String.class);
+        verify(geminiReviewClient).review(anyString(), userPrompt.capture());
+        assertThat(userPrompt.getValue())
+                .contains("\"ragContext\"")
+                .contains("[RAG Reference Materials]")
+                .contains("brand tone reference");
     }
 
     private AiReviewRequestDTO request() {
