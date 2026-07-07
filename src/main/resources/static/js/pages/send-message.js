@@ -931,13 +931,7 @@ const MessageComposer = {
         if (!this.validateMessageLength()) {
             return;
         }
-        if (!linkUrl) {
-            alert("?대┃ ?뺤씤???꾪빐 留곹겕 URL???낅젰?댁＜?몄슂.");
-            $("#linkUrl").focus();
-            this.openLinkSettings();
-            return;
-        }
-        if (!/^https?:\/\//i.test(linkUrl)) {
+        if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
             alert("留곹겕 URL? http ?먮뒗 https濡??쒖옉?댁빞 ?⑸땲??");
             $("#linkUrl").focus();
             this.openLinkSettings();

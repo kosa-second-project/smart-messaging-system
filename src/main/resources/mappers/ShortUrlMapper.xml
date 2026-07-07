@@ -40,6 +40,24 @@
           AND NVL(is_deleted, 0) = 0
     </select>
 
+    <select id="findBySendTargetIdAndPurpose" resultType="ShortUrlVO">
+        SELECT
+            id,
+            original_url,
+            send_target_id,
+            is_clicked,
+            clicked_at,
+            is_converted,
+            purpose,
+            <include refid="Common.auditColumns"/>
+        FROM short_url
+        WHERE send_target_id = #{sendTargetId}
+          AND purpose = #{purpose}
+          AND NVL(is_deleted, 0) = 0
+        ORDER BY created_at DESC
+        FETCH FIRST 1 ROW ONLY
+    </select>
+
     <select id="findClickTargetById" resultType="ShortUrlTargetVO">
         SELECT
             su.id AS short_url_id,

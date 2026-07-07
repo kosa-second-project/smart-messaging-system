@@ -253,8 +253,7 @@ const MessageReviewer = {
         $nextBtn.prop("disabled", true).text("\uCC98\uB9AC \uC911...");
 
         const savedLinkUrl = (sessionStorage.getItem("linkUrl") || "").trim();
-        const urlMatches = this.state.content.match(/https?:\/\/[^\s]+/);
-        const originalUrl = savedLinkUrl || (urlMatches ? urlMatches[0] : null);
+        const originalUrl = savedLinkUrl || null;
         const savedButtonName = (sessionStorage.getItem("linkButtonName") || "").trim();
         const savedLinkPurpose = sessionStorage.getItem("linkPurpose") || "CLICK";
 

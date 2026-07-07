@@ -11,6 +11,8 @@ public interface ShortUrlMapper {
 
     ShortUrlVO findById(@Param("id") String id);
 
+    ShortUrlVO findBySendTargetIdAndPurpose(@Param("sendTargetId") Long sendTargetId, @Param("purpose") String purpose);
+
     ShortUrlTargetVO findClickTargetById(@Param("id") String id);
 
     ShortUrlTargetVO findTargetBySendTargetId(@Param("sendTargetId") Long sendTargetId);

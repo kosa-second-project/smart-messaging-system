@@ -60,6 +60,11 @@ public class EmailMessageServiceImpl implements EmailMessageService {
 
     @Override
     public SendResult sendEmail(String email, String title, String content) {
+        return sendEmail(email, title, content, null, null);
+    }
+
+    @Override
+    public SendResult sendEmail(String email, String title, String content, String actionButtonName, String actionUrl) {
         log.info("[Email Service] Sending email to={}", MaskingUtils.maskEmail(email));
 
         if (!isValidEmail(email)) {
@@ -84,6 +89,7 @@ public class EmailMessageServiceImpl implements EmailMessageService {
         }
 
         try {
+            String emailBody = buildEmailBody(content, actionButtonName, actionUrl);
             String encodedFromName = encodeSenderName(fromName);
             String source = encodedFromName != null && !encodedFromName.isBlank() 
                 ? String.format("%s <%s>", encodedFromName, fromEmail) 
@@ -95,7 +101,7 @@ public class EmailMessageServiceImpl implements EmailMessageService {
                     .content(EmailContent.builder()
                             .simple(Message.builder()
                                     .subject(Content.builder().data(title).charset("UTF-8").build())
-                                    .body(Body.builder().text(Content.builder().data(content).charset("UTF-8").build()).build())
+                                    .body(Body.builder().text(Content.builder().data(emailBody).charset("UTF-8").build()).build())
                                     .build())
                             .build())
                     .build();
@@ -129,5 +135,16 @@ public class EmailMessageServiceImpl implements EmailMessageService {
             log.error("[Email Service] Unknown Exception occurred while sending to={}", MaskingUtils.maskEmail(email), e);
             return SendResult.fail("EMAIL", "EMAIL_SEND_FAIL", "시스템 오류로 이메일 발송에 실패했습니다.");
         }
+    }
+
+    private String buildEmailBody(String content, String actionButtonName, String actionUrl) {
+        String body = content == null ? "" : content;
+        if (actionUrl == null || actionUrl.isBlank()) {
+            return body;
+        }
+        String buttonName = actionButtonName == null || actionButtonName.isBlank()
+                ? "View details"
+                : actionButtonName.trim();
+        return body + "\n\n" + buttonName + "\n" + actionUrl.trim();
     }
 }

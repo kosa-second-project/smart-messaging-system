@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -84,13 +85,14 @@ public class CampaignCommandConsumer {
                         .finalChannelId(plan.getFirstChannelId())
                         .status("PENDING")
                         .cost(plan.getEstimatedCost())
-                        .userUuid(plan.getRecipient().getKakaoUserKey())
+                        .userUuid(createTrackingUserUuid())
                         .build();
                 target.setCreatedBy(command.getUserId());
                 sendPreparationMapper.insertSendTarget(target);
 
+                String actionUrl = createActionUrl(command, target, plan);
                 if (!isScheduled) {
-                    messageQueuePublisher.publish(buildTask(command, target, plan));
+                    messageQueuePublisher.publish(buildTask(command, target, plan, actionUrl));
                     published++;
                 }
             }
@@ -131,7 +133,7 @@ public class CampaignCommandConsumer {
                 .toList();
     }
 
-    private MessageTaskDto buildTask(CampaignCommandQueueDto command, SendTargetVO target, RecipientSendPlan plan) {
+    private MessageTaskDto buildTask(CampaignCommandQueueDto command, SendTargetVO target, RecipientSendPlan plan, String actionUrl) {
 
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(command, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
@@ -153,21 +155,42 @@ public class CampaignCommandConsumer {
                 .title(command.getTitle())
                 .content(command.getContent())
                 .purpose(command.getPurpose())
-                .actionButtonName(null)
-                .actionUrl(null)
+                .actionButtonName(actionUrl == null ? null : command.getLinkButtonName())
+                .actionUrl(actionUrl)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
                 .currentStep(0)
                 .build();
     }
+
+    private String createActionUrl(CampaignCommandQueueDto command, SendTargetVO target, RecipientSendPlan plan) {
+        if (command.getLinkUrl() == null || command.getLinkUrl().isBlank() || !hasSendableChannel(plan)) {
+            return null;
+        }
+        return shortUrlService.createTrackedUrl(
+                target.getId(),
+                command.getLinkUrl(),
+                ShortUrlPurpose.from(command.getLinkPurpose())
+        );
+    }
+
+    private boolean hasSendableChannel(RecipientSendPlan plan) {
+        return plan.getFallbackSequence() != null && !plan.getFallbackSequence().isEmpty();
+    }
+
+    private boolean hasSmsOrLms(RecipientSendPlan plan) {
+        if (plan.getFallbackSequence() == null || plan.getFallbackSequence().isEmpty()) {
+            return false;
+        }
+        String firstChannel = normalizeChannelType(plan.getFallbackSequence().get(0));
+        return "SMS".equals(firstChannel) || "LMS".equals(firstChannel);
+    }
+
     private boolean shouldCreateUnsubscribeUrl(CampaignCommandQueueDto command, RecipientSendPlan plan) {
         if (command.getPurpose() == null || !"AD".equals(command.getPurpose().trim().toUpperCase(Locale.ROOT))) {
             return false;
         }
-        return plan.getFallbackSequence() != null
-                && plan.getFallbackSequence().stream()
-                .map(this::normalizeChannelType)
-                .anyMatch(channel -> "SMS".equals(channel) || "LMS".equals(channel));
+        return hasSmsOrLms(plan);
     }
 
     private String normalizeChannelType(String channelType) {
@@ -179,5 +202,9 @@ public class CampaignCommandConsumer {
             return "KAKAO";
         }
         return normalized;
+    }
+
+    private String createTrackingUserUuid() {
+        return UUID.randomUUID().toString();
     }
 }

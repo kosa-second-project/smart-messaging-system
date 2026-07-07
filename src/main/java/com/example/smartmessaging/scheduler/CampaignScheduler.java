@@ -126,6 +126,7 @@ public class CampaignScheduler {
 
     private MessageTaskDto buildTask(SendHistoryVO campaign, SendTargetVO target, RecipientSendPlan plan) {
 
+        String actionUrl = findActionUrl(target, plan);
         String unsubscribeUrl = shouldCreateUnsubscribeUrl(campaign, plan)
                 ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
                 : null;
@@ -146,21 +147,42 @@ public class CampaignScheduler {
                 .title(campaign.getTitle())
                 .content(campaign.getContent())
                 .purpose(campaign.getPurpose())
-                .actionButtonName(null)
-                .actionUrl(null)
+                .actionButtonName(actionUrl == null ? null : campaign.getLinkButtonName())
+                .actionUrl(actionUrl)
                 .unsubscribeUrl(unsubscribeUrl)
                 .fallbackSequence(plan.getFallbackSequence())
                 .currentStep(0)
                 .build();
     }
+
+    private String findActionUrl(SendTargetVO target, RecipientSendPlan plan) {
+        if (!hasSendableChannel(plan)) {
+            return null;
+        }
+        String purchaseUrl = shortUrlService.getTrackedUrl(target.getId(), ShortUrlPurpose.PURCHASE);
+        if (purchaseUrl != null) {
+            return purchaseUrl;
+        }
+        return shortUrlService.getTrackedUrl(target.getId(), ShortUrlPurpose.CLICK);
+    }
+
+    private boolean hasSendableChannel(RecipientSendPlan plan) {
+        return plan.getFallbackSequence() != null && !plan.getFallbackSequence().isEmpty();
+    }
+
+    private boolean hasSmsOrLms(RecipientSendPlan plan) {
+        if (plan.getFallbackSequence() == null || plan.getFallbackSequence().isEmpty()) {
+            return false;
+        }
+        String firstChannel = normalizeChannelType(plan.getFallbackSequence().get(0));
+        return "SMS".equals(firstChannel) || "LMS".equals(firstChannel);
+    }
+
     private boolean shouldCreateUnsubscribeUrl(SendHistoryVO campaign, RecipientSendPlan plan) {
         if (campaign.getPurpose() == null || !"AD".equals(campaign.getPurpose().trim().toUpperCase(Locale.ROOT))) {
             return false;
         }
-        return plan.getFallbackSequence() != null
-                && plan.getFallbackSequence().stream()
-                .map(this::normalizeChannelType)
-                .anyMatch(channel -> "SMS".equals(channel) || "LMS".equals(channel));
+        return hasSmsOrLms(plan);
     }
 
     private String normalizeChannelType(String channelType) {

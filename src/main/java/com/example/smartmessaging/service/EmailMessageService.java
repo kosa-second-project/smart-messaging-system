@@ -12,4 +12,6 @@ public interface EmailMessageService {
     record EmailCheck(@Email @NotBlank String email) {}
 
     SendResult sendEmail(String email, String title, String content);
+
+    SendResult sendEmail(String email, String title, String content, String actionButtonName, String actionUrl);
 }
