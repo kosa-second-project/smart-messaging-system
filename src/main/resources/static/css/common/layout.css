@@ -221,6 +221,45 @@
   color: #000000;
 }
 
+.app-header__profile-link {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  outline-offset: 3px;
+}
+
+.app-header__profile-link:hover .app-header__profile-image {
+  box-shadow: 0 0 0 3px rgba(24, 67, 250, 0.14);
+}
+
+.app-header__profile-link:focus-visible {
+  outline: 2px solid var(--ring);
+}
+
+.app-header__profile-image {
+  width: 2rem;
+  height: 2rem;
+  display: block;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+  transition: box-shadow 150ms ease;
+}
+
+.app-header__profile-name {
+  max-width: 8rem;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-mobile-backdrop {
   position: fixed;
   inset: 0;
