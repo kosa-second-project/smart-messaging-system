@@ -49,6 +49,70 @@
   text-decoration: underline;
 }
 
+
+.dashboard-queue-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dashboard-queue-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.375rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.dashboard-queue-state--idle {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dashboard-queue-state--processing {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.dashboard-queue-state--needs-attention {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.dashboard-queue-refresh {
+  display: grid;
+  justify-items: end;
+  gap: 0.125rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.dashboard-queue-refresh time {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.dashboard-page .stats-queue-item__meta {
+  margin-top: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.dashboard-page .stats-queue-item.is-unavailable {
+  opacity: 0.65;
+}
+
+.dashboard-page .stats-queue-item--empty {
+  grid-column: 1 / -1;
+}
 .dashboard-chart-row {
   min-height: 0;
   display: grid;

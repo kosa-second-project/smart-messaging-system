@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.smartmessaging.service.repository.HistoryMapper">
@@ -200,19 +200,17 @@
 
     <select id="findAttemptFlowsByHistoryId"
             resultMap="historyAttemptFlowResponseMap">
-        SELECT
-            shr.priority_order AS attempt_order,
-            c.channel_type AS channel_name,
-            NVL(attempt_counts.request_count, 0) AS request_count,
-            NVL(attempt_counts.success_count, 0) AS success_count,
-            NVL(attempt_counts.fail_count, 0) AS fail_count
-        FROM send_history_routing shr
-        JOIN channel c
-          ON c.id = shr.channel_id
-         AND NVL(c.is_deleted, 0) = 0
-        LEFT JOIN (
+        WITH attempt_orders AS (
+            SELECT DISTINCT sa.attempt_order
+            FROM send_attempt sa
+            JOIN send_target st
+              ON st.id = sa.send_target_id
+             AND NVL(st.is_deleted, 0) = 0
+            WHERE st.send_history_id = #{sendHistoryId}
+              AND NVL(sa.is_deleted, 0) = 0
+        ), attempt_counts AS (
             SELECT
-                st.send_history_id,
+                sa.attempt_order,
                 sa.channel_id,
                 COUNT(sa.id) AS request_count,
                 COUNT(CASE WHEN sa.is_succeeded = 1 THEN 1 END) AS success_count,
@@ -223,13 +221,25 @@
              AND NVL(st.is_deleted, 0) = 0
             WHERE st.send_history_id = #{sendHistoryId}
               AND NVL(sa.is_deleted, 0) = 0
-            GROUP BY st.send_history_id, sa.channel_id
-        ) attempt_counts
-          ON attempt_counts.send_history_id = shr.send_history_id
-         AND attempt_counts.channel_id = shr.channel_id
+            GROUP BY sa.attempt_order, sa.channel_id
+        )
+        SELECT
+            ao.attempt_order AS attempt_order,
+            c.channel_type AS channel_name,
+            NVL(ac.request_count, 0) AS request_count,
+            NVL(ac.success_count, 0) AS success_count,
+            NVL(ac.fail_count, 0) AS fail_count
+        FROM attempt_orders ao
+        CROSS JOIN send_history_routing shr
+        JOIN channel c
+          ON c.id = shr.channel_id
+         AND NVL(c.is_deleted, 0) = 0
+        LEFT JOIN attempt_counts ac
+          ON ac.attempt_order = ao.attempt_order
+         AND ac.channel_id = shr.channel_id
         WHERE shr.send_history_id = #{sendHistoryId}
           AND NVL(shr.is_deleted, 0) = 0
-        ORDER BY shr.priority_order ASC
+        ORDER BY ao.attempt_order ASC, shr.priority_order ASC
     </select>
 
     <select id="findChannelsByHistoryIds"

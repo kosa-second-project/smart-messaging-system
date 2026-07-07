@@ -13,20 +13,20 @@
         <section class="stats-card stats-queue-card dashboard-queue-card">
             <div class="stats-queue-card__head">
                 <div>
-                    <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
-                    <p class="stats-card-subtitle">대량 발송 요청의 현재 처리 흐름입니다.</p>
+                    <div class="dashboard-queue-title-row">
+                        <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
+                        <span id="dashboardQueueStateBadge" class="dashboard-queue-state dashboard-queue-state--idle">현재 대기 중</span>
+                    </div>
+                    <p id="dashboardQueueMessage" class="stats-card-subtitle">처리할 메시지가 없습니다.</p>
                 </div>
-                <button type="button" class="dashboard-link-button" data-dashboard-modal-open>
-                    상세 분석
-                    <svg class="stats-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m9 18 6-6-6-6"></path>
-                    </svg>
-                </button>
+                <div class="dashboard-queue-refresh">
+                    <span>마지막 갱신</span>
+                    <time id="dashboardQueueRefreshedAt">-</time>
+                </div>
             </div>
             <div id="dashboardQueueItems" class="stats-queue-grid"></div>
-            <div id="dashboardQueueBar" class="stats-queue-bar" aria-label="발송 큐 상태 비중"></div>
+            <div id="dashboardQueueBar" class="stats-queue-bar" aria-label="발송 큐 상태 비율"></div>
         </section>
-
         <section class="dashboard-chart-row">
             <article class="stats-card stats-chart-card dashboard-cost-card">
                 <h3 class="stats-card-title">비용 비교 현황</h3>
