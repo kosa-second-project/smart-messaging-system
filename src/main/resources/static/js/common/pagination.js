@@ -86,9 +86,12 @@
         if (!root) return;
 
         const page = Math.max(Number(config.page || 1), 1);
+        const size = Math.max(Number(config.size || 20), 1);
+        const total = Number(config.total || 0);
+        const totalPages = Number(config.totalPages || Math.ceil(total / size) || 0);
         const knownPages = Math.max(Number(config.knownPages || page), page);
         const canOpenNextPage = Boolean(config.hasNext) && page >= knownPages;
-        const maxPage = Math.max(knownPages + (canOpenNextPage ? 1 : 0), page);
+        const maxPage = Math.max(totalPages || 0, knownPages + (canOpenNextPage ? 1 : 0), page);
         const start = Math.max(1, Math.min(page - 2, Math.max(maxPage - 4, 1)));
         const end = Math.min(maxPage, start + 4);
 

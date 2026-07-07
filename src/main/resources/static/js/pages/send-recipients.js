@@ -420,6 +420,7 @@ const RecipientSelector = {
 
     // 페이징 인포 갱신
     updatePaginationInfo: function (start, end, total) {
+        SendPage.state.paginationTotalCount = total;
         SendPage.state.paginationSummary = `Showing ${start} to ${end} of ${total} entries`;
     },
 
@@ -430,6 +431,7 @@ const RecipientSelector = {
             page: currentPageNum,
             size: SendPage.state.pageSize,
             sizes: [20, 50, 100],
+            total: SendPage.state.paginationTotalCount || 0,
             summary: SendPage.state.paginationSummary || "Showing 0 to 0 of 0 entries",
             knownPages: SendPage.state.cursorHistory.length,
             hasPrevious: SendPage.state.currentCursorIndex > 0,
