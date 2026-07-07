@@ -63,15 +63,10 @@ public class RagIngestionService {
 
         try {
             List<Document> documents = loadDocuments(sourcePath);
-            List<String> documentIds = documents.stream()
-                    .map(Document::getId)
-                    .toList();
-
-            if (!documentIds.isEmpty()) {
-                // QdrantVectorStore는 UUID 형식의 id를 요구하므로 원본 doc_id를 deterministic UUID로 변환해
-                // 같은 seed를 여러 번 reindex해도 중복 적재되지 않게 delete 후 add한다.
+            if (!documents.isEmpty()) {
+                // Qdrant add is an upsert for deterministic UUID ids. Avoid pre-delete
+                // so existing points survive if embedding or upsert fails midway.
                 VectorStore vectorStore = vectorStoreProvider.getObject();
-                vectorStore.delete(documentIds);
                 vectorStore.add(documents);
             }
 
@@ -142,12 +137,12 @@ public class RagIngestionService {
             }
         });
 
-        // embedding 대상은 content만 사용하고, 원본 doc_id 포함 나머지 필드는 검색 응답용 metadata로 보존한다.
+        // Embed only content; keep the original doc_id and other fields as metadata.
         return new Document(toDeterministicDocumentId(docId), content, metadata);
     }
 
     static String toDeterministicDocumentId(String docId) {
-        // Spring AI Qdrant 구현은 UUID 문자열만 point id로 허용하므로 doc_id를 안정적인 UUID로 매핑한다.
+        // Spring AI Qdrant requires UUID point ids, so map source doc_id stably.
         return UUID.nameUUIDFromBytes((DOCUMENT_ID_NAMESPACE + docId).getBytes(StandardCharsets.UTF_8)).toString();
     }
 
