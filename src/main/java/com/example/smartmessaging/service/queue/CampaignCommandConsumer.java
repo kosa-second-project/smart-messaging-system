@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -84,7 +85,7 @@ public class CampaignCommandConsumer {
                         .finalChannelId(plan.getFirstChannelId())
                         .status("PENDING")
                         .cost(plan.getEstimatedCost())
-                        .userUuid(plan.getRecipient().getKakaoUserKey())
+                        .userUuid(createTrackingUserUuid())
                         .build();
                 target.setCreatedBy(command.getUserId());
                 sendPreparationMapper.insertSendTarget(target);
@@ -201,5 +202,9 @@ public class CampaignCommandConsumer {
             return "KAKAO";
         }
         return normalized;
+    }
+
+    private String createTrackingUserUuid() {
+        return UUID.randomUUID().toString();
     }
 }

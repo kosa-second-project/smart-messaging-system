@@ -5,6 +5,7 @@ import com.example.smartmessaging.dto.queue.CampaignCommandQueueDto;
 import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
+import com.example.smartmessaging.dto.vo.SendTargetVO;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.RecipientChannelResolver;
@@ -13,6 +14,7 @@ import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import com.rabbitmq.client.Channel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -77,6 +80,11 @@ class CampaignCommandConsumerTest {
         consumer.consumeCampaignCommand(command, rabbitChannel, 1L);
 
         verify(sendPreparationMapper, times(1)).updateHistoryStatus(10L, "SENDING");
+        ArgumentCaptor<SendTargetVO> targetCaptor = ArgumentCaptor.forClass(SendTargetVO.class);
+        verify(sendPreparationMapper).insertSendTarget(targetCaptor.capture());
+        assertThat(targetCaptor.getValue().getUserUuid())
+                .isNotBlank()
+                .matches("[0-9a-fA-F-]{36}");
         verify(messageQueuePublisher).publish(any());
         verify(rabbitChannel).basicAck(1L, false);
     }
