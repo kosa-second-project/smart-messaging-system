@@ -12,6 +12,7 @@ public class TemplateSearchRequest {
     private TemplateCategory category;
     private List<TemplateCategory> categories;
     private String purpose;
+    private List<String> purposes;
     private String channelType;
     private List<String> channelTypes;
     private String sortOrder = "latest";
@@ -22,5 +23,9 @@ public class TemplateSearchRequest {
 
     public int getOffset() {
         return (page - 1) * size;
+    }
+
+    public void setSize(int size) {
+        this.size = Math.min(Math.max(size, 10), 100);
     }
 }

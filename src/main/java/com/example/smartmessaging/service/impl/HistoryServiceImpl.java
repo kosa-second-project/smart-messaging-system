@@ -35,7 +35,7 @@ public class HistoryServiceImpl implements HistoryService {
         condition = condition.normalized();
         long totalElements = historyMapper.countHistories(condition);
         int totalPages = totalElements == 0 ? 0
-                : (int) Math.ceil((double) totalElements / HistorySearchRequestDTO.PAGE_SIZE);
+                : (int) Math.ceil((double) totalElements / condition.pageSize());
 
         // 요청 페이지가 실제 전체 페이지보다 클 경우 마지막 페이지로 가도록 함
         // url에 잘못된 값이 들어오는 것을 방지
@@ -50,7 +50,7 @@ public class HistoryServiceImpl implements HistoryService {
         histories = attachChannelsAndTags(histories);
 
         // 페이지 응답 DTO로 감싸서 반환
-        return PageResponseDTO.of(histories, condition.page(), HistorySearchRequestDTO.PAGE_SIZE, totalElements);
+        return PageResponseDTO.of(histories, condition.page(), condition.pageSize(), totalElements);
     }
 
     @Override

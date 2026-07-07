@@ -1,12 +1,17 @@
 let currentTab = 'members';     // members (고객 목록), rejects (수신 거부 목록)
 let currentPage = 1;
 let pageSize = 10;
-let selectedType = '';     // 일반, 신규, 휴면, 전체('')
+let selectedTypes = [];
 let searchKeyword = '';
 let sortOrder = 'latest';
 
 // 페이지 진입 시 최초 렌더링
 document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById('typeFilterWrapper').addEventListener('multiselect:change', function() {
+        selectedTypes = getSelectedCustomerTypes();
+        currentPage = 1;
+        fetchData();
+    });
     renderHeader();
     fetchData();
     fetchStats();
@@ -44,14 +49,10 @@ function switchTab(tab) {
     // 인풋 및 필터 초기화
     document.getElementById('customerSearchInput').value = '';
     searchKeyword = '';
-    selectedType = '';
+    selectedTypes = [];
+    document.querySelectorAll('#typeFilterWrapper input[type="checkbox"]').forEach(input => input.checked = false);
+    window.DsMultiselect?.refresh(document.getElementById('typeFilterWrapper'));
     
-    // 필터 버튼 활성 스타일 리셋
-    const buttons = document.querySelectorAll('#typeFilterWrapper .filter-button');
-    buttons.forEach((btn, idx) => {
-        btn.classList.toggle('active', idx === 0);
-    });
-
     renderHeader();
     fetchData();
 }
@@ -92,7 +93,7 @@ function handleSearch(event) {
 
 // 고객 유형 필터 변경
 function filterType(type, element) {
-    selectedType = type;
+    selectedTypes = type ? [type] : [];
     currentPage = 1;
 
     const buttons = document.querySelectorAll('#typeFilterWrapper .filter-button');
@@ -107,6 +108,12 @@ function changeSortOrder(val) {
     sortOrder = val;
     currentPage = 1;
     fetchData();
+}
+
+function getSelectedCustomerTypes() {
+    return Array.from(document.querySelectorAll('#typeFilterWrapper input[type="checkbox"]:checked'))
+        .map(input => input.value)
+        .filter(Boolean);
 }
 
 // 데이터 페치 AJAX 호출
@@ -129,12 +136,16 @@ function fetchData() {
     if (currentTab === 'members') {
         if (nameParam) params += `&name=${encodeURIComponent(nameParam)}`;
         if (phoneParam) params += `&phone=${encodeURIComponent(phoneParam)}`;
-        if (selectedType) params += `&customerType=${encodeURIComponent(selectedType)}`;
+        selectedTypes.forEach(type => {
+            params += `&customerTypes=${encodeURIComponent(type)}`;
+        });
     } else {
         url = '/api/customers/rejects';
         if (nameParam) params += `&name=${encodeURIComponent(nameParam)}`;
         if (phoneParam) params += `&phone=${encodeURIComponent(phoneParam)}`;
-        if (selectedType) params += `&customerType=${encodeURIComponent(selectedType)}`;
+        selectedTypes.forEach(type => {
+            params += `&customerTypes=${encodeURIComponent(type)}`;
+        });
     }
 
     fetch(`${url}?${params}`)
@@ -206,61 +217,26 @@ function renderTable(list) {
 
 // 페이징 풋터 렌더링
 function renderPagination(pageData) {
-    const infoText = document.getElementById('pageInfoText');
-    const btnContainer = document.getElementById('paginationButtons');
-
     const total = pageData.totalCount || 0;
     const current = pageData.page || 1;
-    const size = pageData.size || 10;
-    const totalPages = pageData.totalPages || 1;
+    const size = pageData.size || pageSize;
 
-    infoText.innerText = `총 ${total.toLocaleString()}명 중 ${(current - 1) * size + 1} - ${Math.min(current * size, total)}명 노출`;
-
-    btnContainer.innerHTML = '';
-
-    // 이전 페이지 버튼
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'page-btn';
-    prevBtn.innerText = '‹';
-    prevBtn.disabled = (current === 1);
-    prevBtn.onclick = function() {
-        if (currentPage > 1) {
-            currentPage--;
+    window.DsPagination?.renderOffset("#customerPagination", {
+        total,
+        page: current,
+        size,
+        totalPages: pageData.totalPages || 0,
+        summary: `총 ${total.toLocaleString()}명 중 ${total === 0 ? 0 : ((current - 1) * size) + 1} - ${Math.min(current * size, total)}명 노출`,
+        onPageChange: function(page) {
+            currentPage = page;
+            fetchData();
+        },
+        onPageSizeChange: function(size) {
+            pageSize = size;
+            currentPage = 1;
             fetchData();
         }
-    };
-    btnContainer.appendChild(prevBtn);
-
-    // 페이지 번호 리스트 출력 (앞뒤 3개 제한)
-    let startPage = Math.max(1, current - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
-    if (endPage - startPage < 4) {
-        startPage = Math.max(1, endPage - 4);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.className = `page-btn ${i === current ? 'active' : ''}`;
-        pageBtn.innerText = i;
-        pageBtn.onclick = function() {
-            currentPage = i;
-            fetchData();
-        };
-        btnContainer.appendChild(pageBtn);
-    }
-
-    // 다음 페이지 버튼
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'page-btn';
-    nextBtn.innerText = '›';
-    nextBtn.disabled = (current === totalPages || totalPages === 0);
-    nextBtn.onclick = function() {
-        if (currentPage < totalPages) {
-            currentPage++;
-            fetchData();
-        }
-    };
-    btnContainer.appendChild(nextBtn);
+    });
 }
 
 // 상세 모달 열기 및 데이터 조회

@@ -27,11 +27,14 @@ function bindTemplateEvents() {
         fetchTemplates();
     });
 
-    ["templateCategoryFilter", "templatePurposeFilter", "templateChannelFilter", "templateSortSelect"].forEach(id => {
-        document.getElementById(id).addEventListener("change", function() {
-            templateCurrentPage = 1;
-            fetchTemplates();
-        });
+    document.getElementById("templateSortSelect").addEventListener("change", function() {
+        templateCurrentPage = 1;
+        fetchTemplates();
+    });
+
+    document.querySelector(".template-toolbar").addEventListener("multiselect:change", function() {
+        templateCurrentPage = 1;
+        fetchTemplates();
     });
 
     ["templateTitle", "templateContent"].forEach(id => {
@@ -97,17 +100,35 @@ function renderTemplateFilters() {
         value: option.value,
         label: getCategoryLabel(option.value || option.label)
     }));
-    renderSelectOptions("templateCategoryFilter", categoryOptions, "전체 카테고리");
+    renderMultiSelectOptions("templateCategoryFilter", categoryOptions, "categories");
     renderSelectOptions("templateCategory", categoryOptions, "카테고리 선택");
 
     const purposeOptions = buildPurposeOptions(templateOptions.purposes || []);
-    renderSelectOptions("templatePurposeFilter", purposeOptions, "전체 광고여부");
+    renderMultiSelectOptions("templatePurposeFilter", purposeOptions, "purposes");
 
     const channelOptions = (templateOptions.channels || []).map(channel => ({
         value: channel.channelType,
         label: channel.channelType
     }));
-    renderSelectOptions("templateChannelFilter", channelOptions, "전체 채널");
+    renderMultiSelectOptions("templateChannelFilter", channelOptions, "channelTypes");
+}
+
+function renderMultiSelectOptions(rootId, options, inputName) {
+    const root = document.getElementById(rootId);
+    const menu = root.querySelector("[data-multiselect-menu]");
+    const selected = new Set(getMultiSelectValues(rootId));
+
+    menu.innerHTML = options.map(option => `
+        <label class="ds-multiselect__option">
+            <input type="checkbox" name="${inputName}" value="${escapeHtml(option.value)}" data-label="${escapeHtml(option.label)}" ${selected.has(String(option.value)) ? "checked" : ""}>
+            <span>${escapeHtml(option.label)}</span>
+        </label>
+    `).join("");
+
+    if (window.DsMultiselect) {
+        window.DsMultiselect.initAll(root.parentElement);
+        window.DsMultiselect.refresh(root);
+    }
 }
 
 function renderSelectOptions(selectId, options, firstLabel) {
@@ -152,9 +173,9 @@ function fetchTemplates() {
     });
 
     appendParam(params, "keyword", document.getElementById("templateKeywordInput").value.trim());
-    appendParam(params, "category", document.getElementById("templateCategoryFilter").value);
-    appendParam(params, "purpose", document.getElementById("templatePurposeFilter").value);
-    appendParam(params, "channelType", document.getElementById("templateChannelFilter").value);
+    appendParams(params, "categories", getMultiSelectValues("templateCategoryFilter"));
+    appendParams(params, "purposes", getMultiSelectValues("templatePurposeFilter"));
+    appendParams(params, "channelTypes", getMultiSelectValues("templateChannelFilter"));
 
     fetch(`/api/templates?${params.toString()}`)
         .then(res => res.json())
@@ -174,6 +195,16 @@ function appendParam(params, key, value) {
     if (value) {
         params.append(key, value);
     }
+}
+
+function appendParams(params, key, values) {
+    values.forEach(value => appendParam(params, key, value));
+}
+
+function getMultiSelectValues(rootId) {
+    return Array.from(document.querySelectorAll(`#${rootId} input[type='checkbox']:checked`))
+        .map(input => input.value)
+        .filter(Boolean);
 }
 
 function renderTemplateTable(list) {
@@ -262,45 +293,22 @@ function renderTemplatePagination(pageData) {
     const total = pageData.totalCount || 0;
     const current = pageData.page || 1;
     const size = pageData.size || templatePageSize;
-    const totalPages = pageData.totalPages || 0;
-    const from = total === 0 ? 0 : ((current - 1) * size) + 1;
-    const to = Math.min(current * size, total);
 
-    document.getElementById("templatePageInfo").innerText = `${total.toLocaleString()}건 중 ${from.toLocaleString()}-${to.toLocaleString()}`;
-
-    const container = document.getElementById("templatePaginationButtons");
-    container.innerHTML = "";
-
-    container.appendChild(createPageButton("이전", current === 1, function() {
-        templateCurrentPage = Math.max(1, templateCurrentPage - 1);
-        fetchTemplates();
-    }));
-
-    const max = Math.max(1, totalPages);
-    const base = Math.min(Math.max(current - 2, 1), Math.max(max - 4, 1));
-    for (let page = base; page < base + 5 && page <= max; page++) {
-        const button = createPageButton(page, false, function() {
+    window.DsPagination?.renderOffset("#templatePagination", {
+        total,
+        page: current,
+        size,
+        totalPages: pageData.totalPages || 0,
+        onPageChange: function(page) {
             templateCurrentPage = page;
             fetchTemplates();
-        });
-        button.classList.toggle("is-active", page === current);
-        container.appendChild(button);
-    }
-
-    container.appendChild(createPageButton("다음", current >= max, function() {
-        templateCurrentPage = Math.min(max, templateCurrentPage + 1);
-        fetchTemplates();
-    }));
-}
-
-function createPageButton(label, disabled, onClick) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ds-page-button";
-    button.innerText = label;
-    button.disabled = disabled;
-    button.onclick = onClick;
-    return button;
+        },
+        onPageSizeChange: function(nextSize) {
+            templatePageSize = nextSize;
+            templateCurrentPage = 1;
+            fetchTemplates();
+        }
+    });
 }
 
 let currentDetailItem = null;

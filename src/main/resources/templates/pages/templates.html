@@ -10,9 +10,9 @@
     <link rel="stylesheet" th:href="@{/css/pages/templates.css}">
 
     <div class="template-page">
-        <section class="template-toolbar" aria-label="템플릿 검색 및 필터">
-            <div class="template-toolbar__filters">
-                <div class="template-search">
+        <section class="template-toolbar ds-filter-panel" aria-label="템플릿 검색 및 필터">
+            <div class="template-toolbar__filters ds-filter-row">
+                <div class="template-search ds-filter-search">
                     <svg class="template-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -20,17 +20,26 @@
                     <input id="templateKeywordInput" type="text" class="ds-input template-search__input" placeholder="템플릿명, 내용, 카테고리 검색...">
                 </div>
 
-                <select id="templateCategoryFilter" class="ds-select template-filter-select">
-                    <option value="">전체 카테고리</option>
-                </select>
+                <div id="templateCategoryFilter" class="ds-multiselect" data-multiselect data-placeholder="전체 카테고리">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 카테고리</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu></div>
+                </div>
 
-                <select id="templateChannelFilter" class="ds-select template-filter-select">
-                    <option value="">전체 채널</option>
-                </select>
+                <div id="templateChannelFilter" class="ds-multiselect" data-multiselect data-placeholder="전체 채널">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 채널</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu></div>
+                </div>
 
-                <select id="templatePurposeFilter" class="ds-select template-filter-select">
-                    <option value="">전체 광고여부</option>
-                </select>
+                <div id="templatePurposeFilter" class="ds-multiselect" data-multiselect data-placeholder="전체 광고여부">
+                    <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                        <span class="ds-multiselect__label" data-multiselect-label>전체 광고여부</span>
+                    </button>
+                    <div class="ds-multiselect__menu" data-multiselect-menu></div>
+                </div>
 
                 <select id="templateSortSelect" class="ds-select template-filter-select">
                     <option value="latest">최신순</option>
@@ -71,10 +80,7 @@
                 </table>
             </div>
 
-            <div class="ds-pagination">
-                <span id="templatePageInfo" class="ds-pagination__summary">불러오는 중...</span>
-                <div id="templatePaginationButtons" class="ds-pagination__pages"></div>
-            </div>
+            <div id="templatePagination" class="ds-pagination"></div>
         </section>
 
         <div id="templateDetailModal" class="ds-modal" onclick="closeTemplateDetailOnBackdrop(event)">

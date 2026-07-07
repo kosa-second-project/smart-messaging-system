@@ -24,9 +24,17 @@
             AND t.category = #{category}
             </when>
         </choose>
-        <if test="purpose != null and purpose != ''">
-            AND t.purpose = #{purpose}
-        </if>
+        <choose>
+            <when test="purposes != null and purposes.size() > 0">
+                AND t.purpose IN
+                <foreach item="purposeItem" collection="purposes" open="(" separator="," close=")">
+                    #{purposeItem}
+                </foreach>
+            </when>
+            <when test="purpose != null and purpose != ''">
+                AND t.purpose = #{purpose}
+            </when>
+        </choose>
         <choose>
             <when test="channelTypes != null and channelTypes.size() > 0">
                 AND EXISTS (

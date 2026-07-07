@@ -36,39 +36,50 @@
 
 
         <!-- 2. 상단 필터/컨트롤 바 -->
-        <div class="controls-row">
-            <div class="controls-left">
-                <!-- 탭 버튼 컨테이너 -->
-                <div class="tab-container">
-                    <button type="button" id="tabMembersBtn" class="tab-button active" onclick="switchTab('members')">고객 목록</button>
-                    <button type="button" id="tabRejectsBtn" class="tab-button" onclick="switchTab('rejects')">수신 거부 목록</button>
-                </div>
-                
-                <!-- 실시간 검색어 인풋 -->
-                <div class="search-wrapper">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="customerSearchInput" class="search-input" placeholder="고객명 또는 전화번호 검색" onkeyup="handleSearch(event)">
+        <div class="controls-row ds-filter-panel">
+            <div class="ds-filter-row ds-filter-row--split">
+                <div class="controls-left ds-filter-group">
+                    <div class="tab-container">
+                        <button type="button" id="tabMembersBtn" class="tab-button active" onclick="switchTab('members')">고객 목록</button>
+                        <button type="button" id="tabRejectsBtn" class="tab-button" onclick="switchTab('rejects')">수신 거부 목록</button>
+                    </div>
+
+                    <div class="search-wrapper ds-filter-search">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="customerSearchInput" class="search-input" placeholder="고객명 또는 전화번호 검색" onkeyup="handleSearch(event)">
+                    </div>
+
+                    <div id="typeFilterWrapper" class="ds-multiselect" data-multiselect data-placeholder="전체 유형">
+                        <button type="button" class="ds-multiselect__trigger" data-multiselect-trigger>
+                            <span class="ds-multiselect__label" data-multiselect-label>전체 유형</span>
+                        </button>
+                        <div class="ds-multiselect__menu" data-multiselect-menu>
+                            <label class="ds-multiselect__option">
+                                <input type="checkbox" name="customerTypes" value="REGULAR" data-label="일반">
+                                <span>일반</span>
+                            </label>
+                            <label class="ds-multiselect__option">
+                                <input type="checkbox" name="customerTypes" value="NEW" data-label="신규">
+                                <span>신규</span>
+                            </label>
+                            <label class="ds-multiselect__option">
+                                <input type="checkbox" name="customerTypes" value="DORMANT" data-label="휴면">
+                                <span>휴면</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 고객 유형 필터 버튼 (고객 목록 탭에서만 유효) -->
-                <div id="typeFilterWrapper" style="display: flex; gap: 8px;">
-                    <button type="button" class="filter-button active" onclick="filterType('', this)">전체</button>
-                    <button type="button" class="filter-button" onclick="filterType('일반', this)">일반</button>
-                    <button type="button" class="filter-button" onclick="filterType('신규', this)">신규</button>
-                    <button type="button" class="filter-button" onclick="filterType('휴면', this)">휴면</button>
+                <div class="ds-filter-actions">
+                    <select id="sortOrderSelect" class="ds-select sort-select" onchange="changeSortOrder(this.value)">
+                        <option value="latest">최신순</option>
+                        <option value="name">이름순</option>
+                        <option value="type">유형순</option>
+                    </select>
                 </div>
-            </div>
-
-            <!-- 정렬 및 추가 기능 -->
-            <div style="display: flex; items-center; gap: 8px;">
-                <select id="sortOrderSelect" class="sort-select" onchange="changeSortOrder(this.value)">
-                    <option value="latest">최신순</option>
-                    <option value="name">이름순</option>
-                    <option value="type">유형순</option>
-                </select>
             </div>
         </div>
 
@@ -85,13 +96,7 @@
                 </table>
             </div>
 
-            <!-- 페이징 풋터 -->
-            <div class="pagination-container">
-                <span id="pageInfoText">불러오는 중...</span>
-                <div class="pagination-buttons" id="paginationButtons">
-                    <!-- 동적 페이징 버튼 생성 -->
-                </div>
-            </div>
+            <div id="customerPagination" class="ds-pagination"></div>
         </div>
 
         <!-- 4. 고객 상세 모달 팝업 -->

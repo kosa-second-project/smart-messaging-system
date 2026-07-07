@@ -109,6 +109,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 고객 유형 필터 (일반, 신규, 휴면 - 실시간 계산식 매칭) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -168,6 +187,25 @@
         </if>
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
+        </if>
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
         </if>
         <if test="customerType != null and customerType != ''">
             <choose>
@@ -254,6 +292,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
@@ -301,6 +358,25 @@
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
         <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.joined_at &gt;= SYSTIMESTAMP - 7
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
+                    </when>
+                    <otherwise>
+                        c.joined_at &lt; SYSTIMESTAMP - 7
+                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
         <if test="customerType != null and customerType != ''">
             <choose>
                 <when test="customerType == '신규'">
