@@ -830,7 +830,7 @@ const MessageComposer = {
             parts.actionLink = buttonName + "\n" + this.getPreviewShortUrl("r");
         }
         if (purpose === "AD") {
-            parts.unsubscribe = "수신거부를 원하시면 아래 링크를 눌러주세요.\n" + this.getPreviewShortUrl("u");
+            parts.unsubscribe = "수신거부:\n" + this.getPreviewShortUrl("u");
         }
         return parts;
     },

@@ -59,7 +59,7 @@ public final class SmsMessageTypeResolver {
                     .append(actionUrl.trim());
         }
         if (isAdvertising(purpose) && !isBlank(unsubscribeUrl)) {
-            text.append("\n\n수신거부를 원하시면 아래 링크를 눌러주세요.\n")
+            text.append("\n\n수신거부:\n")
                     .append(unsubscribeUrl.trim());
         }
         return text.toString();

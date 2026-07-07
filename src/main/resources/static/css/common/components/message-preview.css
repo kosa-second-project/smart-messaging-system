@@ -155,33 +155,32 @@
 .bubble {
     box-sizing: border-box;
     width: 220px;
-    flex: 0 0 236px;
+    flex: 0 0 auto;
     min-height: 0;
     padding: 7px 10px;
     font-size: 13px;
-    line-height: 1.2;
+    line-height: 1.16;
     word-break: break-word;
     overflow-wrap: anywhere;
-    white-space: pre-wrap;
 }
 
 .bubble-title {
-    margin-bottom: 1px;
+    margin-bottom: 2px;
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.16;
 }
 
 .bubble-text {
-    line-height: 1.2;
+    line-height: 1.16;
 }
 
 .bubble-link-area,
 .bubble-unsubscribe {
-    margin-top: 2px;
+    margin-top: 3px;
     padding-top: 0;
     font-size: 12px;
-    line-height: 1.2;
+    line-height: 1.16;
     white-space: pre-wrap;
 }
 
@@ -402,7 +401,6 @@
 .kakao-bubble {
     position: relative;
     width: 228px;
-    flex-basis: 228px;
     max-width: 228px;
     background: #ffffff;
     color: #191919;
