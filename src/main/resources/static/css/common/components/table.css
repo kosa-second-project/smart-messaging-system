@@ -1,4 +1,7 @@
 .table-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -15,8 +18,10 @@
 }
 
 .table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
 }
 
 .ds-table {
@@ -36,6 +41,9 @@
 }
 
 .ds-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: var(--muted);
   color: var(--muted-foreground);
   font-size: 0.75rem;

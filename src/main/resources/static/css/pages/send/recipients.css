@@ -147,11 +147,13 @@
   gap: 1.25rem;
   min-height: 0;
   min-width: 0; /* Flex 아이템 내부 최소너비(900px)에 의한 부모 팽창 방지 */
+  overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
 
 .main-header-row {
   display: flex;
+  flex: 0 0 auto;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -165,6 +167,7 @@
 /* 테이블 컨트롤 바 */
 .table-control-bar {
   display: flex;
+  flex: 0 0 auto;
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
@@ -255,12 +258,16 @@
 
 /* 테이블 영역 */
 .table-container {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow: auto; /* 가로(overflow-x) 및 세로(overflow-y) 스크롤바가 자연스럽게 발생하도록 유도 */
-  min-height: 420px; /* 테이블 가용 영역 높이를 시원하게 확장하여 한 번에 더 많은 행이 노출되도록 보장 */
+  min-height: 0;
   max-width: 100%; /* 부모 영역 가로폭을 넘어가 삐져나가지 않도록 상한선 제약 */
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+}
+
+.send-main-panel > .ds-pagination {
+  flex: 0 0 auto;
 }
 
 .table-container .ds-table {

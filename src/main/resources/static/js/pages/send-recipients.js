@@ -195,21 +195,6 @@ const RecipientSelector = {
             self.renderAll();
         });
 
-        // 9. 페이징 버튼 (이전/다음) 클릭 처리
-        $(document).on("click", ".page-link-btn", function () {
-            const action = $(this).data("action");
-            if (action === 'prev' && SendPage.state.currentCursorIndex > 0) {
-                SendPage.state.currentCursorIndex--;
-                self.renderTableOnly();
-            } else if (action === 'next' && SendPage.state.hasNext) {
-                SendPage.state.currentCursorIndex++;
-                if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
-                    SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
-                }
-                self.renderTableOnly();
-            }
-        });
-
         // 10. "현재 회원 모두 추가" 버튼 클릭 → POST /api/campaigns/draft 로 Redis에 저장
         $(document).on("click", "#btnAddAllFiltered", function () {
             const params = self.getQueryParams(false);
@@ -444,8 +429,25 @@ const RecipientSelector = {
             size: SendPage.state.pageSize,
             sizes: [20, 50, 100],
             summary: SendPage.state.paginationSummary || "Showing 0 to 0 of 0 entries",
+            knownPages: SendPage.state.cursorHistory.length,
             hasPrevious: SendPage.state.currentCursorIndex > 0,
             hasNext: SendPage.state.hasNext,
+            onPageChange: function(pageNumber) {
+                const targetIndex = pageNumber - 1;
+                if (targetIndex === SendPage.state.currentCursorIndex) {
+                    return;
+                }
+                if (targetIndex < SendPage.state.cursorHistory.length) {
+                    SendPage.state.currentCursorIndex = targetIndex;
+                    self.renderTableOnly();
+                    return;
+                }
+                if (pageNumber === SendPage.state.currentCursorIndex + 2 && SendPage.state.hasNext) {
+                    SendPage.state.currentCursorIndex++;
+                    SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    self.renderTableOnly();
+                }
+            },
             onPrevious: function() {
                 if (SendPage.state.currentCursorIndex > 0) {
                     SendPage.state.currentCursorIndex--;

@@ -208,9 +208,9 @@
 }
 
 .table-responsive {
-    overflow-x: auto;
-    max-height: 560px;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
 }
 
 .data-table {

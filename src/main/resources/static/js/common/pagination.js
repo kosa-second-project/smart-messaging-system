@@ -85,6 +85,12 @@
         const root = typeof container === "string" ? document.querySelector(container) : container;
         if (!root) return;
 
+        const page = Math.max(Number(config.page || 1), 1);
+        const knownPages = Math.max(Number(config.knownPages || page), page);
+        const maxPage = Math.max(knownPages + (config.hasNext ? 1 : 0), page);
+        const start = Math.max(1, Math.min(page - 2, Math.max(maxPage - 4, 1)));
+        const end = Math.min(maxPage, start + 4);
+
         root.className = "ds-pagination";
         root.replaceChildren();
 
@@ -94,14 +100,25 @@
 
         const pages = document.createElement("div");
         pages.className = "ds-pagination__pages";
-        pages.appendChild(button("이전", { disabled: !config.hasPrevious, onClick: config.onPrevious }));
+        pages.appendChild(button("이전", {
+            disabled: !config.hasPrevious,
+            onClick: config.onPrevious
+        }));
 
-        const current = document.createElement("span");
-        current.className = "ds-pagination__current";
-        current.textContent = `${config.page || 1} 페이지`;
-        pages.appendChild(current);
+        for (let pageNumber = start; pageNumber <= end; pageNumber++) {
+            const isKnownPage = pageNumber <= knownPages;
+            const isNextPage = pageNumber === page + 1 && config.hasNext;
+            pages.appendChild(button(String(pageNumber), {
+                active: pageNumber === page,
+                disabled: !isKnownPage && !isNextPage,
+                onClick: () => config.onPageChange?.(pageNumber)
+            }));
+        }
 
-        pages.appendChild(button("다음", { disabled: !config.hasNext, onClick: config.onNext }));
+        pages.appendChild(button("다음", {
+            disabled: !config.hasNext,
+            onClick: config.onNext
+        }));
 
         const actions = document.createElement("div");
         actions.className = "ds-pagination__actions";

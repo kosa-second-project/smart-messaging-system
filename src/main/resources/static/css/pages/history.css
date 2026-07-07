@@ -2,13 +2,19 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  height: 100%;
+  min-height: 0;
   padding: 1.5rem;
   font-family: "Pretendard", "Inter", sans-serif;
 }
 
-.history-page > .history-filter,
-.history-page > .history-table {
+.history-page > .history-filter {
   flex-shrink: 0;
+}
+
+.history-page > .history-table {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .history-filter {
@@ -136,8 +142,7 @@
 }
 
 .history-table .table-scroll {
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: auto;
 }
 
 .history-table th,
