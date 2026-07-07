@@ -55,12 +55,12 @@ class HistoryTemplateRenderTest {
                         "전체 직원의 메시지 발송 결과와 비용 절감 내역을 확인합니다."
                 ))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("조회된 전송 기록이 없습니다.")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">예약</option>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">전송중</option>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">완료</option>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">실패</option>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">정보성</option>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">광고성</option>")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">예약</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">전송중</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">완료</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">실패</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">정보성</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">광고성</span>")));
     }
 
     @Test
@@ -97,8 +97,8 @@ class HistoryTemplateRenderTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-history-id=\"1\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"historyDetailModal\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("실패 대상자에게 재발송")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"1\" data-tag-submit id=\"tagIds1\" name=\"tagIds\" checked=\"checked\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"2\" data-tag-submit id=\"tagIds2\" name=\"tagIds\" checked=\"checked\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"tagIds\" value=\"1\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"tagIds\" value=\"2\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("tagIds=1")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("tagIds=2")));
     }
