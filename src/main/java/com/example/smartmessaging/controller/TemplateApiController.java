@@ -10,6 +10,7 @@ import com.example.smartmessaging.security.CustomUserDetails;
 import com.example.smartmessaging.service.TemplateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,7 +61,7 @@ public class TemplateApiController {
 
     @PostMapping
     public ResponseEntity<Long> createTemplate(
-            @RequestBody TemplateSaveRequest request,
+            @Valid @RequestBody TemplateSaveRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long templateId = templateService.createTemplate(userDetails.getUserId(), request);
         return ResponseEntity.created(URI.create("/api/templates/" + templateId)).body(templateId);

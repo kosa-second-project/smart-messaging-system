@@ -5,6 +5,7 @@ import com.example.smartmessaging.ai.dto.response.AiReviewResponse;
 import com.example.smartmessaging.ai.dto.response.ValidationIssue;
 import com.example.smartmessaging.ai.dto.type.ChannelType;
 import com.example.smartmessaging.ai.dto.type.IssueSeverity;
+import com.example.smartmessaging.ai.dto.type.IssueSource;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
 import com.example.smartmessaging.ai.service.AiReviewService;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,10 +41,14 @@ class AiMessageControllerTest {
     void 정상_요청을_검사하고_점수_없는_응답을_반환한다() throws Exception {
         ValidationIssue issue = new ValidationIssue(
                 "MISSING_AD_PREFIX",
+                IssueSource.SERVER_RULE,
                 IssueSeverity.HIGH,
+                ReviewStatus.FAIL,
+                "content",
                 "광고성 메시지에는 본문 시작부에 '(광고)' 문구가 필요합니다.",
                 null,
-                "본문 시작부에 '(광고)'를 추가하세요."
+                "본문 시작부에 '(광고)'를 추가하세요.",
+                List.of()
         );
         AiReviewResponse response = new AiReviewResponse(
                 ReviewStatus.FAIL,
@@ -71,6 +76,9 @@ class AiMessageControllerTest {
                 .andExpect(jsonPath("$.status").value("FAIL"))
                 .andExpect(jsonPath("$.summary").value("검사 결과 반드시 수정해야 하는 항목이 있습니다."))
                 .andExpect(jsonPath("$.issues[0].ruleId").value("MISSING_AD_PREFIX"))
+                .andExpect(jsonPath("$.issues[0].source").value("SERVER_RULE"))
+                .andExpect(jsonPath("$.issues[0].status").value("FAIL"))
+                .andExpect(jsonPath("$.issues[0].field").value("content"))
                 .andExpect(jsonPath("$.issues[0].detail").doesNotExist())
                 .andExpect(jsonPath("$.suggestedRewrite").isEmpty())
                 .andExpect(jsonPath("$.needsHumanReview").value(true))

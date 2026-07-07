@@ -9,6 +9,7 @@ public enum ErrorCode {
     UNAUTHORIZED_AUDIT_USER(401, "SYS-401", "감사 필드 주입을 위한 인증 사용자 정보를 찾을 수 없습니다."),
     INVALID_INPUT_VALUE(400, "SYS-400", "올바르지 않은 입력값입니다."),
     AI_REVIEW_INVALID_REQUEST(400, "AI-400", "AI 검사 요청값이 올바르지 않습니다."),
+    AI_SUGGESTION_NO_VALID_CANDIDATE(422, "AI-SUGGESTION-422", "조건을 만족하는 추천 문구를 생성하지 못했습니다."),
     SEND_HISTORY_NOT_FOUND(404, "HISTORY-404", "전송 기록을 찾을 수 없습니다."),
     DRAFT_NOT_FOUND(404, "DRAFT-404", "발송 세션이 만료되었거나 존재하지 않습니다."),
     INTERNAL_SERVER_ERROR(500, "SYS-500", "서버 내부 오류가 발생했습니다."),
