@@ -23,7 +23,7 @@ class UnsubscribeMapperXmlTest {
         parseMapper(configuration, RESOURCE);
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.UnsubscribeMapper.insertRejectHistoryIfAbsent"
+                "com.example.smartmessaging.service.repository.UnsubscribeMapper.insertRejectHistoryIfAbsent"
         )).isTrue();
     }
 

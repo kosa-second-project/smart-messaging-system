@@ -1,10 +1,10 @@
 // ==========================================
-// 4. 2단계: 메시지 작성 및 채널 라우팅 기능 제어 객체
+// 4. 2?④퀎: 硫붿떆吏 ?묒꽦 諛?梨꾨꼸 ?쇱슦??湲곕뒫 ?쒖뼱 媛앹껜
 // ==========================================
 const MessageComposer = {
     channels: [],
     draggedItem: null,
-    smsMaxLength: 90, // DB 연동 전 기본값
+    smsMaxLength: 90, // DB ?곕룞 ??湲곕낯媛?
     baseEstimatedCost: 0,
     smsCost: 18,
     lmsCost: 45,
@@ -25,8 +25,7 @@ const MessageComposer = {
     init: function () {
         this.loadChannels();
         this.bindEvents();
-        // 1단계에서 가져온 총 대상 수 렌더링
-        $("#totalTargetCount").text(SendPage.state.draftTotalCount || 0);
+        // 1?④퀎?먯꽌 媛?몄삩 珥???????뚮뜑留?
         const shouldRestoreMessageDraft = sessionStorage.getItem("messageEntrySource") === "review";
         if (shouldRestoreMessageDraft) {
             $("#messageTitle").val(sessionStorage.getItem("messageTitle") || "");
@@ -91,7 +90,7 @@ const MessageComposer = {
                 let lms = channels.find(c => c.channelType && c.channelType.toUpperCase() === 'LMS');
 
                 if (sms && lms) {
-                    self.smsMaxLength = sms.maxLength || 90; // DB의 SMS 최대 길이값 저장
+                    self.smsMaxLength = sms.maxLength || 90; // DB??SMS 理쒕? 湲몄씠媛????
                     self.smsCost = sms.costPerMsg || 18;
                     self.lmsCost = lms.costPerMsg || 45;
                     sms.originalType = sms.channelType;
@@ -100,7 +99,7 @@ const MessageComposer = {
                     const lmsCost = lms.costPerMsg ? lms.costPerMsg.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : "0";
                     sms.displayCost = `${smsCost}원 / ${lmsCost}원`;
 
-                    // LMS 삭제
+                    // LMS ??젣
                     channels = channels.filter(c => c.id !== lms.id);
                 } else if (sms) {
                     self.smsMaxLength = sms.maxLength || 90;
@@ -110,14 +109,9 @@ const MessageComposer = {
 
                 self.channels = channels;
                 self.renderChannels();
-
-                // 채널 로드가 끝난 후 비용 산출을 호출하여 데이터 일관성 보장(레이스 컨디션 방지)
-                if (SendPage.state.draftId) {
-                    self.loadCostEstimation(SendPage.state.draftId);
-                }
             },
             error: function () {
-                alert("채널 정보를 불러오는 데 실패했습니다.");
+                alert("채널 정보를 불러오지 못했습니다.");
             }
         });
     },
@@ -134,7 +128,7 @@ const MessageComposer = {
                 self.renderPurposeButtons(res.purposes || []);
             },
             error: function () {
-                console.error("템플릿 옵션을 불러오는 데 실패했습니다.");
+                console.error("템플릿 옵션을 불러오지 못했습니다.");
                 self.renderPurposeButtons([]);
             }
         });
@@ -198,7 +192,7 @@ const MessageComposer = {
         return `
             <span class="filter-chip" data-filter-type="${escapeHtml(type)}" data-val="${escapeHtml(value)}">
                 ${escapeHtml(label)}
-                <button type="button" class="filter-chip__remove" aria-label="${escapeHtml(label)} 필터 제거">x</button>
+                <button type="button" class="filter-chip__remove" aria-label="${escapeHtml(label)} ?꾪꽣 ?쒓굅">x</button>
             </span>
         `;
     },
@@ -284,7 +278,6 @@ const MessageComposer = {
         }
         return channelType || "채널";
     },
-
     renderChannels: function () {
         const $list = $("#channelSortableList");
         $list.empty();
@@ -295,11 +288,11 @@ const MessageComposer = {
         }
 
         this.channels.forEach((ch, index) => {
-            const safeName = escapeHtml(ch.channelType);
+            const safeName = escapeHtml(this.getChannelLabel(ch.originalType || ch.channelType));
             const basicCost = ch.costPerMsg ? ch.costPerMsg.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : "0";
             const safeCostStr = ch.displayCost ? `<b>${escapeHtml(ch.displayCost)}</b>` : `<b>${basicCost}</b>원`;
 
-            // 우선순위 뱃지 (1순위, 2순위, 3순위 ...)
+            // ?곗꽑?쒖쐞 諭껋? (1?쒖쐞, 2?쒖쐞, 3?쒖쐞 ...)
             let badgeClass = "priority-disabled";
             if (index === 0) badgeClass = "priority-1";
             else if (index === 1) badgeClass = "priority-2";
@@ -308,7 +301,7 @@ const MessageComposer = {
             const html = `
                 <li class="channel-card" draggable="true" data-index="${index}" data-id="${ch.id}">
                     <div class="channel-info">
-                        <div class="drag-handle">☰</div>
+                        <div class="drag-handle">::</div>
                         <div class="channel-name">${safeName}</div>
                         <div class="channel-meta">건당 ${safeCostStr}</div>
                     </div>
@@ -319,6 +312,8 @@ const MessageComposer = {
         });
 
         this.bindDragEvents();
+        sessionStorage.setItem("routingChannels", JSON.stringify(this.channels));
+        sessionStorage.setItem("routingChannelIds", JSON.stringify(this.channels.map(c => c.id)));
     },
 
     bindDragEvents: function () {
@@ -360,7 +355,7 @@ const MessageComposer = {
             newOrderIds.push($(this).data("id"));
         });
 
-        // channels 배열 재배치
+        // channels 諛곗뿴 ?щ같移?
         const reordered = [];
         const priorities = [];
         newOrderIds.forEach(id => {
@@ -372,25 +367,21 @@ const MessageComposer = {
         });
 
         this.channels = reordered;
-        this.renderChannels(); // 뱃지 재렌더링
-
-        if (SendPage.state.draftId) {
-            this.loadCostEstimation(SendPage.state.draftId, priorities);
-        }
+        this.renderChannels(); // 諭껋? ?щ젋?붾쭅
     },
 
     bindEvents: function () {
         const self = this;
 
-        // 최저가 자동정렬 버튼
+        // 理쒖?媛 ?먮룞?뺣젹 踰꾪듉
         $("#btnSmartSort").on("click", function () {
             self.channels.sort((a, b) => (a.costPerMsg || 0) - (b.costPerMsg || 0));
             self.renderChannels();
-            // 정렬된 순서를 반영하여 예상 비용 재계산 호출
+            // ?뺣젹???쒖꽌瑜?諛섏쁺?섏뿬 ?덉긽 鍮꾩슜 ?ш퀎???몄텧
             self.updateChannelOrder();
         });
 
-        // 미리보기 탭 스위칭 이벤트
+        // 誘몃━蹂닿린 ???ㅼ쐞移??대깽??
         $(".preview-tab-btn").on("click", function () {
             $(".preview-tab-btn").removeClass("active");
             $(this).addClass("active");
@@ -401,38 +392,41 @@ const MessageComposer = {
             $box.addClass("mode-" + target);
         });
 
-        // 제목 입력 실시간 미리보기 동기화
+        // ?쒕ぉ ?낅젰 ?ㅼ떆媛?誘몃━蹂닿린 ?숆린??
         $("#messageTitle").on("input", function () {
-            const title = $(this).val() || "메시지 제목";
+            const rawVal = $(this).val() || "";
+            sessionStorage.setItem("messageTitle", rawVal);
+            const title = rawVal || "메시지 제목";
             $("#previewSmsTitle").text(title);
             $("#previewKakaoTitle").text(title);
             $("#previewEmailTitle").text(title);
             self.updateMessageMetrics();
         });
 
-        // 텍스트 바이트 수 계산 및 미리보기 화면 텍스트 동기화
+        // ?띿뒪??諛붿씠????怨꾩궛 諛?誘몃━蹂닿린 ?붾㈃ ?띿뒪???숆린??
         $("#messageContent").on("input", function () {
-            const actualText = $(this).val();
+            const actualText = $(this).val() || "";
+            sessionStorage.setItem("messageContent", actualText);
 
             self.updatePreviewContent();
             self.updateMessageMetrics();
         });
 
-        // 템플릿 카드 클릭 시 제목과 내용 자동 완성 및 미리보기 연동
+        // 템플릿 카드 클릭 시 제목과 내용을 자동 완성하고 미리보기를 연동
         $(document).on("click", ".template-card", function () {
             const title = $(this).attr("data-title") || "";
             const content = $(this).attr("data-template") || "";
             const purpose = $(this).attr("data-purpose");
 
-            // 입력 필드 세팅
+            // ?낅젰 ?꾨뱶 ?명똿
             $("#messageTitle").val(title);
             $("#messageContent").val(content);
 
-            // 실시간 미리보기 업데이트
+            // ?ㅼ떆媛?誘몃━蹂닿린 ?낅뜲?댄듃
             $("#messageTitle").trigger("input");
             $("#messageContent").trigger("input");
 
-            // 광고여부 버튼 연동
+            // 愿묎퀬?щ? 踰꾪듉 ?곕룞
             if (purpose) {
                 $(".purpose-btn").removeClass("active");
                 $(`.purpose-btn[data-val="${purpose}"]`).addClass("active");
@@ -441,7 +435,7 @@ const MessageComposer = {
                 self.updateMessageMetrics();
             }
 
-            // 시각적 피드백 (선택 효과)
+            // ?쒓컖???쇰뱶諛?(?좏깮 ?④낵)
             $(".template-card").removeClass("active-card");
             $(this).addClass("active-card");
             self.updateSelectedTemplate(title, content);
@@ -597,104 +591,6 @@ const MessageComposer = {
         this.updatePreviewContent();
         this.updateMessageMetrics();
     },
-
-    loadCostEstimation: function (draftId, priorities = []) {
-        const self = this;
-
-        // 로딩 피드백 제공
-        $("#estimatedTotalCost").text("계산 중...");
-        $("#channelDistributionList").empty().append('<li class="cost-distribution-item cost-distribution-item--loading">재계산 중입니다...</li>');
-
-        $.ajax({
-            url: `/api/campaigns/draft/${draftId}/estimate-cost`,
-            type: "GET",
-            data: { priorities: priorities },
-            traditional: true,
-            success: function (res) {
-                if (!res) return;
-
-                // 1. 총 비용 표시 (동적 계산을 위해 변수에 저장)
-                self.baseEstimatedCost = res.totalEstimatedCost || 0;
-                self.channelDistribution = self.normalizeDistribution(res.channelDistribution || {});
-                self.smsCount = self.channelDistribution["SMS"] || 0;
-
-                self.updateCostUI(self.isCurrentLmsMessage());
-            },
-            error: function (err) {
-                if (err.status === 404) {
-                    alert("발송 세션이 만료되었거나 존재하지 않습니다. 수신자 선택 단계로 돌아갑니다.");
-                    if (typeof SendPage !== "undefined") {
-                        SendPage.clearSendSession();
-                    }
-                    window.location.href = "/send/recipients";
-                } else {
-                    console.error("예상 비용 산출 실패");
-                }
-            }
-        });
-    },
-
-    updateCostUI: function (isLms) {
-        let extraCost = 0;
-        if (isLms) {
-            extraCost = (this.lmsCost - this.smsCost) * this.smsCount;
-        }
-        const totalCost = this.baseEstimatedCost + extraCost;
-        $("#estimatedTotalCost").text(totalCost.toLocaleString());
-
-        // 2. 채널 분포 리스트 표시 및 SMS -> LMS 변환
-        const $distList = $("#channelDistributionList");
-        $distList.empty();
-
-        const dist = { ...this.channelDistribution };
-
-        if (isLms && dist["SMS"] > 0) {
-            // SMS의 인원을 전부 LMS로 이동
-            dist["LMS"] = (dist["LMS"] || 0) + dist["SMS"];
-            dist["SMS"] = 0;
-        }
-
-        // 항상 표시할 주요 채널들
-        const allKeys = ["EMAIL", "SMS", "LMS", "KAKAO", "UNASSIGNED"];
-        const self = this;
-
-        allKeys.forEach(channelType => {
-            const count = dist[channelType] || 0;
-
-            // 배정 제외는 0명이면 굳이 표시하지 않음
-            if (channelType === "UNASSIGNED" && count === 0) return;
-
-            let label = channelType;
-            let costPerMsg = 0;
-
-            if (channelType === "KAKAO") {
-                label = "카카오톡";
-                const ch = self.channels.find(c => self.normalizeChannelType(c.channelType) === "KAKAO");
-                if (ch) costPerMsg = ch.costPerMsg || 0;
-            }
-            else if (channelType === "SMS") { label = "SMS"; costPerMsg = self.smsCost; }
-            else if (channelType === "LMS") { label = "LMS"; costPerMsg = self.lmsCost; }
-            else if (channelType === "EMAIL") {
-                label = "이메일";
-                const ch = self.channels.find(c => self.normalizeChannelType(c.channelType) === "EMAIL");
-                if (ch) costPerMsg = ch.costPerMsg || 0;
-            }
-            else if (channelType === "UNASSIGNED") { label = "배정 불가"; }
-
-            let totalChCost = count * costPerMsg;
-            const formattedCost = totalChCost > 0 ? totalChCost.toLocaleString(undefined, { maximumFractionDigits: 1 }) + "원" : "0원";
-
-            const itemHtml = `
-                <li class="cost-distribution-item">
-                    <span class="cost-distribution-label">${escapeHtml(label)}</span>
-                    <span class="cost-distribution-value">${count}명</span>
-                    <span class="cost-distribution-cost">${formattedCost}</span>
-                </li>
-            `;
-            $distList.append(itemHtml);
-        });
-    },
-
     restorePurposeState: function (shouldRestore = true) {
         if (!shouldRestore) {
             sessionStorage.removeItem("messagePurpose");
@@ -729,17 +625,16 @@ const MessageComposer = {
             $notice
                 .removeClass("message-purpose-notice--info")
                 .addClass("message-purpose-notice--ad")
-                .text("광고성 문자에는 고객별 수신거부 링크가 자동으로 추가됩니다.");
+                .text("광고성 메시지는 수신거부 링크가 자동으로 추가됩니다.");
             $(".preview-ad-badge").text("광고성").removeClass("preview-ad-badge--info");
             return;
         }
         $notice
             .removeClass("message-purpose-notice--ad")
             .addClass("message-purpose-notice--info")
-            .text("정보성 메시지에는 광고 문구 사용을 제한해주세요.");
+            .text("정보성 메시지로 발송됩니다.");
         $(".preview-ad-badge").text("정보성").addClass("preview-ad-badge--info");
     },
-
     updatePreviewContent: function () {
         const preview = this.buildPreviewParts(true);
 
@@ -767,7 +662,6 @@ const MessageComposer = {
                 .removeClass("ds-badge--secondary msg-type-badge--lms")
                 .addClass("ds-badge--primary");
         }
-        this.updateCostUI(isLms);
     },
 
     buildPreviewMessageText: function (usePlaceholder) {
@@ -792,8 +686,8 @@ const MessageComposer = {
     },
 
     buildPreviewParts: function (usePlaceholder) {
-        const body = $("#messageContent").val() || (usePlaceholder ? "전송할 메시지 내용을 입력해주세요." : "");
-        const buttonName = ($("#linkButtonName").val() || "자세히 보기").trim();
+        const body = $("#messageContent").val() || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
+        const buttonName = ($("#linkButtonName").val() || "?먯꽭??蹂닿린").trim();
         const linkUrl = ($("#linkUrl").val() || "").trim();
         const purpose = $(".purpose-btn.active").data("val") || "INFO";
         const parts = {
@@ -910,18 +804,18 @@ const MessageComposer = {
             return;
         }
         if (!linkUrl) {
-            alert("클릭 확인을 위해 링크 URL을 입력해주세요.");
+            alert("?대┃ ?뺤씤???꾪빐 留곹겕 URL???낅젰?댁＜?몄슂.");
             $("#linkUrl").focus();
             this.openLinkSettings();
             return;
         }
         if (!/^https?:\/\//i.test(linkUrl)) {
-            alert("링크 URL은 http 또는 https로 시작해야 합니다.");
+            alert("留곹겕 URL? http ?먮뒗 https濡??쒖옉?댁빞 ?⑸땲??");
             $("#linkUrl").focus();
             this.openLinkSettings();
             return;
         }
-        if (!window.confirm("내 카카오 계정으로 테스트 메시지를 발송할까요?")) {
+        if (!window.confirm("테스트 메시지를 발송할까요?")) {
             return;
         }
 
@@ -962,12 +856,11 @@ const MessageComposer = {
 
     buildTestSendResultMessage: function (res) {
         const lines = [
-            "테스트 발송 요청이 완료되었습니다.",
-            "대상: " + (res.customerName || "테스트 고객"),
+            "테스트 발송 요청 결과",
+            "대상: " + (res.customerName || "테스트 수신자"),
             "",
-            this.formatChannelResult("문자", res.smsResult, res.smsActionUrl),
-            this.formatChannelResult("이메일", res.emailResult, res.emailActionUrl),
-            this.formatChannelResult("카카오", res.kakaoResult, res.kakaoActionUrl)
+            this.formatChannelResult("SMS", res.smsResult, res.smsActionUrl),
+            this.formatChannelResult("이메일", res.emailResult, res.emailActionUrl)
         ];
         return lines.join("\n");
     },
@@ -977,14 +870,10 @@ const MessageComposer = {
             return label + ": 결과 없음";
         }
         if (result.success) {
-            return label + ": 성공\n" + actionUrl;
+            return label + ": 성공" + (actionUrl ? "\n" + actionUrl : "");
         }
-        if (result.errorCode === "SKIPPED") {
-            return label + ": 스킵 - " + (result.errorMessage || "이번 테스트 발송 대상이 아닙니다.");
-        }
-        return label + ": 실패 - " + (result.errorMessage || result.errorCode || "알 수 없는 오류");
+        return label + ": 스킵 - " + (result.errorMessage || "이번 테스트 발송 대상이 아닙니다.");
     },
-
     getCurrentChannelIds: function () {
         return this.channels
             .map(channel => channel.id)
@@ -1009,3 +898,5 @@ const MessageComposer = {
         $textarea.trigger("input");
     }
 };
+
+

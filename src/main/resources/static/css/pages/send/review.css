@@ -1,0 +1,265 @@
+/* static/css/pages/send/review.css - 캡처 이미지에 완전히 맞춘 발송 검토 대시보드 스타일 */
+
+.review-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem;
+}
+
+/* 2컬럼 레이아웃: 좌측 1.2 : 우측 2 */
+.review-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 공통 카드 스타일 */
+.ds-card-flat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.ds-card-flat__title {
+  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--foreground);
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+/* 1. 발송 방식 설정 영역 (좌측) */
+.send-method-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.method-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.method-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.method-tab-btn:hover {
+  border-color: var(--primary);
+}
+
+.method-tab-btn.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(24, 67, 250, 0.03);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* 예약 일시 세부 레이아웃 */
+.reservation-detail-area {
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 1rem;
+}
+
+.reservation-detail-area.active {
+  display: flex;
+}
+
+.reserve-label {
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--muted-foreground);
+}
+
+.quick-time-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.quick-time-btn {
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  cursor: pointer;
+  color: var(--foreground);
+  font-weight: var(--font-weight-medium);
+  transition: all 0.2s;
+}
+
+.quick-time-btn:hover {
+  border-color: var(--primary);
+}
+
+.quick-time-btn.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.datetime-inputs-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0.75rem;
+}
+
+.input-with-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.input-with-label label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.input-with-label input {
+  padding: 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--card);
+  outline: none;
+}
+
+.input-with-label input:focus {
+  border-color: var(--primary);
+}
+
+/* 2. 비용 계산 영역 (우측) */
+.cost-calculation-area {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .cost-calculation-area {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cost-info-card {
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid var(--border);
+  min-height: 90px;
+}
+
+/* 회색 카드 (대상인원, 광고여부, 채널) */
+.cost-info-card.neutral {
+  background: #F0F0F5;
+  border-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 파란색 카드 (예상 발송 비용) */
+.cost-info-card.info-blue {
+  background: #EEF1FF;
+  border-color: rgba(24, 67, 250, 0.12);
+}
+
+/* 초록색 카드 (예상 절감액) */
+.cost-info-card.success-green {
+  background: #E8F8F5;
+  border-color: rgba(16, 185, 129, 0.12);
+  grid-column: span 2;
+}
+
+@media (max-width: 600px) {
+  .cost-info-card.success-green {
+    grid-column: span 1;
+  }
+}
+
+.cost-card-label {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+.cost-card-value {
+  font-size: 1.375rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--foreground);
+  margin: 0;
+}
+
+.cost-info-card.info-blue .cost-card-value {
+  color: var(--primary);
+}
+
+.cost-info-card.success-green .cost-card-value {
+  color: var(--success);
+}
+
+.cost-saving-detail {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+
+/* 채널 리스트 뱃지 */
+.channel-badge-list {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.channel-badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--foreground);
+}
+
+.channel-number-circle {
+  display: inline-grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+}

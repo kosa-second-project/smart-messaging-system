@@ -6,7 +6,7 @@
     namespace는 Java Mapper 인터페이스의 전체 경로와 같아야 한다.
     그래야 StatsBatchMapper의 메서드 호출이 아래 SQL id와 연결된다.
 -->
-<mapper namespace="com.example.smartmessaging.mapper.StatsBatchMapper">
+<mapper namespace="com.example.smartmessaging.service.repository.StatsBatchMapper">
 
     <!--
         특정 날짜의 기존 message_stat 활성 row를 soft-delete 처리한다.

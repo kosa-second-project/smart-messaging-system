@@ -22,10 +22,10 @@ class ShortUrlMapperXmlTest {
         parseMapper(configuration, "mappers/common-mapper.xml");
         parseMapper(configuration, RESOURCE);
 
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.findClickTargetById")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.markFirstClicked")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.incrementChannelClickCount")).isTrue();
-        assertThat(configuration.hasStatement("com.example.smartmessaging.mapper.ShortUrlMapper.incrementHourlyClickCount")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.ShortUrlMapper.findClickTargetById")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.ShortUrlMapper.markFirstClicked")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.ShortUrlMapper.incrementChannelClickCount")).isTrue();
+        assertThat(configuration.hasStatement("com.example.smartmessaging.service.repository.ShortUrlMapper.incrementHourlyClickCount")).isTrue();
     }
 
     @Test
