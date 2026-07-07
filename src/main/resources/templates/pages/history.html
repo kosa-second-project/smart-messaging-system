@@ -89,18 +89,14 @@
                 <div class="ds-filter-period" aria-label="발송 기간">
                     <label>
                         <span class="visually-hidden">시작일</span>
-                        <input class="ds-input" type="date" th:field="*{startDate}">
+                        <input class="ds-input" type="date" th:field="*{startDate}" data-auto-submit>
                     </label>
                     <span aria-hidden="true">~</span>
                     <label>
                         <span class="visually-hidden">종료일</span>
-                        <input class="ds-input" type="date" th:field="*{endDate}">
+                        <input class="ds-input" type="date" th:field="*{endDate}" data-auto-submit>
                     </label>
                 </div>
-            </div>
-
-            <div class="ds-filter-actions">
-                <button class="ds-button ds-button--primary history-filter__submit" type="submit">조회</button>
                 <a class="ds-button ds-button--ghost" th:href="@{/history}">초기화</a>
             </div>
         </div>
