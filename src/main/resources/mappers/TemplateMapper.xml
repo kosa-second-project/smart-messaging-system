@@ -115,9 +115,26 @@
             t.category,
             t.cnt,
             t.purpose,
+            NVL(ts.click_rate, 0) AS click_rate,
+            NVL(ts.conversion_rate, 0) AS conversion_rate,
             TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
             TO_CHAR(t.updated_at, 'YYYY-MM-DD HH24:MI') AS updated_at
         FROM template t
+        LEFT JOIN (
+            SELECT
+                template_id,
+                CASE
+                    WHEN SUM(NVL(click_target_count, 0)) = 0 THEN 0
+                    ELSE ROUND((SUM(NVL(click_count, 0)) / SUM(NVL(click_target_count, 0))) * 100, 1)
+                END AS click_rate,
+                CASE
+                    WHEN SUM(NVL(conversion_target_count, 0)) = 0 THEN 0
+                    ELSE ROUND((SUM(NVL(conversion_count, 0)) / SUM(NVL(conversion_target_count, 0))) * 100, 1)
+                END AS conversion_rate
+            FROM template_stat
+            WHERE NVL(is_deleted, 0) = 0
+            GROUP BY template_id
+        ) ts ON ts.template_id = t.id
         WHERE t.id = #{templateId}
           AND t.user_id = #{userId}
           AND NVL(t.is_deleted, 0) = 0

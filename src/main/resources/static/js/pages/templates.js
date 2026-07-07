@@ -325,6 +325,7 @@ function openTemplateDetailModal(templateId) {
         .then(data => {
             currentDetailItem = data;
             body.innerHTML = renderTemplateDetail(data);
+            renderTemplateDetailPreview(data);
         })
         .catch(err => {
             console.error("Template detail load fail:", err);
@@ -362,6 +363,8 @@ function renderTemplateDetail(item) {
             <div class="template-detail__metrics">
                 ${renderMetric("템플릿 ID", item.id || "-")}
                 ${renderMetric("사용 횟수", `${(item.cnt || 0).toLocaleString()}회`)}
+                ${renderMetric("클릭률", formatPercent(item.clickRate))}
+                ${renderMetric("전환률", formatPercent(item.conversionRate))}
                 ${renderMetric("생성일", item.createdAt || "-")}
                 ${renderMetric("최근 수정", item.updatedAt || "-")}
                 ${renderMetric("광고여부", getPurposeLabel(item.purpose))}
@@ -385,7 +388,6 @@ function renderTemplateDetail(item) {
                         </div>
                     </div>
                     <div id="templateDetailPreview">
-                        ${renderMessagePreview(item.title, item.content, currentDetailPreviewMode, true)}
                     </div>
                 </section>
             </div>
@@ -406,12 +408,57 @@ function switchDetailPreviewMode(mode) {
     // 미리보기 화면 갱신
     const previewDiv = document.getElementById("templateDetailPreview");
     if (previewDiv && currentDetailItem) {
-        previewDiv.innerHTML = renderMessagePreview(
-            currentDetailItem.title, 
-            currentDetailItem.content, 
-            mode, 
-            true
-        );
+        renderTemplateDetailPreview(currentDetailItem);
+    }
+}
+
+function renderTemplateDetailPreview(item) {
+    const previewDiv = document.getElementById("templateDetailPreview");
+    if (!previewDiv) {
+        return;
+    }
+
+    const component = createCommonMessagePreview(item.title, item.content, currentDetailPreviewMode);
+    previewDiv.innerHTML = "";
+    if (component) {
+        previewDiv.appendChild(component);
+    }
+}
+
+function createCommonMessagePreview(title, content, mode) {
+    const template = document.getElementById("messagePreviewComponentTemplate");
+    if (!template) {
+        return null;
+    }
+
+    const fragment = template.content.cloneNode(true);
+    const preview = fragment.querySelector("#phonePreviewBox");
+    if (!preview) {
+        return null;
+    }
+
+    const normalizedMode = mode === "message" ? "sms" : mode;
+    preview.classList.remove("mode-sms", "mode-kakao", "mode-email");
+    preview.classList.add(`mode-${normalizedMode}`);
+
+    setPreviewText(preview, "#previewSmsTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewKakaoTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewEmailTitle", title || "메시지 제목");
+    setPreviewText(preview, "#previewSmsContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewKakaoContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewEmailContent", content || "발송할 메시지 내용을 입력해주세요.");
+    setPreviewText(preview, "#previewSmsLinks", "");
+    setPreviewText(preview, "#previewKakaoLinks", "");
+    setPreviewText(preview, "#previewSmsUnsubscribe", "");
+    setPreviewText(preview, "#previewKakaoUnsubscribe", "");
+
+    return preview;
+}
+
+function setPreviewText(root, selector, text) {
+    const target = root.querySelector(selector);
+    if (target) {
+        target.textContent = text;
     }
 }
 
@@ -422,6 +469,17 @@ function renderMetric(label, value) {
             <div class="template-detail__metric-value">${escapeHtml(value)}</div>
         </div>
     `;
+}
+
+function formatPercent(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+        return "0%";
+    }
+    return `${number.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1
+    })}%`;
 }
 
 function openAddTemplateModal() {

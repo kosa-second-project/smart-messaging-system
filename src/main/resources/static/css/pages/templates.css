@@ -302,7 +302,7 @@
 
 @media (min-width: 1024px) {
     .template-detail__content {
-        grid-template-columns: minmax(0, 1fr) 18.75rem;
+        grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
         align-items: start;
     }
 }
@@ -643,16 +643,8 @@
     resize: none;
 }
 
-.template-form-preview .message-preview,
-.template-detail-preview .message-preview {
-    width: 16rem;
-    border-radius: 2.65rem;
-    padding: 0.375rem;
-}
-
-.template-form-preview .message-preview__screen,
-.template-detail-preview .message-preview__screen {
-    border-radius: 2.22rem;
+.template-form-preview .message-preview {
+    width: min(16.5rem, 100%);
 }
 
 .template-form-preview,
@@ -660,6 +652,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-width: 0;
 }
 
 .template-form-preview .template-preview-header,
@@ -672,11 +665,32 @@
     flex: 0 0 auto;
 }
 
+#templateDetailPreview {
+    --template-detail-preview-scale: 0.68;
+    display: flex;
+    justify-content: center;
+    width: calc(393px * var(--template-detail-preview-scale));
+    height: calc(852px * var(--template-detail-preview-scale));
+    max-width: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+
+.template-detail-preview #phonePreviewBox {
+    width: 393px;
+    transform: scale(var(--template-detail-preview-scale));
+    transform-origin: top center;
+}
+
 @media (max-width: 1023.98px) {
     .template-form-preview,
     .template-detail-preview {
         max-width: 22rem;
         margin: 0 auto;
+    }
+
+    #templateDetailPreview {
+        --template-detail-preview-scale: 0.72;
     }
 }
 
@@ -688,5 +702,14 @@
     .template-add-modal,
     .template-detail-modal {
         max-height: calc(100vh - 2rem);
+    }
+
+    .template-detail-preview .template-preview-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #templateDetailPreview {
+        --template-detail-preview-scale: 0.64;
     }
 }

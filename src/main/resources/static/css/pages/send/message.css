@@ -968,12 +968,9 @@
 }
 
 .preview-section #phonePreviewBox {
-    width: min(320px, 100%);
-    height: clamp(460px, 58dvh, 620px);
-}
-
-.preview-section .preview-status-bar {
-    flex: 0 0 82px;
+    width: min(330px, 100%);
+    aspect-ratio: 393 / 852;
+    height: auto;
 }
 
 .preview-section .preview-body {
@@ -1042,6 +1039,8 @@
     }
 
     .preview-section #phonePreviewBox {
-        height: 560px;
+        width: min(330px, 100%);
+        aspect-ratio: 393 / 852;
+        height: auto;
     }
 }

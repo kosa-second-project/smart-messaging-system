@@ -196,6 +196,10 @@
         </div>
     </div>
 
+    <template id="messagePreviewComponentTemplate">
+        <div th:replace="~{fragments/components/message-preview :: preview}"></div>
+    </template>
+
     <script th:src="@{/js/pages/templates.js}"></script>
 </main>
 </html>

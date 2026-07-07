@@ -44,6 +44,20 @@ class TemplateMapperXmlTest {
                 .contains("t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST, t.id DESC");
     }
 
+    @Test
+    void detail_query_calculates_click_and_conversion_rates() throws Exception {
+        String mapper = new String(
+                Resources.getResourceAsStream(RESOURCE).readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(mapper)
+                .contains("AS click_rate",
+                        "AS conversion_rate",
+                        "SUM(NVL(click_count, 0)) / SUM(NVL(click_target_count, 0))",
+                        "SUM(NVL(conversion_count, 0)) / SUM(NVL(conversion_target_count, 0))");
+    }
+
     private void parseMapper(Configuration configuration, String resource) throws Exception {
         try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
             XMLMapperBuilder mapperParser = new XMLMapperBuilder(
