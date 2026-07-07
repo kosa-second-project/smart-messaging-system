@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.smartmessaging.mapper.SendPreparationMapper">
+<mapper namespace="com.example.smartmessaging.service.repository.SendPreparationMapper">
 
     <select id="findRecipientCandidatesByCustomerIds" resultType="SendRecipientCandidateVO">
         SELECT
             c.id AS customer_id,
+            NVL(c.is_real_customer, 1) AS isRealCustomer,
             c.phone AS phone,
             c.email AS email,
             NULL AS kakao_user_key,
@@ -48,22 +49,24 @@
             estimated_cost,
             estimated_saving,
             actual_cost,
+            kakao_access_token_enc,
             scheduled_at,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{templateId,jdbcType=NUMERIC},
-            #{userId},
-            #{title},
-            #{content},
-            #{purpose},
-            #{status},
-            #{totalTargetCount},
-            #{successCount},
-            #{failCount},
-            #{estimatedCost},
-            #{estimatedSaving},
-            #{actualCost},
-            #{scheduledAt,jdbcType=TIMESTAMP},
+            #{templateId, jdbcType=BIGINT},
+            #{userId, jdbcType=BIGINT},
+            #{title, jdbcType=VARCHAR},
+            #{content, jdbcType=VARCHAR},
+            #{purpose, jdbcType=VARCHAR},
+            #{status, jdbcType=VARCHAR},
+            #{totalTargetCount, jdbcType=INTEGER},
+            #{successCount, jdbcType=INTEGER},
+            #{failCount, jdbcType=INTEGER},
+            #{estimatedCost, jdbcType=DECIMAL},
+            #{estimatedSaving, jdbcType=DECIMAL},
+            #{actualCost, jdbcType=DECIMAL},
+            #{kakaoAccessTokenEnc, jdbcType=CLOB},
+            #{scheduledAt, jdbcType=TIMESTAMP},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -75,9 +78,9 @@
             priority_order,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{sendHistoryId},
-            #{channelId},
-            #{priorityOrder},
+            #{sendHistoryId, jdbcType=BIGINT},
+            #{channelId, jdbcType=BIGINT},
+            #{priorityOrder, jdbcType=INTEGER},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
@@ -92,13 +95,83 @@
             user_uuid,
             <include refid="Common.auditColumns"/>
         ) VALUES (
-            #{sendHistoryId},
-            #{customerId},
-            #{finalChannelId},
-            #{status},
-            #{cost},
-            #{userUuid,jdbcType=VARCHAR},
+            #{sendHistoryId, jdbcType=BIGINT},
+            #{customerId, jdbcType=BIGINT},
+            #{finalChannelId, jdbcType=BIGINT},
+            #{status, jdbcType=VARCHAR},
+            #{cost, jdbcType=DECIMAL},
+            #{userUuid, jdbcType=VARCHAR},
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
+
+    <select id="selectSendHistoryById" resultType="com.example.smartmessaging.dto.vo.SendHistoryVO">
+        SELECT *
+        FROM send_history
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </select>
+
+    <update id="updateHistoryStatus">
+        UPDATE send_history
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </update>
+    <update id="updateHistoryTotalTargetCount">
+        UPDATE send_history
+        SET total_target_count = #{totalTargetCount},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </update>
+
+    <select id="findPendingReservedCampaigns" resultType="com.example.smartmessaging.dto.vo.SendHistoryVO">
+        SELECT *
+        FROM send_history
+        WHERE status = 'SCHEDULED'
+          AND scheduled_at <![CDATA[<=]]> #{now}
+          AND is_deleted = 0
+    </select>
+
+    <select id="findRoutingChannelIdsByHistoryId" resultType="long">
+        SELECT channel_id
+        FROM send_history_routing
+        WHERE send_history_id = #{sendHistoryId}
+          AND is_deleted = 0
+        ORDER BY priority_order ASC
+    </select>
+
+    <select id="selectPendingTargetsByHistoryId" resultType="com.example.smartmessaging.dto.vo.SendTargetVO">
+        SELECT *
+        FROM send_target
+        WHERE send_history_id = #{sendHistoryId}
+          AND status = 'PENDING'
+          AND is_deleted = 0
+    </select>
+
+    <select id="selectReservedSendTasks" resultType="com.example.smartmessaging.dto.request.MessageTaskDto">
+        SELECT
+            'send-' || sh.id || '-' || st.id AS messageId,
+            sh.id AS sendHistoryId,
+            st.id AS sendTargetId,
+            sh.template_id AS templateId,
+            sh.id AS campaignId,
+            st.customer_id AS customerId,
+            NVL(c.is_real_customer, 1) AS isRealCustomer,
+            c.phone AS phoneNumber,
+            c.email AS email,
+            NULL AS kakaoUserKey,
+            sh.title AS title,
+            sh.content AS content,
+            sh.purpose AS purpose
+        FROM send_target st
+        JOIN send_history sh ON sh.id = st.send_history_id
+        JOIN customer c ON c.id = st.customer_id
+        WHERE st.send_history_id = #{sendHistoryId}
+          AND st.status = 'PENDING'
+          AND st.is_deleted = 0
+          AND sh.is_deleted = 0
+    </select>
 </mapper>

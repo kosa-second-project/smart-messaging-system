@@ -13,8 +13,6 @@ public class DevTestSendResponse {
     private String phone;
     private String smsActionUrl;
     private String emailActionUrl;
-    private String kakaoActionUrl;
     private SendResult smsResult;
     private SendResult emailResult;
-    private SendResult kakaoResult;
 }

@@ -7,6 +7,7 @@ import com.solapi.sdk.message.service.DefaultMessageService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import com.example.smartmessaging.service.impl.SmsMessageServiceImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,7 +22,7 @@ class SmsMessageServiceTest {
     @Test
     @DisplayName("SMS 채널이면 MessageType.SMS를 명시하고 자동 타입 판별을 끈다")
     void sendTextMessage_smsType() throws Exception {
-        SmsMessageService service = new SmsMessageService(
+        SmsMessageService service = new SmsMessageServiceImpl(
                 solapiMessageService,
                 true,
                 "01012345678"
@@ -46,7 +47,7 @@ class SmsMessageServiceTest {
     @Test
     @DisplayName("LMS 채널이면 MessageType.LMS와 제목을 설정하고 자동 타입 판별을 끈다")
     void sendTextMessage_lmsType() throws Exception {
-        SmsMessageService service = new SmsMessageService(
+        SmsMessageService service = new SmsMessageServiceImpl(
                 solapiMessageService,
                 true,
                 "01012345678"
@@ -68,7 +69,7 @@ class SmsMessageServiceTest {
     @Test
     @DisplayName("수신번호가 올바르지 않으면 SOLAPI를 호출하지 않는다")
     void sendTextMessage_invalidPhone() throws Exception {
-        SmsMessageService service = new SmsMessageService(
+        SmsMessageService service = new SmsMessageServiceImpl(
                 solapiMessageService,
                 true,
                 "01012345678"
@@ -85,7 +86,7 @@ class SmsMessageServiceTest {
     @Test
     @DisplayName("SOLAPI가 비활성화되어 있으면 SOLAPI를 호출하지 않는다")
     void sendTextMessage_disabled() throws Exception {
-        SmsMessageService service = new SmsMessageService(
+        SmsMessageService service = new SmsMessageServiceImpl(
                 solapiMessageService,
                 false,
                 "01012345678"
@@ -101,7 +102,7 @@ class SmsMessageServiceTest {
     @Test
     @DisplayName("광고성 문자에는 추적 링크와 수신거부 링크를 본문에 추가한다")
     void sendTextMessage_adTextIncludesLinks() throws Exception {
-        SmsMessageService service = new SmsMessageService(
+        SmsMessageService service = new SmsMessageServiceImpl(
                 solapiMessageService,
                 true,
                 "01012345678"

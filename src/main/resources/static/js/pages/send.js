@@ -1,5 +1,5 @@
 // ==========================================
-// 0. HTML 이스케이프 유틸리티 (XSS 방지)
+// 0. HTML escape utility
 // ==========================================
 function escapeHtml(str) {
     if (str == null) return '';
@@ -9,52 +9,40 @@ function escapeHtml(str) {
 }
 
 // ==========================================
-// 1. DB 태그 ID 매핑 맵 정의
+// 1. DB tag id map loaded from server
 // ==========================================
-const TAG_MAP = {
-    "일반": 23, "신규": 24, "휴면": 25, "생일 대상자": 26,
-    "카카오 동의": 27, "sms 동의": 28, "이메일 동의": 29,
-    "남자": 30, "여자": 31,
-    "10대": 32, "20대": 33, "30대": 34, "40대": 35, "50대": 36, "60대": 37, "70대": 38
-};
+let TAG_MAP = {};
 
 // ==========================================
-// 2. 발송 화면 전역 상태 관리 객체
+// 2. Send page global state
 // ==========================================
 const SendPage = {
-    // 현재 전역 데이터 상태
     state: {
         currentStep: 1,
-        selectedTags: [],            // 항상 빈 태그 상태로 시작
-        conditionMode: 'OR',         // 기본 OR 모드
-        draftId: null,               // Redis에 저장된 수신자 목록의 식별자 (draftId)
-        draftTotalCount: 0,          // Redis에 저장된 수신자 총 인원 수
-        searchQuery: '',             // 우측 고객 검색어
-        cursorHistory: [null],       // 페이징 커서 히스토리 (index 0 = 1페이지)
-        currentCursorIndex: 0,       // 현재 보고 있는 커서 히스토리의 인덱스
-        nextCursorId: null,          // 서버에서 응답받은 다음 페이지 커서
-        hasNext: false,              // 다음 페이지 존재 여부
-        pageSize: 20,                // 한 페이지에 20명씩 렌더링 (기본값)
-        activeTab: 'filtered',       // 'filtered'(태그후보), 'selected'(직접선택)
-        renderSeq: 0                 // AJAX 요청 순번: 이전 응답 덮어쓰기(Race Condition) 방지
+        selectedTags: [],
+        conditionMode: 'OR',
+        draftId: null,
+        draftTotalCount: 0,
+        searchQuery: '',
+        cursorHistory: [null],
+        currentCursorIndex: 0,
+        nextCursorId: null,
+        hasNext: false,
+        pageSize: 20,
+        activeTab: 'filtered',
+        renderSeq: 0
     },
 
-    isNavigatingInternal: false,     // 정상적인 이전/다음 단계 이동 여부 플래그
+    isNavigatingInternal: false,
 
-    // 초기화
     init: function () {
-
-
-        // 현재 URL 경로를 통해 currentStep 파싱
         const path = window.location.pathname;
         if (path.includes("/send/recipients")) {
             this.state.currentStep = 1;
-            // 1단계 진입 시에도 이전 단계에서 이동해 온 경우를 위해 복원
             this.state.draftId = sessionStorage.getItem("draftId") || null;
             this.state.draftTotalCount = parseInt(sessionStorage.getItem("draftTotalCount") || "0");
         } else if (path.includes("/send/message")) {
             this.state.currentStep = 2;
-            // 2단계 진입: 1단계에서 저장해 둔 draftId 복원
             this.state.draftId = sessionStorage.getItem("draftId") || null;
             this.state.draftTotalCount = parseInt(sessionStorage.getItem("draftTotalCount") || "0");
         } else if (path.includes("/send/review")) {
@@ -66,8 +54,6 @@ const SendPage = {
         }
 
         this.bindGlobalEvents();
-
-        // 현재 단계에 맞춘 초기 UI 동기화
         this.updateStepBarUI(this.state.currentStep);
 
         if (this.state.currentStep === 1) {
@@ -77,44 +63,28 @@ const SendPage = {
         }
     },
 
-    // 전역 이벤트 바인딩 (이전/다음 화면 전환 등)
     bindGlobalEvents: function () {
         const self = this;
 
-        // [다음] 또는 [발송하기] 버튼 클릭
         $(document).on("click", "[data-action='next-step']", (e) => {
             e.preventDefault();
             this.handleNextStep();
         });
 
-        // [이전] 버튼 클릭
         $(document).on("click", "[data-action='prev-step']", (e) => {
             e.preventDefault();
             this.handlePrevStep();
         });
 
-        // 브라우저 이탈(새로고침, 탭 닫기, 외부 링크 클릭) 방지 알림
         window.addEventListener("beforeunload", function (e) {
-            // draftId가 있고(수신자 선택 진행중) 정상적인 내부 이동이 아닐 경우 경고
             if (self.state.draftId && !self.isNavigatingInternal) {
                 e.preventDefault();
                 e.returnValue = "이 페이지를 벗어나면 선택된 수신자 정보가 초기화됩니다.";
             }
         });
 
-        // 브라우저 이탈 또는 백그라운드 전환 시 (이탈이 확정된 시점) sessionStorage 파기 및 Redis 정리
-        document.addEventListener("visibilitychange", function () {
-            if (document.visibilityState === 'hidden' && self.state.draftId && !self.isNavigatingInternal) {
-                sessionStorage.removeItem("draftId");
-                sessionStorage.removeItem("draftTotalCount");
-                if (navigator.sendBeacon) {
-                    // beacon은 무조건 POST를 사용하므로 cleanup 전용 엔드포인트 호출
-                    navigator.sendBeacon("/api/campaigns/draft/" + self.state.draftId + "/cleanup");
-                }
-            }
-        });
-
-        // 진행 중인 Draft 통신이 있을 때 [다음] 버튼 블록 처리 (Race Condition 및 롤백 방어)
+        // Do not delete draft automatically during page navigation or tab visibility changes.
+        // Draft cleanup is performed only after successful send or explicit reset.
         self.state.pendingDraftRequests = 0;
         $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
             if (self.isDraftMutationRequest(ajaxOptions)) {
@@ -163,17 +133,37 @@ const SendPage = {
             this.isNavigatingInternal = true;
             window.location.href = "/send/message";
         } else if (current === 2) {
-            // 메시지 작성 화면: 입력값 세션 저장
-            sessionStorage.setItem("messageTitle", $("#messageTitle").val() || "");
-            sessionStorage.setItem("messageContent", $("#messageContent").val() || "");
+            const messageTitle = ($("#messageTitle").val() || "").trim();
+            const messageContent = ($("#messageContent").val() || "").trim();
+            if (!messageTitle) {
+                alert("\uBA54\uC2DC\uC9C0 \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+                $("#messageTitle").focus();
+                return;
+            }
+            if (!messageContent) {
+                alert("\uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+                $("#messageContent").focus();
+                return;
+            }
+            sessionStorage.setItem("messageTitle", messageTitle);
+            sessionStorage.setItem("messageContent", messageContent);
             sessionStorage.setItem("messagePurpose", $(".purpose-btn.active").data("val") || "INFO");
             sessionStorage.setItem("messagePriorities", JSON.stringify(this.getCurrentChannelPriorities()));
             sessionStorage.setItem("linkButtonName", $("#linkButtonName").val() || "");
             sessionStorage.setItem("linkUrl", $("#linkUrl").val() || "");
             sessionStorage.setItem("linkPurpose", $(".link-purpose-btn.active").data("purpose") || "CLICK");
 
+            // 추가: 채널 우선순위 ID 리스트 저장
+            const channelIds = [];
+            $("#channelSortableList li.channel-card").each(function() {
+                const id = $(this).data("id");
+                if (id) channelIds.push(parseInt(id));
+            });
+            sessionStorage.setItem("routingChannelIds", JSON.stringify(channelIds));
+
             this.isNavigatingInternal = true;
             window.location.href = "/send/review";
+
         } else if (current === 3) {
             // 리뷰 화면: 공통 발송 작업 메시지 생성 요청
             const draftId = sessionStorage.getItem("draftId") || this.state.draftId;
@@ -248,24 +238,9 @@ const SendPage = {
 
     // 발송 완료 또는 초기화 시 세션/Draft 정리 헬퍼
     clearSessionAndDraft: function () {
-        const draftId = this.state.draftId;
         this.isNavigatingInternal = true;
-        if (draftId) {
-            this.clearSendSession();
-            // API 호출로 Redis Draft 비우기
-            $.ajax({
-                url: '/api/campaigns/draft/' + draftId,
-                type: 'DELETE',
-                success: function () {
-                    window.location.href = "/send/recipients";
-                },
-                error: function () {
-                    window.location.href = "/send/recipients";
-                }
-            });
-        } else {
-            window.location.href = "/send/recipients";
-        }
+        this.clearSendSession();
+        window.location.href = "/send/recipients";
     },
 
     clearSendSession: function () {

@@ -108,3 +108,8 @@ rag:
     auto-ingest: false
   search:
     top-k: 5
+
+security:
+  crypto:
+    secret-key: ${TOKEN_CRYPTO_SECRET:smart-messaging-local-token-secret}
+

@@ -3,6 +3,7 @@ package com.example.smartmessaging.controller;
 import com.example.smartmessaging.dto.request.CustomerSearchDTO;
 import com.example.smartmessaging.dto.request.CustomerSearchRequest;
 import com.example.smartmessaging.dto.response.*;
+import com.example.smartmessaging.dto.vo.TagVO;
 import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,10 @@ public class CustomerApiController {
     private final CustomerService customerService;
     private final CampaignDraftService draftService;
 
+    @GetMapping("/tags")
+    public ResponseEntity<List<TagVO>> getTags() {
+        return ResponseEntity.ok(customerService.getTags());
+    }
     /**
      * 고객 목록 조회
      * - draftId가 있을 때: Redis에서 현재 페이지 ID를 꺼낸 뒤 Oracle에서 상세 조회 (selected 탭 페이징)

@@ -3,12 +3,98 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/send-layout}">
 <body>
-    <div layout:fragment="send-content" class="step-mock-container">
-        <div class="mock-card">
-            <span class="mock-icon">✉️</span>
-            <h2>3단계: 검토 및 발송 화면</h2>
-            <p>1단계(수신자)와 2단계(메시지) 내용 검토 후 최종 카카오/이메일/문자로 메시지 일괄 발송을 수행하는 화면이 올 자리입니다.</p>
+    <div layout:fragment="send-content" class="review-container">
+        <!-- 중첩 레이아웃 헤더 증발 방지를 위해 본문 영역 내에 직접 로드 -->
+        <link rel="stylesheet" th:href="@{/css/pages/send/review.css(v=${#dates.createNow().getTime()})}">
+        
+        <div class="review-grid">
+            
+            <!-- [좌측 열]: 발송 방식 설정 -->
+            <div class="ds-card-flat send-method-box">
+                <h3 class="ds-card-flat__title">발송 방식</h3>
+                
+                <!-- 즉시/예약 가로 탭 -->
+                <div class="method-tabs">
+                    <button type="button" class="method-tab-btn active" id="tabImmediate" data-mode="IMMEDIATE">
+                        <span>🕒</span> 즉시 발송
+                    </button>
+                    <button type="button" class="method-tab-btn" id="tabReserved" data-mode="RESERVED">
+                        <span>📅</span> 예약 발송
+                    </button>
+                </div>
+
+                <!-- 예약 설정 세부 영역 (기본 숨김) -->
+                <div class="reservation-detail-area" id="reservationDetailArea">
+                    <span class="reserve-label">예약 일시</span>
+                    
+                    <!-- 퀵 선택 단축 버튼 -->
+                    <div class="quick-time-buttons">
+                        <button type="button" class="quick-time-btn" data-time="today-10">오늘 10:00</button>
+                        <button type="button" class="quick-time-btn" data-time="today-14">오늘 14:00</button>
+                        <button type="button" class="quick-time-btn" data-time="tomorrow-9">내일 09:00</button>
+                    </div>
+
+                    <!-- 날짜 & 시간 인풋 필드 -->
+                    <div class="datetime-inputs-row">
+                        <div class="input-with-label">
+                            <label for="inputDate">날짜</label>
+                            <input type="date" id="inputDate">
+                        </div>
+                        <div class="input-with-label">
+                            <label for="inputTime">시간</label>
+                            <input type="time" id="inputTime">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [우측 열]: 비용 계산 대시보드 -->
+            <div class="ds-card-flat">
+                <h3 class="ds-card-flat__title">비용 계산</h3>
+                
+                <div class="cost-calculation-area">
+                    <!-- 1. 대상 인원 카드 -->
+                    <div class="cost-info-card neutral">
+                        <span class="cost-card-label">대상 인원</span>
+                        <h4 class="cost-card-value" id="cardTargetCount">0명</h4>
+                    </div>
+
+                    <!-- 2. 광고여부 카드 -->
+                    <div class="cost-info-card neutral">
+                        <span class="cost-card-label">광고여부</span>
+                        <h4 class="cost-card-value" id="cardAdBlocked">정보성</h4>
+                    </div>
+
+                    <!-- 3. 채널 카드 -->
+                    <div class="cost-info-card neutral">
+                        <span class="cost-card-label">채널</span>
+                        <div class="channel-badge-list" id="cardChannels">
+                            <!-- 예: ❶ 카카오톡 -->
+                            <div class="channel-badge-item">
+                                <span class="channel-number-circle">1</span> 카카오톡
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. 예상 발송 비용 카드 -->
+                    <div class="cost-info-card info-blue">
+                        <span class="cost-card-label">예상 발송 비용</span>
+                        <h4 class="cost-card-value" id="cardSendCost">0원</h4>
+                    </div>
+
+                    <!-- 5. 예상 절감액 카드 -->
+                    <div class="cost-info-card success-green">
+                        <span class="cost-card-label">예상 절감액</span>
+                        <h4 class="cost-card-value" id="cardSavedCost">0원</h4>
+                        <div class="cost-saving-detail" id="cardSavedCostFormula">0원 - 0원</div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
+        
+        <!-- 3단계 전용 JS 로드 -->
+        <script th:src="@{/js/pages/send-review.js(v=${#dates.createNow().getTime()})}"></script>
     </div>
 </body>
 </html>

@@ -7,6 +7,7 @@ import lombok.Setter;
 @Setter
 public class SendRecipientCandidateVO {
     private Long customerId;
+    private Boolean isRealCustomer;
     private String phone;
     private String email;
     private String kakaoUserKey;

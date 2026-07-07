@@ -42,10 +42,15 @@ public class MyBatisAuditInterceptor implements Interceptor {
                 currentUserId = userDetails.getUserId();
             }
 
-            // 인증 정보가 없으면 감사 주체 누락으로 비즈니스 예외 발생 (하드코딩 1L 임시 처리를 제거하여 보안 무결성 확보)
+            // 인증 정보가 없고, 객체 자체에도 이미 createdBy/updatedBy가 세팅되어 있지 않다면 예외 발생
             if (currentUserId == null) {
-                log.error("[MyBatis Audit Error] 감사 주체 ID를 찾을 수 없어 쿼리 처리를 제한합니다.");
-                throw new BusinessException(ErrorCode.UNAUTHORIZED_AUDIT_USER);
+                if (baseVO.getCreatedBy() != null) {
+                    currentUserId = baseVO.getCreatedBy();
+                    log.debug("[MyBatis Audit] SecurityContext 정보가 없으나 객체 내 명시된 UserID({})를 기반으로 처리합니다.", currentUserId);
+                } else {
+                    log.error("[MyBatis Audit Error] 감사 주체 ID를 찾을 수 없어 쿼리 처리를 제한합니다.");
+                    throw new BusinessException(ErrorCode.UNAUTHORIZED_AUDIT_USER);
+                }
             }
 
             // 3. SQL 실행 유형(INSERT, UPDATE)에 따라 Audit 필드 값 주입 (시간 및 삭제 여부 기본값은 DB가 자동 처리하므로 생략)

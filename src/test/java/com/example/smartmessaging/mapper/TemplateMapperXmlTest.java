@@ -22,13 +22,13 @@ class TemplateMapperXmlTest {
         parseMapper(configuration, RESOURCE);
 
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.TemplateMapper.selectTemplateDetail"
+                "com.example.smartmessaging.service.repository.TemplateMapper.selectTemplateDetail"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.TemplateMapper.selectCategoryOptions"
+                "com.example.smartmessaging.service.repository.TemplateMapper.selectCategoryOptions"
         )).isTrue();
         assertThat(configuration.hasStatement(
-                "com.example.smartmessaging.mapper.TemplateMapper.selectTagOptions"
+                "com.example.smartmessaging.service.repository.TemplateMapper.selectTagOptions"
         )).isFalse();
     }
 

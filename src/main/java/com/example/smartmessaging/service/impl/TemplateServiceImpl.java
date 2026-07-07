@@ -9,7 +9,7 @@ import com.example.smartmessaging.dto.response.TemplateResponse;
 import com.example.smartmessaging.dto.response.TemplateStatResponse;
 import com.example.smartmessaging.dto.vo.TemplateChannelVO;
 import com.example.smartmessaging.dto.vo.TemplateVO;
-import com.example.smartmessaging.mapper.TemplateMapper;
+import com.example.smartmessaging.service.repository.TemplateMapper;
 import com.example.smartmessaging.service.TemplateService;
 import com.example.smartmessaging.dto.response.TemplateFilterOptionResponse;
 import com.example.smartmessaging.dto.vo.TemplateCategory;

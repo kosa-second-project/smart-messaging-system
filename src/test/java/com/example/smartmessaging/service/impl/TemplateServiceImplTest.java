@@ -6,7 +6,7 @@ import com.example.smartmessaging.dto.response.TemplateOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateResponse;
 import com.example.smartmessaging.dto.vo.TemplateCategory;
 import com.example.smartmessaging.dto.vo.TemplateVO;
-import com.example.smartmessaging.mapper.TemplateMapper;
+import com.example.smartmessaging.service.repository.TemplateMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

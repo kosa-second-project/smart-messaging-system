@@ -4,7 +4,26 @@
 const RecipientSelector = {
     init: function () {
         this.bindEvents();
-        this.renderAll();
+        this.loadTagMapAndRender();
+    },
+    loadTagMapAndRender: function () {
+        const self = this;
+        CustomerApi.getTags()
+            .done(function (tags) {
+                TAG_MAP = {};
+                (tags || []).forEach(function (tag) {
+                    if (tag && tag.name && tag.id) {
+                        TAG_MAP[String(tag.name).trim()] = tag.id;
+                    }
+                });
+            })
+            .fail(function () {
+                console.error("태그 목록을 불러오지 못했습니다.");
+                TAG_MAP = {};
+            })
+            .always(function () {
+                self.renderAll();
+            });
     },
 
     // API 요청용 파라미터 빌드
@@ -17,7 +36,9 @@ const RecipientSelector = {
             matchType: SendPage.state.conditionMode
         };
 
-        if (tagIds.length > 0) {
+        if (SendPage.state.selectedTags.length > 0 && tagIds.length === 0) {
+            params.customerIds = "-1";
+        } else if (tagIds.length > 0) {
             params.tagIds = tagIds; // jQuery ajax는 배열을 자동으로 tagIds=1&tagIds=2 형태로 직렬화함
         }
 

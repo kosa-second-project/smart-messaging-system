@@ -19,6 +19,7 @@ public class CustomerVO extends BaseVO {
     private String name;
     private String email;
     private String customerType;
+    private Boolean isRealCustomer;
     private Boolean isAdBlocked;
     private LocalDateTime lastActiveAt;
     private LocalDateTime joinedAt;

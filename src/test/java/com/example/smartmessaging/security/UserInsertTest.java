@@ -2,7 +2,7 @@ package com.example.smartmessaging.security;
 
 import com.example.smartmessaging.dto.vo.AuthoritiesVO;
 import com.example.smartmessaging.dto.vo.UsersVO;
-import com.example.smartmessaging.mapper.UserMapper;
+import com.example.smartmessaging.service.repository.UserMapper;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
