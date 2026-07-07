@@ -5,6 +5,8 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +27,11 @@ public class RabbitMQConfig {
     public static final String CAMP_COMMAND_QUEUE = "campaign.command.queue";
     public static final String CAMP_COMMAND_ROUTING_KEY = "campaign.command.routing.key";
 
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        return new RabbitAdmin(connectionFactory);
+    }
     @Bean
     public Queue mainQueue() {
         return QueueBuilder.durable(MAIN_QUEUE)
