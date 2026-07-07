@@ -26,8 +26,6 @@ import java.util.stream.Collectors;
 @Service
 public class RuleValidationService {
 
-    private static final String MISSING_AD_PREFIX = "MISSING_AD_PREFIX";
-    private static final String MISSING_OPT_OUT = "MISSING_OPT_OUT";
     private static final String INVALID_VARIABLE_FORMAT = "INVALID_VARIABLE_FORMAT";
     private static final String UNSUPPORTED_VARIABLE = "UNSUPPORTED_VARIABLE";
     private static final String PERSONAL_PHONE_NUMBER = "PERSONAL_PHONE_NUMBER";
@@ -59,10 +57,6 @@ public class RuleValidationService {
                     + "|#" + KNOWN_VARIABLE_NAME_PATTERN + "(?![가-힣A-Za-z0-9_])"
                     + "|\\[" + KNOWN_VARIABLE_NAME_PATTERN + "]"
     );
-    private static final Pattern OPT_OUT_PHONE_PATTERN = Pattern.compile(
-            "(?<!\\d)080-\\d{3,4}-\\d{4}(?!\\d)"
-    );
-
     // 본문에 직접 입력된 개인정보 형태의 패턴을 찾는다.
     // 순서대로 휴대폰 번호, 이메일, 주민등록번호 형태를 검사한다.
     private static final Pattern PHONE_PATTERN = Pattern.compile(
@@ -122,58 +116,24 @@ public class RuleValidationService {
         return new BusinessException(message, ErrorCode.AI_REVIEW_INVALID_REQUEST);
     }
 
-    private RuleCheckResult validateRules(AiReviewRequest request) {
-        String content = request.getContent();
+    private RuleCheckResultResponseDTO validateRules(AiReviewRequestDTO request) {
+        String content = request.content();
         // 빈 issues 리스트 생성
-        List<ValidationIssue> issues = new ArrayList<>();
+        List<ValidationIssueResponseDTO> issues = new ArrayList<>();
 
         // 지정된 검사 실행
-        checkAdPrefix(request.getMessageType(), content, issues);
-        checkOptOut(request.getMessageType(), content, issues);
         checkVariableFormat(content, issues);
-        checkSupportedVariables(content, request.getAvailableVariables(), issues);
+        checkSupportedVariables(content, request.availableVariables(), issues);
         checkPersonalInformation(content, issues);
 
-        return new RuleCheckResult(determineStatus(issues), issues);
-    }
-
-    // 광고성 메세지인 경우 '(광고)' 문구가 들어있는지 확인
-    private void checkAdPrefix(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType == MessageType.AD && !content.trim().startsWith("(광고)")) {
-            issues.add(new ValidationIssue(
-                    MISSING_AD_PREFIX,
-                    IssueSeverity.HIGH,
-                    "광고성 메시지에는 본문 시작부에 '(광고)' 문구가 필요합니다.",
-                    null,
-                    "본문 시작부에 '(광고)'를 추가하세요."
-            ));
-        }
-    }
-
-    // 광고성 메시지는 수신거부 문구와 실제 080 번호가 모두 있어야 한다.
-    private void checkOptOut(MessageType messageType, String content, List<ValidationIssue> issues) {
-        if (messageType != MessageType.AD) {
-            return;
-        }
-
-        boolean hasOptOutText = content.contains("무료수신거부") || content.contains("수신거부");
-        boolean hasOptOutPhone = OPT_OUT_PHONE_PATTERN.matcher(content).find();
-        if (!hasOptOutText || !hasOptOutPhone) {
-            issues.add(new ValidationIssue(
-                    MISSING_OPT_OUT,
-                    IssueSeverity.HIGH,
-                    "광고성 메시지에는 무료수신거부 방법이 필요합니다.",
-                    null,
-                    "본문 하단에 '무료수신거부 080-000-0000' 형식의 수신거부 문구를 추가하세요."
-            ));
-        }
+        return new RuleCheckResultResponseDTO(determineStatus(issues), issues);
     }
 
     // 변수 형식 검사
-    private void checkVariableFormat(String content, List<ValidationIssue> issues) {
+    private void checkVariableFormat(String content, List<ValidationIssueResponseDTO> issues) {
         String invalidVariable = findInvalidVariable(content);
         if (invalidVariable != null) {
-            issues.add(new ValidationIssue(
+            issues.add(new ValidationIssueResponseDTO(
                     INVALID_VARIABLE_FORMAT,
                     IssueSeverity.HIGH,
                     "템플릿 변수는 '#{변수명}' 형식으로 작성해야 합니다.",
