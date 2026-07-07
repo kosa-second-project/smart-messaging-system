@@ -49,8 +49,20 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         validateOriginalUrl(resolvedOriginalUrl, resolvedPurpose);
 
         String code = createShortUrlRow(sendTargetId, resolvedOriginalUrl, resolvedPurpose);
-        String path = resolvedPurpose == ShortUrlPurpose.UNSUBSCRIBE ? "/u/" : "/r/";
-        return shortUrlBaseUrl + path + code;
+        return buildShortUrl(code, resolvedPurpose);
+    }
+
+    @Override
+    public String getTrackedUrl(Long sendTargetId, ShortUrlPurpose purpose) {
+        if (sendTargetId == null) {
+            return null;
+        }
+        ShortUrlPurpose resolvedPurpose = purpose == null ? ShortUrlPurpose.CLICK : purpose;
+        ShortUrlVO existing = shortUrlMapper.findBySendTargetIdAndPurpose(sendTargetId, resolvedPurpose.name());
+        if (existing == null || existing.getId() == null || existing.getId().isBlank()) {
+            return null;
+        }
+        return buildShortUrl(existing.getId(), resolvedPurpose);
     }
 
     @Override
@@ -127,6 +139,11 @@ public class ShortUrlServiceImpl implements ShortUrlService {
             }
         }
         throw new BusinessException("추적 링크 생성에 실패했습니다.", ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private String buildShortUrl(String code, ShortUrlPurpose purpose) {
+        String path = purpose == ShortUrlPurpose.UNSUBSCRIBE ? "/u/" : "/r/";
+        return shortUrlBaseUrl + path + code;
     }
 
     private void recordClickTargetStats(Long sendTargetId, ShortUrlPurpose purpose) {

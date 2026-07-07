@@ -20,6 +20,9 @@ public class SendHistoryVO extends BaseVO {
     private String title;
     private String content;
     private String purpose;
+    private String linkButtonName;
+    private String linkUrl;
+    private String linkPurpose;
     private String status;
     private String solapiGroupId;
     private Integer totalTargetCount;

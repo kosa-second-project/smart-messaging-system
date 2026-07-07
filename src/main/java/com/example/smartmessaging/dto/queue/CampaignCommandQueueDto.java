@@ -20,6 +20,9 @@ public class CampaignCommandQueueDto implements Serializable {
     private String title;
     private String content;
     private String purpose;
+    private String linkButtonName;
+    private String linkUrl;
+    private String linkPurpose;
     private Long templateId;
     private List<Long> routingChannelIds;
     private String kakaoAccessToken;

@@ -134,6 +134,30 @@ class EmailMessageServiceTest {
     }
 
     @Test
+    void sendEmail_actionUrlAppendedToTextBody() {
+        ReflectionTestUtils.setField(emailMessageService, "dummySendEnabled", false);
+        ReflectionTestUtils.setField(emailMessageService, "sesEnabled", true);
+
+        SendEmailResponse mockResponse = SendEmailResponse.builder().messageId("msg-123").build();
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(mockResponse);
+
+        SendResult result = emailMessageService.sendEmail(
+                "test@test.com",
+                "Title",
+                "Content",
+                "Buy now",
+                "https://kosa.kr/r/Ab3dE5gH"
+        );
+
+        assertThat(result.isSuccess()).isTrue();
+
+        ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client, times(1)).sendEmail(captor.capture());
+        assertThat(captor.getValue().content().simple().body().text().data())
+                .isEqualTo("Content\n\nBuy now\nhttps://kosa.kr/r/Ab3dE5gH");
+    }
+
+    @Test
     @DisplayName("이메일 주소 형식이 올바르지 않으면 실패(INVALID_EMAIL)를 반환한다")
     void sendEmail_invalidEmail() {
         ReflectionTestUtils.setField(emailMessageService, "dummySendEnabled", false);

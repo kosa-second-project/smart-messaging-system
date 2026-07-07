@@ -79,7 +79,13 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                             task.getUnsubscribeUrl()
                     );
                 case "EMAIL":
-                    return emailMessageService.sendEmail(task.getEmail(), task.getTitle(), task.getContent());
+                    return emailMessageService.sendEmail(
+                            task.getEmail(),
+                            task.getTitle(),
+                            task.getContent(),
+                            task.getActionButtonName(),
+                            task.getActionUrl()
+                    );
                 default:
                     return SendResult.fail(currentChannel, "UNSUPPORTED_CHANNEL", "지원하지 않는 채널입니다: " + currentChannel);
             }

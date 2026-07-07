@@ -42,7 +42,7 @@ class MessageRouterServiceTest {
         task.setContent("Test Content");
 
         SendResult expectedResult = SendResult.success("EMAIL");
-        when(emailMessageService.sendEmail("test@test.com", "Test Title", "Test Content"))
+        when(emailMessageService.sendEmail("test@test.com", "Test Title", "Test Content", null, null))
                 .thenReturn(expectedResult);
 
         // when
@@ -51,7 +51,7 @@ class MessageRouterServiceTest {
         // then
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.getChannel()).isEqualTo("EMAIL");
-        verify(emailMessageService, times(1)).sendEmail("test@test.com", "Test Title", "Test Content");
+        verify(emailMessageService, times(1)).sendEmail("test@test.com", "Test Title", "Test Content", null, null);
         verifyNoInteractions(kakaoMessageService);
         verifyNoInteractions(smsMessageService);
     }

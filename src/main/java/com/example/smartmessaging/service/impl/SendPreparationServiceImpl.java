@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -107,6 +108,9 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .purpose(normalizedPurpose)
+                .linkButtonName(normalizeNullable(request.getLinkButtonName()))
+                .linkUrl(normalizeNullable(request.getLinkUrl()))
+                .linkPurpose(normalizeLinkPurpose(request.getLinkPurpose()))
                 .templateId(request.getTemplateId())
                 .routingChannelIds(routingChannels.stream().map(ChannelVO::getId).toList())
                 .kakaoAccessToken(kakaoAccessToken)
@@ -141,6 +145,21 @@ public class SendPreparationServiceImpl implements SendPreparationService {
         if (request.getScheduledAt() != null && request.getScheduledAt().isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
+        if (!isBlank(request.getLinkUrl())) {
+            validateHttpUrl(request.getLinkUrl());
+        }
+    }
+
+    private void validateHttpUrl(String url) {
+        String scheme;
+        try {
+            scheme = UriComponentsBuilder.fromUriString(url.trim()).build().getScheme();
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
     }
 
     private List<ChannelVO> orderRoutingChannels(List<ChannelVO> activeChannels, List<String> requestedPriority) {
@@ -169,6 +188,18 @@ public class SendPreparationServiceImpl implements SendPreparationService {
             return "INFO";
         }
         return normalized;
+    }
+
+    private String normalizeLinkPurpose(String linkPurpose) {
+        if (isBlank(linkPurpose)) {
+            return "CLICK";
+        }
+        String normalized = linkPurpose.trim().toUpperCase(Locale.ROOT);
+        return "PURCHASE".equals(normalized) ? "PURCHASE" : "CLICK";
+    }
+
+    private String normalizeNullable(String value) {
+        return isBlank(value) ? null : value.trim();
     }
 
     private String normalizeChannelType(String channelType) {

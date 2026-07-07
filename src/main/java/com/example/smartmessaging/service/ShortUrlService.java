@@ -11,6 +11,8 @@ public interface ShortUrlService {
 
     String createTrackedUrl(Long sendTargetId, String originalUrl, ShortUrlPurpose purpose);
 
+    String getTrackedUrl(Long sendTargetId, ShortUrlPurpose purpose);
+
     ShortUrlVO getExisting(String code);
 
     String markClickAndResolveRedirect(String code);
