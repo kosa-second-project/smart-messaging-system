@@ -852,7 +852,16 @@ async function readErrorMessage(response, fallback) {
 function renderFormPreview() {
     const title = document.getElementById("templateTitle")?.value || "";
     const content = document.getElementById("templateContent")?.value || "";
-    document.getElementById("templateFormPreview").innerHTML = renderMessagePreview(title, content, templatePreviewMode, true);
+    const previewDiv = document.getElementById("templateFormPreview");
+    if (!previewDiv) {
+        return;
+    }
+
+    const component = createCommonMessagePreview(title, content, templatePreviewMode);
+    previewDiv.innerHTML = "";
+    if (component) {
+        previewDiv.appendChild(component);
+    }
 }
 
 function renderMessagePreview(title, content, mode, compact = false) {

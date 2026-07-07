@@ -50,6 +50,8 @@ class TemplatePageSourceTest {
                         "fragments/components/message-preview :: preview");
         assertThat(script)
                 .contains("createCommonMessagePreview",
+                        "templateFormPreview",
+                        "templateDetailPreview",
                         "phonePreviewBox",
                         "mode-sms",
                         "mode-kakao",

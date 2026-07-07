@@ -1,4 +1,5 @@
 #phonePreviewBox {
+    box-sizing: border-box;
     width: min(393px, 100%);
     aspect-ratio: 393 / 852;
     height: auto;
@@ -127,7 +128,7 @@
 
 .bubble {
     max-width: 88%;
-    padding: 11px 14px;
+    padding: 8px 14px;
     font-size: 14px;
     line-height: 1.42;
     word-break: break-word;
@@ -136,15 +137,15 @@
 }
 
 .bubble-title {
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     font-size: 14px;
     font-weight: 700;
 }
 
 .bubble-link-area,
 .bubble-unsubscribe {
-    margin-top: 10px;
-    padding-top: 8px;
+    margin-top: 8px;
+    padding-top: 6px;
     font-size: 12px;
     line-height: 1.45;
     white-space: pre-wrap;
