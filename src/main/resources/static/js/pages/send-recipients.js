@@ -187,14 +187,6 @@ const RecipientSelector = {
             });
         });
 
-        // 7. 페이지 크기 셀렉터 이벤트 바인딩
-        $(document).on("change", "#pageSizeSelect", function () {
-            SendPage.state.pageSize = parseInt($(this).val(), 10);
-            SendPage.state.currentCursorIndex = 0;
-            SendPage.state.cursorHistory = [null];
-            self.renderAll();
-        });
-
         // 8. 토글 스위치 변경 제어
         $("#toggleShowSelected").on("change", function () {
             SendPage.state.activeTab = this.checked ? "selected" : "filtered";
@@ -428,9 +420,6 @@ const RecipientSelector = {
                 self.updatePaginationInfo(totalCount > 0 ? startIndex + 1 : 0, endIndex, totalCount);
                 self.renderPaginationControls(currentPageNum);
 
-                // 페이지 크기 셀렉터 상태 동기화
-                $("#pageSizeSelect").val(SendPage.state.pageSize);
-
                 // filtered 탭: 검색 응답의 totalCount를 후보 카운트로 직접 사용 (별도 API 호출 절약)
                 if (SendPage.state.activeTab === 'filtered') {
                     $("#lblCandidateCount").text(totalCount);
@@ -444,26 +433,41 @@ const RecipientSelector = {
 
     // 페이징 인포 갱신
     updatePaginationInfo: function (start, end, total) {
-        $("#lblStartIdx").text(start);
-        $("#lblEndIdx").text(end);
-        $("#lblTotalIdx").text(total);
+        SendPage.state.paginationSummary = `Showing ${start} to ${end} of ${total} entries`;
     },
 
     // 페이징 컨트롤 버튼 생성 (커서 기반)
     renderPaginationControls: function (currentPageNum) {
-        const $controls = $("#paginationControls");
-        $controls.empty();
-
-        // [이전] 버튼
-        const prevDisabled = SendPage.state.currentCursorIndex === 0 ? 'disabled' : '';
-        $controls.append(`<button type="button" class="page-link-btn" data-action="prev" ${prevDisabled}>이전</button>`);
-
-        // 현재 페이지 표시
-        $controls.append(`<span style="margin: 0 10px; line-height: 36px; font-weight: 500;">${currentPageNum} 페이지</span>`);
-
-        // [다음] 버튼
-        const nextDisabled = !SendPage.state.hasNext ? 'disabled' : '';
-        $controls.append(`<button type="button" class="page-link-btn" data-action="next" ${nextDisabled}>다음</button>`);
+        const self = this;
+        window.DsPagination?.renderCursor("#recipientPagination", {
+            page: currentPageNum,
+            size: SendPage.state.pageSize,
+            sizes: [20, 50, 100],
+            summary: SendPage.state.paginationSummary || "Showing 0 to 0 of 0 entries",
+            hasPrevious: SendPage.state.currentCursorIndex > 0,
+            hasNext: SendPage.state.hasNext,
+            onPrevious: function() {
+                if (SendPage.state.currentCursorIndex > 0) {
+                    SendPage.state.currentCursorIndex--;
+                    self.renderTableOnly();
+                }
+            },
+            onNext: function() {
+                if (SendPage.state.hasNext) {
+                    SendPage.state.currentCursorIndex++;
+                    if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
+                        SendPage.state.cursorHistory.push(SendPage.state.nextCursorId);
+                    }
+                    self.renderTableOnly();
+                }
+            },
+            onPageSizeChange: function(size) {
+                SendPage.state.pageSize = size;
+                SendPage.state.currentCursorIndex = 0;
+                SendPage.state.cursorHistory = [null];
+                self.renderAll();
+            }
+        });
     },
 
     // 4. 선택 카운트만 갱신 (API 호출 없음)

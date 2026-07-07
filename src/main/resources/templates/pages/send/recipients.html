@@ -142,30 +142,7 @@
                         </table>
                     </div>
                     
-                    <!-- 테이블 하단 및 페이징 -->
-                    <div class="table-footer-row">
-                        <!-- 1. 좌측 정보 -->
-                        <div class="pagination-info">
-                            Showing <span id="lblStartIdx">0</span> to <span id="lblEndIdx">0</span> of <span id="lblTotalIdx">0</span> entries
-                        </div>
-                        
-                        <!-- 2. 중앙 페이지네이션 -->
-                        <div class="pagination-controls-wrapper">
-                            <div class="pagination-controls" id="paginationControls">
-                                <!-- 자바스크립트 동적 주입 -->
-                            </div>
-                        </div>
-
-                        <!-- 3. 우측 페이지 크기 셀렉터 -->
-                        <div class="page-size-selector">
-                            <label for="pageSizeSelect">페이지 당 보기:</label>
-                            <select id="pageSizeSelect" class="ds-input ds-input--sm page-size-select">
-                                <option value="20">20개</option>
-                                <option value="50">50개</option>
-                                <option value="100">100개</option>
-                            </select>
-                        </div>
-                    </div>
+                    <div id="recipientPagination" class="ds-pagination"></div>
                 </div>
                 
         <!-- 1단계 전용 JS -->
