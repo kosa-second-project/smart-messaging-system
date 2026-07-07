@@ -90,7 +90,7 @@
                 NVL(t.cnt, 0) DESC, t.id DESC
             </when>
             <otherwise>
-                t.updated_at DESC, t.id DESC
+                t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST, t.id DESC
             </otherwise>
         </choose>
         OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY

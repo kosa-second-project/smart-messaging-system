@@ -15,7 +15,7 @@ public class TemplateSearchRequest {
     private List<String> purposes;
     private String channelType;
     private List<String> channelTypes;
-    private String sortOrder = "latest";
+    private String sortOrder = "recentModified";
     private Long userId;
 
     private int page = 1;
