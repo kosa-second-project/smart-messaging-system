@@ -23,7 +23,9 @@ public record HistoryDetailResponseDTO(
         BigDecimal successRate,
         List<String> channels,
         List<String> tags,
-        List<HistoryAttemptFlowResponseDTO> attemptFlows
+        List<HistoryAttemptFlowResponseDTO> attemptFlows,
+        Integer retryableFailCount,
+        Integer unretryableFailCount
 ) {
     public HistoryDetailResponseDTO(
             Long sendHistoryId,
@@ -54,7 +56,9 @@ public record HistoryDetailResponseDTO(
                 successRate,
                 List.of(),
                 List.of(),
-                List.of()
+                List.of(),
+                0,
+                0
         );
     }
 
@@ -74,7 +78,9 @@ public record HistoryDetailResponseDTO(
                 successRate,
                 copyOrEmpty(channels),
                 tags,
-                attemptFlows
+                attemptFlows,
+                retryableFailCount,
+                unretryableFailCount
         );
     }
 
@@ -94,7 +100,9 @@ public record HistoryDetailResponseDTO(
                 successRate,
                 channels,
                 copyOrEmpty(tags),
-                attemptFlows
+                attemptFlows,
+                retryableFailCount,
+                unretryableFailCount
         );
     }
 
@@ -114,7 +122,31 @@ public record HistoryDetailResponseDTO(
                 successRate,
                 channels,
                 tags,
-                attemptFlows == null ? List.of() : List.copyOf(attemptFlows)
+                attemptFlows == null ? List.of() : List.copyOf(attemptFlows),
+                retryableFailCount,
+                unretryableFailCount
+        );
+    }
+
+    public HistoryDetailResponseDTO withRetryAvailability(Integer retryableFailCount, Integer unretryableFailCount) {
+        return new HistoryDetailResponseDTO(
+                sendHistoryId,
+                title,
+                content,
+                scheduledAt,
+                purpose,
+                status,
+                totalTargetCount,
+                successCount,
+                failCount,
+                actualCost,
+                estimatedSaving,
+                successRate,
+                channels,
+                tags,
+                attemptFlows,
+                retryableFailCount == null ? 0 : retryableFailCount,
+                unretryableFailCount == null ? 0 : unretryableFailCount
         );
     }
 

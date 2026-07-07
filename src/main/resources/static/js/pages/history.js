@@ -7,6 +7,7 @@ $(function() {
     const content = document.getElementById("historyDetailContent");
     let lastFocusedElement = null;
     let detailRequest = null;
+    let currentDetailHistoryId = null;
 
     // 검색 조건이 바뀌면 검색 폼을 자동으로 submit
     $form.find("[data-auto-submit]").on("change", function() {
@@ -52,12 +53,7 @@ $(function() {
         }
     });
 
-    $("#historyRetryButton").on("click", function() {
-        const icon = this.querySelector(".history-retry-button__icon");
-        icon.classList.remove("is-spinning");
-        void icon.offsetWidth;
-        icon.classList.add("is-spinning");
-    });
+    $("#historyRetryButton").on("click", retryFailedTargets);
 
     $("#historyRetryButton .history-retry-button__icon").on("animationend", function() {
         this.classList.remove("is-spinning");
@@ -78,6 +74,7 @@ $(function() {
         // 모달을 닫았을 때 다시 그 row로 포커스를 돌려주기 위함
         lastFocusedElement = triggerElement;
 
+        currentDetailHistoryId = sendHistoryId;
         modal.hidden = false;
         document.body.classList.add("history-modal-open");
         showLoading();
@@ -115,6 +112,7 @@ $(function() {
         }
         detailRequest?.abort();
         detailRequest = null;
+        currentDetailHistoryId = null;
         modal.hidden = true;
         document.body.classList.remove("history-modal-open");
         lastFocusedElement?.focus();
@@ -186,6 +184,8 @@ $(function() {
         renderBadges(detail);
         renderTags(detail.tags || []);
         renderAttemptFlows(detail.attemptFlows || []);
+        renderRetryAvailability(detail);
+        updateRetryButton(detail);
     }
 
     // 모달 상단 배지 렌더링
@@ -289,6 +289,90 @@ $(function() {
             item.append(order, flowContent);
             container.appendChild(item);
         });
+    }
+
+    function renderRetryAvailability(detail) {
+        const section = document.getElementById("historyRetryAvailabilitySection");
+        if (!section) {
+            return;
+        }
+
+        const failCount = Number(detail.failCount || 0);
+        const retryableCount = Number(detail.retryableFailCount || 0);
+        const unretryableCount = Number(detail.unretryableFailCount || 0);
+
+        section.hidden = failCount <= 0;
+        if (failCount <= 0) {
+            return;
+        }
+
+        setText("historyRetryableFailCount", `${formatNumber(retryableCount)}건`);
+        setText("historyUnretryableFailCount", `${formatNumber(unretryableCount)}건`);
+
+        const message = document.getElementById("historyRetryAvailabilityMessage");
+        if (!message) {
+            return;
+        }
+        if (unretryableCount > 0 && retryableCount > 0) {
+            message.textContent = `${formatNumber(unretryableCount)}건은 현재 수신 가능한 채널이 없어 재발송에서 제외됩니다.`;
+        } else if (unretryableCount > 0) {
+            message.textContent = `${formatNumber(unretryableCount)}건 모두 현재 수신 가능한 채널이 없어 재발송할 수 없습니다.`;
+        } else {
+            message.textContent = "현재 실패 대상 모두 재발송할 수 있습니다.";
+        }
+    }
+    async function retryFailedTargets() {
+        if (!currentDetailHistoryId) {
+            return;
+        }
+
+        const button = document.getElementById("historyRetryButton");
+        if (!button || button.disabled || button.dataset.retryable === "false") {
+            return;
+        }
+        const icon = button?.querySelector(".history-retry-button__icon");
+        button.disabled = true;
+        icon?.classList.remove("is-spinning");
+        if (icon) {
+            void icon.offsetWidth;
+            icon.classList.add("is-spinning");
+        }
+
+        try {
+            const response = await fetch(`/history/${encodeURIComponent(currentDetailHistoryId)}/retry-failed`, {
+                method: "POST",
+                headers: { "Accept": "application/json" }
+            });
+            const responseBody = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(responseBody.message || "재발송 요청에 실패했습니다.");
+            }
+            alert(responseBody.message || "재발송 요청이 등록되었습니다.");
+            await openHistoryDetail(currentDetailHistoryId, lastFocusedElement);
+        } catch (retryError) {
+            alert(retryError.message || "재발송 요청에 실패했습니다.");
+        } finally {
+            button.disabled = button.dataset.retryable === "false";
+        }
+    }
+
+    function updateRetryButton(detail) {
+        const button = document.getElementById("historyRetryButton");
+        if (!button) {
+            return;
+        }
+        const failCount = Number(detail.failCount || 0);
+        const retryableCount = Number(detail.retryableFailCount || 0);
+        const label = button.querySelector(".history-retry-button__label");
+
+        button.hidden = failCount <= 0;
+        button.dataset.retryable = retryableCount > 0 ? "true" : "false";
+        button.disabled = retryableCount <= 0;
+        if (label) {
+            label.textContent = retryableCount > 0
+                ? `재발송 가능 ${formatNumber(retryableCount)}건 재발송`
+                : "재발송 가능한 대상 없음";
+        }
     }
     function appendBadge(container, label, extraClass) {
         const badge = document.createElement("span");

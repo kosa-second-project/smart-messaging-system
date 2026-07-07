@@ -1,35 +1,65 @@
 package com.example.smartmessaging.service.impl;
 
+import com.example.smartmessaging.dto.model.RecipientSendPlan;
 import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
+import com.example.smartmessaging.dto.request.MessageTaskDto;
 import com.example.smartmessaging.dto.response.HistoryChannelResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryRetryFailedResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryStatusOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
 import com.example.smartmessaging.dto.response.PageResponseDTO;
 import com.example.smartmessaging.dto.type.SendHistoryStatus;
-import com.example.smartmessaging.service.repository.HistoryMapper;
+import com.example.smartmessaging.dto.type.ShortUrlPurpose;
+import com.example.smartmessaging.dto.vo.ChannelVO;
+import com.example.smartmessaging.dto.vo.SendHistoryVO;
+import com.example.smartmessaging.dto.vo.SendRecipientCandidateVO;
+import com.example.smartmessaging.dto.vo.SendTargetVO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
+import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.HistoryService;
+import com.example.smartmessaging.service.RecipientChannelResolver;
+import com.example.smartmessaging.service.ShortUrlService;
+import com.example.smartmessaging.service.TokenCryptoService;
+import com.example.smartmessaging.service.queue.MessageQueuePublisher;
+import com.example.smartmessaging.service.repository.HistoryMapper;
+import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class HistoryServiceImpl implements HistoryService {
-    private final HistoryMapper historyMapper;
+    private static final int RETRY_CHUNK_SIZE = 1000;
 
-    // 검색 조건을 기반으로 전송 기록 목록과 페이지 정보를 반환
+    private final HistoryMapper historyMapper;
+    private final SendPreparationMapper sendPreparationMapper;
+    private final ChannelService channelService;
+    private final RecipientChannelResolver recipientChannelResolver;
+    private final ShortUrlService shortUrlService;
+    private final MessageQueuePublisher messageQueuePublisher;
+    private final TokenCryptoService tokenCryptoService;
+
     @Override
     public PageResponseDTO<HistoryListResponseDTO> getHistories(HistorySearchRequestDTO condition) {
         condition = condition.normalized();
@@ -37,19 +67,15 @@ public class HistoryServiceImpl implements HistoryService {
         int totalPages = totalElements == 0 ? 0
                 : (int) Math.ceil((double) totalElements / HistorySearchRequestDTO.PAGE_SIZE);
 
-        // 요청 페이지가 실제 전체 페이지보다 클 경우 마지막 페이지로 가도록 함
-        // url에 잘못된 값이 들어오는 것을 방지
         if (totalPages > 0 && condition.page() > totalPages) {
             condition = condition.withPage(totalPages);
         }
 
-        // 현재 페이지 목록 조회, 전체 개수 0일 경우 DB 조회하지 않고 빈 리스트로
         List<HistoryListResponseDTO> histories = totalElements == 0
                 ? Collections.emptyList()
                 : historyMapper.findHistories(condition);
         histories = attachChannelsAndTags(histories);
 
-        // 페이지 응답 DTO로 감싸서 반환
         return PageResponseDTO.of(histories, condition.page(), HistorySearchRequestDTO.PAGE_SIZE, totalElements);
     }
 
@@ -68,7 +94,122 @@ public class HistoryServiceImpl implements HistoryService {
                 .map(HistoryTagResponseDTO::tagName)
                 .toList());
         detail = detail.withAttemptFlows(historyMapper.findAttemptFlowsByHistoryId(sendHistoryId));
-        return detail;
+        int retryableFailCount = calculateRetryableFailCount(sendHistoryId, detail.failCount());
+        int failCount = detail.failCount() == null ? 0 : detail.failCount();
+        return detail.withRetryAvailability(retryableFailCount, Math.max(failCount - retryableFailCount, 0));
+    }
+
+    private int calculateRetryableFailCount(Long sendHistoryId, Integer failCount) {
+        if (failCount == null || failCount <= 0) {
+            return 0;
+        }
+
+        List<SendTargetVO> failedTargets = historyMapper.findFailedTargetsForRetry(sendHistoryId, failCount);
+        if (failedTargets.isEmpty()) {
+            return 0;
+        }
+
+        List<ChannelVO> activeChannels = channelService.getActiveChannels();
+        List<Long> routingChannelIds = sendPreparationMapper.findRoutingChannelIdsByHistoryId(sendHistoryId);
+        List<String> priorities = restorePriorities(routingChannelIds, activeChannels);
+        List<Long> customerIds = failedTargets.stream().map(SendTargetVO::getCustomerId).toList();
+        List<SendRecipientCandidateVO> recipients = sendPreparationMapper.findRecipientCandidatesByCustomerIds(customerIds);
+        List<RecipientSendPlan> plans = recipientChannelResolver.resolve(recipients, activeChannels, priorities);
+        if (plans == null || plans.isEmpty()) {
+            return 0;
+        }
+
+        Set<Long> retryableCustomerIds = plans.stream()
+                .map(RecipientSendPlan::getCustomerId)
+                .collect(Collectors.toSet());
+        return (int) failedTargets.stream()
+                .filter(target -> retryableCustomerIds.contains(target.getCustomerId()))
+                .count();
+    }
+    @Override
+    @Transactional
+    public HistoryRetryFailedResponseDTO retryFailedTargets(Long sendHistoryId) {
+        SendHistoryVO campaign = sendPreparationMapper.selectSendHistoryById(sendHistoryId);
+        if (campaign == null) {
+            throw new BusinessException(ErrorCode.SEND_HISTORY_NOT_FOUND);
+        }
+
+        List<ChannelVO> activeChannels = channelService.getActiveChannels();
+        List<Long> routingChannelIds = sendPreparationMapper.findRoutingChannelIdsByHistoryId(sendHistoryId);
+        List<String> priorities = restorePriorities(routingChannelIds, activeChannels);
+        String kakaoAccessToken = decryptKakaoTokenOrNull(campaign);
+
+        int retryTargetCount = 0;
+        int publishedCount = 0;
+        int skippedCount = 0;
+        Set<Long> skippedTargetIds = new HashSet<>();
+
+        while (true) {
+            List<SendTargetVO> targets = historyMapper.findFailedTargetsForRetry(sendHistoryId, RETRY_CHUNK_SIZE);
+            if (targets.isEmpty()) {
+                break;
+            }
+
+            List<SendTargetVO> retryCandidates = targets.stream()
+                    .filter(target -> !skippedTargetIds.contains(target.getId()))
+                    .toList();
+            if (retryCandidates.isEmpty()) {
+                break;
+            }
+            retryTargetCount += retryCandidates.size();
+
+            List<Long> customerIds = retryCandidates.stream().map(SendTargetVO::getCustomerId).toList();
+            List<SendRecipientCandidateVO> recipients = sendPreparationMapper.findRecipientCandidatesByCustomerIds(customerIds);
+            List<RecipientSendPlan> plans = recipientChannelResolver.resolve(recipients, activeChannels, priorities);
+            if (plans == null) {
+                plans = List.of();
+            }
+
+            Map<Long, RecipientSendPlan> planByCustomerId = plans.stream()
+                    .collect(Collectors.toMap(RecipientSendPlan::getCustomerId, Function.identity(), (left, right) -> left));
+
+            List<SendTargetVO> publishableTargets = new ArrayList<>();
+            for (SendTargetVO target : retryCandidates) {
+                RecipientSendPlan plan = planByCustomerId.get(target.getCustomerId());
+                if (plan == null) {
+                    skippedTargetIds.add(target.getId());
+                    skippedCount++;
+                    continue;
+                }
+                publishableTargets.add(target);
+            }
+
+            if (publishableTargets.isEmpty()) {
+                continue;
+            }
+
+            List<Long> publishedTargetIds = publishableTargets.stream().map(SendTargetVO::getId).toList();
+            historyMapper.updateSendTargetStatusByIds(publishedTargetIds, "PENDING");
+            historyMapper.decrementFailCount(sendHistoryId, publishedTargetIds.size());
+            sendPreparationMapper.updateHistoryStatus(sendHistoryId, "SENDING");
+
+            for (SendTargetVO target : publishableTargets) {
+                RecipientSendPlan plan = planByCustomerId.get(target.getCustomerId());
+                messageQueuePublisher.publish(buildRetryTask(campaign, kakaoAccessToken, target, plan));
+                publishedCount++;
+            }
+        }
+
+        if (retryTargetCount == 0) {
+            return retryResponse(sendHistoryId, 0, 0, 0, "재발송할 실패 대상자가 없습니다.");
+        }
+        if (publishedCount == 0 && historyMapper.countUnfinishedTargets(sendHistoryId) == 0) {
+            sendPreparationMapper.updateHistoryStatus(sendHistoryId, "SENT");
+        }
+
+        String message = publishedCount + "건을 재발송 큐에 등록했습니다.";
+        if (skippedCount > 0) {
+            message += " " + skippedCount + "건은 현재 수신 가능한 채널이 없어 제외되었습니다.";
+        }
+
+        log.info("[HistoryRetry] retry failed targets sendHistoryId={}, retryTargets={}, published={}, skipped={}",
+                sendHistoryId, retryTargetCount, publishedCount, skippedCount);
+        return retryResponse(sendHistoryId, retryTargetCount, publishedCount, skippedCount, message);
     }
 
     @Override
@@ -93,26 +234,104 @@ public class HistoryServiceImpl implements HistoryService {
         return historyMapper.findPurposeOptions();
     }
 
-    // 전송기록 목록에 채널과 태그를 붙이는 메서드
+
+    private String decryptKakaoTokenOrNull(SendHistoryVO campaign) {
+        try {
+            return tokenCryptoService.decrypt(campaign.getKakaoAccessTokenEnc());
+        } catch (RuntimeException exception) {
+            log.warn("[HistoryRetry] kakao token decrypt failed. retry continues without kakao token. sendHistoryId={}",
+                    campaign.getId());
+            return null;
+        }
+    }
+    private MessageTaskDto buildRetryTask(SendHistoryVO campaign, String kakaoAccessToken,
+                                          SendTargetVO target, RecipientSendPlan plan) {
+        String unsubscribeUrl = shouldCreateUnsubscribeUrl(campaign, plan)
+                ? shortUrlService.createTrackedUrl(target.getId(), null, ShortUrlPurpose.UNSUBSCRIBE)
+                : null;
+
+        return MessageTaskDto.builder()
+                .messageId("retry-" + campaign.getId() + "-" + target.getId() + "-" + UUID.randomUUID())
+                .sendHistoryId(campaign.getId())
+                .sendTargetId(target.getId())
+                .templateId(campaign.getTemplateId())
+                .campaignId(campaign.getId())
+                .customerId(plan.getCustomerId())
+                .isRealCustomer(plan.getRecipient().getIsRealCustomer())
+                .userId(campaign.getUserId())
+                .phoneNumber(plan.getRecipient().getPhone())
+                .email(plan.getRecipient().getEmail())
+                .kakaoUserKey(plan.getRecipient().getKakaoUserKey())
+                .kakaoAccessToken(kakaoAccessToken)
+                .title(campaign.getTitle())
+                .content(campaign.getContent())
+                .purpose(campaign.getPurpose())
+                .actionButtonName(null)
+                .actionUrl(null)
+                .unsubscribeUrl(unsubscribeUrl)
+                .fallbackSequence(plan.getFallbackSequence())
+                .currentStep(0)
+                .build();
+    }
+
+    private boolean shouldCreateUnsubscribeUrl(SendHistoryVO campaign, RecipientSendPlan plan) {
+        if (campaign.getPurpose() == null || !"AD".equals(campaign.getPurpose().trim().toUpperCase(Locale.ROOT))) {
+            return false;
+        }
+        return plan.getFallbackSequence() != null
+                && plan.getFallbackSequence().stream()
+                .map(this::normalizeChannelType)
+                .anyMatch(channel -> "SMS".equals(channel) || "LMS".equals(channel));
+    }
+
+    private List<String> restorePriorities(List<Long> routingChannelIds, List<ChannelVO> activeChannels) {
+        if (routingChannelIds == null) {
+            return List.of();
+        }
+        return routingChannelIds.stream()
+                .map(id -> activeChannels.stream().filter(channel -> channel.getId().equals(id)).findFirst().orElse(null))
+                .filter(Objects::nonNull)
+                .map(ChannelVO::getChannelType)
+                .toList();
+    }
+
+    private String normalizeChannelType(String channelType) {
+        if (channelType == null) {
+            return "";
+        }
+        String normalized = channelType.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("KAKAO")) {
+            return "KAKAO";
+        }
+        return normalized;
+    }
+
+    private HistoryRetryFailedResponseDTO retryResponse(Long sendHistoryId, int retryTargetCount,
+                                                        int publishedCount, int skippedCount, String message) {
+        return HistoryRetryFailedResponseDTO.builder()
+                .sendHistoryId(sendHistoryId)
+                .retryTargetCount(retryTargetCount)
+                .publishedCount(publishedCount)
+                .skippedCount(skippedCount)
+                .message(message)
+                .build();
+    }
+
     private List<HistoryListResponseDTO> attachChannelsAndTags(List<HistoryListResponseDTO> histories) {
-        if (histories.isEmpty()) { // 목록이 비어있을 경우 바로 종료
+        if (histories.isEmpty()) {
             return histories;
         }
 
-        // 리스트에 있는 전송기록 id 목록 추출
         List<Long> historyIds = histories.stream().map(HistoryListResponseDTO::id).toList();
 
-        // 전송 기록에 해당하는 채널 정보를 Map으로 묶음
         Map<Long, List<String>> channelsByHistoryId = historyMapper.findChannelsByHistoryIds(historyIds).stream()
                 .collect(Collectors.groupingBy(HistoryChannelResponseDTO::sendHistoryId,
                         Collectors.mapping(HistoryChannelResponseDTO::channelName, Collectors.toList())));
 
-        // 전송 기록에 해당하는 태그 정보를 Map으로 묶음
         Map<Long, List<String>> tagsByHistoryId = historyMapper.findTagsByHistoryIds(historyIds).stream()
                 .collect(Collectors.groupingBy(HistoryTagResponseDTO::sendHistoryId,
                         Collectors.mapping(HistoryTagResponseDTO::tagName, Collectors.toList())));
 
-        // 각 히스토리에 채널/태그 세팅
         return histories.stream()
                 .map(history -> history
                 .withChannels(channelsByHistoryId.getOrDefault(history.id(), Collections.emptyList()))

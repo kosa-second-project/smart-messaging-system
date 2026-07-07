@@ -99,9 +99,10 @@ public class CustomerMessageSenderImpl implements MessageSender {
 
     private void saveAttempt(MessageTaskDto task, int attemptOrder, Long channelId, boolean success, String messageIdOrReason) {
         Long auditUserId = task.getUserId() != null ? task.getUserId() : 1L;
+        int nextAttemptOrder = historyMapper.findNextAttemptOrder(task.getSendTargetId());
         SendAttemptVO attempt = SendAttemptVO.builder()
                 .sendTargetId(task.getSendTargetId())
-                .attemptOrder(attemptOrder)
+                .attemptOrder(nextAttemptOrder)
                 .channelId(channelId)
                 .isSucceeded(success)
                 .solapiMessageId(messageIdOrReason)
