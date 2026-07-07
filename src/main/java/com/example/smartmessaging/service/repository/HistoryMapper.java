@@ -8,6 +8,7 @@ import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryTagResponseDTO;
 import com.example.smartmessaging.dto.vo.SendAttemptVO;
+import com.example.smartmessaging.dto.vo.SendTargetVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -26,6 +27,10 @@ public interface HistoryMapper {
     List<String> findPurposeOptions();
 
     void updateSendTargetStatus(@Param("sendTargetId") Long sendTargetId, @Param("status") String status);
+    List<SendTargetVO> findFailedTargetsForRetry(@Param("sendHistoryId") Long sendHistoryId, @Param("limit") int limit);
+    void updateSendTargetStatusByIds(@Param("targetIds") List<Long> targetIds, @Param("status") String status);
+    void decrementFailCount(@Param("sendHistoryId") Long sendHistoryId, @Param("count") int count);
+    int findNextAttemptOrder(@Param("sendTargetId") Long sendTargetId);
     void insertSendAttempt(SendAttemptVO attempt);
     int countUnfinishedTargets(@Param("sendHistoryId") Long sendHistoryId);
     void incrementSuccessCount(@Param("sendHistoryId") Long sendHistoryId);

@@ -310,6 +310,48 @@
         WHERE id = #{sendTargetId}
           AND is_deleted = 0
     </update>
+
+    <select id="findFailedTargetsForRetry" resultType="com.example.smartmessaging.dto.vo.SendTargetVO">
+        SELECT
+            id,
+            send_history_id AS sendHistoryId,
+            customer_id AS customerId,
+            final_channel_id AS finalChannelId,
+            status,
+            cost,
+            user_uuid AS userUuid
+        FROM send_target
+        WHERE send_history_id = #{sendHistoryId}
+          AND status = 'FAILED'
+          AND NVL(is_deleted, 0) = 0
+        ORDER BY id ASC
+        FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="updateSendTargetStatusByIds">
+        UPDATE send_target
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE NVL(is_deleted, 0) = 0
+          AND id IN
+        <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
+            #{targetId}
+        </foreach>
+    </update>
+
+    <update id="decrementFailCount">
+        UPDATE send_history
+        SET fail_count = GREATEST(NVL(fail_count, 0) - #{count}, 0),
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendHistoryId}
+          AND is_deleted = 0
+    </update>
+    <select id="findNextAttemptOrder" resultType="int">
+        SELECT NVL(MAX(attempt_order), 0) + 1
+        FROM send_attempt
+        WHERE send_target_id = #{sendTargetId}
+          AND NVL(is_deleted, 0) = 0
+    </select>
     <insert id="insertSendAttempt" parameterType="com.example.smartmessaging.dto.vo.SendAttemptVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO send_attempt (
             send_target_id,

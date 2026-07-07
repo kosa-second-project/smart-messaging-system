@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -89,7 +90,7 @@ public class RabbitQueueStatusService {
     private Map<String, Object> fetchQueue(String queueName) {
         try {
             String url = managementBaseUrl + "/api/queues/" + encode(vhost) + "/" + encode(queueName);
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity.EMPTY, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(URI.create(url), HttpMethod.GET, HttpEntity.EMPTY, Map.class);
             return response.getBody();
         } catch (RestClientException exception) {
             return null;

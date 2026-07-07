@@ -4,6 +4,7 @@ import com.example.smartmessaging.dto.request.HistorySearchRequestDTO;
 import com.example.smartmessaging.dto.response.HistoryFilterOptionDTO;
 import com.example.smartmessaging.dto.response.HistoryDetailResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryListResponseDTO;
+import com.example.smartmessaging.dto.response.HistoryRetryFailedResponseDTO;
 import com.example.smartmessaging.dto.response.HistoryStatusOptionDTO;
 import com.example.smartmessaging.dto.response.PageResponseDTO;
 
@@ -13,6 +14,8 @@ public interface HistoryService {
     PageResponseDTO<HistoryListResponseDTO> getHistories(HistorySearchRequestDTO condition);
 
     HistoryDetailResponseDTO getHistoryDetail(Long sendHistoryId);
+
+    HistoryRetryFailedResponseDTO retryFailedTargets(Long sendHistoryId);
 
     List<HistoryFilterOptionDTO> getChannelOptions();
 

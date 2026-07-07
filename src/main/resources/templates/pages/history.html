@@ -260,7 +260,7 @@
                             <svg class="history-retry-button__icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path>
                             </svg>
-                            실패 대상자에게 재발송
+                            <span class="history-retry-button__label">실패 대상자에게 재발송</span>
                         </button>
                     </div>
 
@@ -272,6 +272,20 @@
                     <section class="history-detail__section">
                         <h3>대체 발송 흐름</h3>
                         <div id="historyAttemptFlows" class="history-attempt-flows"></div>
+                    </section>
+                    <section id="historyRetryAvailabilitySection" class="history-detail__section history-retry-availability" hidden>
+                        <h3>재발송 대상</h3>
+                        <div class="history-retry-availability__grid">
+                            <article class="history-retry-availability__item history-retry-availability__item--available">
+                                <span>재발송 가능</span>
+                                <strong id="historyRetryableFailCount">0건</strong>
+                            </article>
+                            <article class="history-retry-availability__item history-retry-availability__item--blocked">
+                                <span>재발송 불가</span>
+                                <strong id="historyUnretryableFailCount">0건</strong>
+                            </article>
+                        </div>
+                        <p id="historyRetryAvailabilityMessage" class="history-retry-availability__message"></p>
                     </section>
                 </div>
             </div>
