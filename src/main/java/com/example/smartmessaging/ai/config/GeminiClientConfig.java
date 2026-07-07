@@ -3,13 +3,11 @@ package com.example.smartmessaging.ai.config;
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
 import org.springframework.ai.model.google.genai.autoconfigure.chat.GoogleGenAiConnectionProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.Assert;
 
-@Configuration
-@EnableConfigurationProperties(GoogleGenAiConnectionProperties.class)
+@Configuration(proxyBeanMethods = false)
 public class GeminiClientConfig {
 
     static final int REQUEST_TIMEOUT_MS = 30_000;
