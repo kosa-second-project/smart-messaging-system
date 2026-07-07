@@ -298,10 +298,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private String formatDateTime(SendHistoryVO send) {
-        var dateTime = send.getCompletedAt() != null
-                ? send.getCompletedAt()
-                : send.getScheduledAt() != null ? send.getScheduledAt() : send.getCreatedAt();
-        return dateTime == null ? "-" : dateTime.format(DATE_TIME_FORMATTER);
+        return send.getCompletedAt() == null ? "" : send.getCompletedAt().format(DATE_TIME_FORMATTER);
     }
 
     private String defaultText(String value, String fallback) {

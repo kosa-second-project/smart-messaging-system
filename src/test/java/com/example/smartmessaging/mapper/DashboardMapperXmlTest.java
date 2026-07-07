@@ -50,8 +50,11 @@ class DashboardMapperXmlTest {
                         "<select id=\"selectChannelSendSummary\"",
                         "GROUP BY msbd.channel_id",
                         "<select id=\"selectLatestCustomerStat\"",
-                        "FETCH FIRST 1 ROW ONLY"
-                );
+                        "FETCH FIRST 1 ROW ONLY",
+                        "ORDER BY sh.completed_at DESC NULLS LAST",
+                        "FETCH FIRST 5 ROWS ONLY"
+                )
+                .doesNotContain("ORDER BY COALESCE(sh.completed_at, sh.scheduled_at, sh.created_at) DESC");
     }
 
     private void parseMapper(Configuration configuration, String resource) throws Exception {

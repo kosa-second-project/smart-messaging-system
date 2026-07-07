@@ -129,7 +129,7 @@
             sh.created_at
         FROM send_history sh
         WHERE sh.is_deleted = 0
-        ORDER BY COALESCE(sh.completed_at, sh.scheduled_at, sh.created_at) DESC
+        ORDER BY sh.completed_at DESC NULLS LAST
         FETCH FIRST 5 ROWS ONLY
     </select>
 
