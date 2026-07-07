@@ -51,11 +51,7 @@ public class GeminiSuggestionClient {
         try {
             // 모델이 지시를 어기고 코드블록이나 설명을 붙여도 JSON 객체 부분만 추출한다.
             String json = extractJson(content);
-            AiSuggestionResponseDTO response = objectMapper.readValue(json, AiSuggestionResponseDTO.class);
-            if (response.suggestions() == null) {
-                throw new IllegalArgumentException("Missing suggestions array");
-            }
-            return response;
+            return objectMapper.readValue(json, AiSuggestionResponseDTO.class);
         } catch (JsonProcessingException | IllegalArgumentException exception) {
             log.warn("Gemini suggestion response parsing failed: exceptionType={}",
                     exception.getClass().getSimpleName());

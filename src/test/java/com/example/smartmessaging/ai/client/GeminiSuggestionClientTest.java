@@ -42,11 +42,9 @@ class GeminiSuggestionClientTest {
     }
 
     @Test
-    void suggestions_배열이_없으면_파싱_실패로_처리한다() {
-        assertThatExceptionOfType(BusinessException.class)
-                .isThrownBy(() -> client.parseResponse("{\"result\":[]}"))
-                .satisfies(exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EXTERNAL_API_ERROR)
-                );
+    void suggestions_배열이_없으면_빈_리스트로_보정한다() {
+        AiSuggestionResponseDTO response = client.parseResponse("{\"result\":[]}");
+
+        assertThat(response.suggestions()).isEmpty();
     }
 }

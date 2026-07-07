@@ -87,6 +87,18 @@ class AiSuggestionServiceTest {
     }
 
     @Test
+    void null_suggestions_응답은_빈_후보로_보고_재시도한다() {
+        when(geminiSuggestionClient.generate(anyString()))
+                .thenReturn(new AiSuggestionResponseDTO(null))
+                .thenReturn(response(validAd("재시도 통과")));
+
+        AiSuggestionResponseDTO result = service.suggest(request(MessageType.AD));
+
+        assertThat(result.suggestions()).hasSize(1);
+        verify(geminiSuggestionClient, times(2)).generate(anyString());
+    }
+
+    @Test
     void 총_3회_모두_통과_후보가_없으면_422_예외을_발생시킨다() {
         when(geminiSuggestionClient.generate(anyString())).thenReturn(
                 response(new AiSuggestionItemResponseDTO("제외", "문의 test@example.com"))
