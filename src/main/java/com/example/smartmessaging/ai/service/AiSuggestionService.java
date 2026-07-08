@@ -61,6 +61,8 @@ public class AiSuggestionService {
             - 과장, 과도한 자극, 허위·오인 가능성이 있는 표현을 피하십시오.
             - 고객 태그를 문구에 그대로 나열하거나 '휴면 고객님', '30대 여성 고객님'과 같이 분류를 불필요하게 노출하지 마십시오.
             - 템플릿 변수는 허용 변수 목록에 있는 값만 정확한 '#{변수명}' 형식으로 사용하십시오.
+            - 광고 표기 '(광고)'와 수신거부 문구는 추천/검사 대상이 아니므로 후보 본문에 강제로 포함하지 마십시오.
+            - 광고성 메시지의 실제 발송 보조 표기는 화면/발송 단계에서 별도로 처리됩니다.
             %s
             %s
             %s
@@ -249,14 +251,14 @@ public class AiSuggestionService {
         if (candidate.title() == null || candidate.title().isBlank()) {
             failures.add("EMPTY_TITLE");
         } else {
-            // 제목에는 광고 표기와 수신거부 규칙을 강제하지 않고 공통 안전 룰만 적용한다.
+            // 제목에는 광고 표기와 수신거부 문구 유무를 보지 않고 공통 안전 룰만 적용한다.
             failures.addAll(validateText(request, candidate.title(), MessageType.INFO, availableVariables));
         }
         if (candidate.content() == null || candidate.content().isBlank()) {
             failures.add("EMPTY_CONTENT");
         } else {
-            // 본문은 실제 유형으로 검사해 AD인 경우 광고·수신거부 규칙까지 확인한다.
-            failures.addAll(validateText(request, candidate.content(), request.messageType(), availableVariables));
+            // 본문도 표기 문구 유무로 후보를 탈락시키지 않도록 공통 안전 룰만 적용한다.
+            failures.addAll(validateText(request, candidate.content(), MessageType.INFO, availableVariables));
         }
         return failures;
     }
