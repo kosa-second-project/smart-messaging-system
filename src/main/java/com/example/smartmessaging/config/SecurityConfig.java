@@ -2,6 +2,7 @@ package com.example.smartmessaging.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -33,6 +34,9 @@ public class SecurityConfig {
                 .requestMatchers("/auth/login", "/auth/login-proc").permitAll()
                 
                 .requestMatchers("/api/stats/batch/**").hasAuthority("ROLE_ADMIN")
+                // 템플릿 조회/생성은 기존 정책을 유지하고, 수정/삭제 요청만 관리자 권한으로 제한한다.
+                .requestMatchers(HttpMethod.PUT, "/api/templates/*").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/templates/*").hasAuthority("ROLE_ADMIN")
 
                 // 문자/카카오 링크 추적 및 수신거부 확인 페이지는 고객이 로그인 없이 접근 가능해야 함
                 .requestMatchers("/r/*", "/u/*", "/u/*/unsubscribe").permitAll()
