@@ -115,6 +115,22 @@ class LlmReviewServiceTest {
     }
 
     @Test
+    void 광고_표기와_수신거부_관련_LLM_ruleId는_허용_규칙에서_제외된다() {
+        LlmReviewResponseDTO response = new LlmReviewResponseDTO(null, List.of(
+                newIssue("UNSUBSCRIBE_MISSING", "MEDIUM", "content", "수신거부", "수신거부가 없습니다."),
+                newIssue("AD_LABEL_MISSING", "MEDIUM", "content", "(광고)", "광고 표기가 없습니다."),
+                newIssue("CLARITY_ISSUE", "LOW", "content", "혜택", "혜택 조건이 모호합니다.")
+        ), null);
+        when(geminiReviewClient.review(anyString(), anyString())).thenReturn(response);
+
+        LlmReviewService.ReviewResult result = llmReviewService.review(request(), List.of());
+
+        assertThat(result.newIssues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
+                .containsExactly("CLARITY_ISSUE");
+    }
+
+    @Test
     void 오탐_가능성은_외부_검사만_한_단계_완화하고_서버_룰은_변경하지_않는다() {
         ValidationIssueResponseDTO serverIssue = issue(
                 "UNSUPPORTED_VARIABLE",
