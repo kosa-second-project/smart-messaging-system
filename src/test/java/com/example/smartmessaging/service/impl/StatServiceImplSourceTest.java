@@ -23,4 +23,15 @@ class StatServiceImplSourceTest {
                 .doesNotContain("successRateByChannel(List<MessageStatByDegreeVO>")
                 .doesNotContain("successRateByDegreeAndChannel(List<MessageStatByDegreeVO>");
     }
+
+    @Test
+    void fallback_성공률_차트는_낮은_성공률도_보이도록_축을_0부터_사용한다() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/resources/static/js/pages/stats/delivery.js"
+        ));
+
+        assertThat(source)
+                .contains("yMin: 0")
+                .doesNotContain("yMin: 90");
+    }
 }

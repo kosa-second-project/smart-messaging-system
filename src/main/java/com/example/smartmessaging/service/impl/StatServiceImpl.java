@@ -226,13 +226,17 @@ public class StatServiceImpl implements StatService {
     }
 
     private StatChartResponse buildFallbackSuccessChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
+        List<Integer> fallbackDegrees = summary.degrees().stream()
+                .filter(degree -> degree != null && degree > 1)
+                .toList();
+
         return StatChartResponse.builder()
                 .chartId("fallbackSuccess")
                 .title("Fallback 채널별 성공률")
                 .type("bar")
-                .labels(summary.degrees().stream().map(degree -> degree + "차").toList())
+                .labels(fallbackDegrees.stream().map(degree -> degree + "차").toList())
                 .datasets(summary.channelIds().stream()
-                        .map(channelId -> dataset(channelName(channelNames, channelId), summary.degrees().stream()
+                        .map(channelId -> dataset(channelName(channelNames, channelId), fallbackDegrees.stream()
                                 .map(degree -> (Number) round(summary.successRateByDegreeAndChannel(degree, channelId)))
                                 .toList()))
                         .toList())

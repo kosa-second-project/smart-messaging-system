@@ -37,7 +37,7 @@ function loadDeliveryStats(state) {
                 kind: "composedTrend"
             },
             fallbackSuccess: {
-                yMin: 90,
+                yMin: 0,
                 yMax: 100,
                 tooltipSuffix: "%",
                 yFormatter: function(value) {
