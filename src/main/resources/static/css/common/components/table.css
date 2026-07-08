@@ -44,8 +44,8 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--muted);
-  color: var(--muted-foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-size: 0.75rem;
   font-weight: var(--font-weight-bold);
   white-space: nowrap;

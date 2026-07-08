@@ -14,26 +14,26 @@
 }
 
 .ds-badge--primary {
-  background: rgba(24, 67, 250, 0.1);
+  background: rgba(24, 67, 250, 0.16);
   color: var(--primary);
 }
 
 .ds-badge--success {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.18);
   color: #047857;
 }
 
 .ds-badge--warning {
-  background: rgba(245, 158, 11, 0.14);
+  background: rgba(245, 158, 11, 0.2);
   color: #A16207;
 }
 
 .ds-badge--danger {
-  background: rgba(224, 32, 32, 0.1);
+  background: rgba(224, 32, 32, 0.16);
   color: var(--destructive);
 }
 
 .ds-badge--violet {
-  background: rgba(139, 92, 246, 0.12);
+  background: rgba(139, 92, 246, 0.18);
   color: #6D28D9;
 }

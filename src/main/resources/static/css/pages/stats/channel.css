@@ -184,8 +184,8 @@
 
 .stats-channel-table th {
   border-bottom: 1px solid var(--border);
-  background: var(--muted);
-  color: var(--muted-foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
   font-weight: var(--font-weight-medium);

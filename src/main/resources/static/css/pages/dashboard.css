@@ -69,17 +69,17 @@
 }
 
 .dashboard-queue-state--idle {
-  background: #f1f5f9;
-  color: #475569;
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .dashboard-queue-state--processing {
-  background: #eff6ff;
+  background: #dbeafe;
   color: #1d4ed8;
 }
 
 .dashboard-queue-state--needs-attention {
-  background: #fef2f2;
+  background: #fee2e2;
   color: #dc2626;
 }
 
@@ -268,23 +268,23 @@
 }
 
 .dashboard-status-badge--green {
-  background: #ecfdf5;
+  background: #d1fae5;
   color: #047857;
 }
 
 .dashboard-status-badge--amber {
-  background: #fffbeb;
+  background: #fef3c7;
   color: #b45309;
 }
 
 .dashboard-status-badge--red {
-  background: #fef2f2;
+  background: #fee2e2;
   color: #dc2626;
 }
 
 .dashboard-source-badge {
   border-radius: 0.25rem;
-  background: #eff6ff;
+  background: #dbeafe;
   color: #1d4ed8;
   padding: 0.0625rem 0.375rem;
   font-size: 0.625rem;

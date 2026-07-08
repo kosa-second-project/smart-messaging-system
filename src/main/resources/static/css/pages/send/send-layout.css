@@ -17,6 +17,11 @@
   overflow-x: hidden;
 }
 
+.send-container .ds-table th {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
 .step-section {
   display: none;
   height: 100%;

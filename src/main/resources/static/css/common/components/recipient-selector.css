@@ -189,12 +189,12 @@
 }
 
 .selector-status-badge--allow {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.18);
   color: #047857;
 }
 
 .selector-status-badge--deny {
-  background: rgba(224, 32, 32, 0.1);
+  background: rgba(224, 32, 32, 0.16);
   color: var(--destructive);
 }
 

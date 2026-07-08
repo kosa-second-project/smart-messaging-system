@@ -251,17 +251,17 @@
 }
 
 .priority-1 {
-    background: #fff1f2;
+    background: #ffe4e6;
     color: #be123c;
 }
 
 .priority-2 {
-    background: #eff6ff;
+    background: #dbeafe;
     color: #1d4ed8;
 }
 
 .priority-3 {
-    background: #ecfdf5;
+    background: #d1fae5;
     color: #047857;
 }
 
@@ -327,17 +327,17 @@
 }
 
 .message-purpose-notice--ad {
-    background: #f1f5ff;
+    background: #dbeafe;
     color: #2445c7;
 }
 
 .message-purpose-notice--info {
-    background: #fff8e6;
+    background: #fef3c7;
     color: #8a5a00;
 }
 
 .preview-ad-badge--info {
-    background-color: #fff8e6;
+    background-color: #fef3c7;
     color: #8a5a00;
 }
 

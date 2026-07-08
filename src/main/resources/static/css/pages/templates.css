@@ -728,10 +728,10 @@
     font-weight: var(--font-weight-bold);
 }
 
-.template-review-status--PASS { background: #dcfce7; color: #166534; }
-.template-review-status--NOTICE { background: #e0f2fe; color: #075985; }
-.template-review-status--WARNING { background: #fef3c7; color: #92400e; }
-.template-review-status--FAIL { background: #fee2e2; color: #991b1b; }
+.template-review-status--PASS { background: #bbf7d0; color: #166534; }
+.template-review-status--NOTICE { background: #bae6fd; color: #075985; }
+.template-review-status--WARNING { background: #fde68a; color: #92400e; }
+.template-review-status--FAIL { background: #fecaca; color: #991b1b; }
 
 .ds-button:disabled {
     cursor: not-allowed;

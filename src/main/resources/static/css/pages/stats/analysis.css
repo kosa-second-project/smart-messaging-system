@@ -111,7 +111,8 @@
 }
 
 .stats-analysis-table th {
-  color: var(--muted-foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-size: 0.6875rem;
   font-weight: var(--font-weight-bold);
 }

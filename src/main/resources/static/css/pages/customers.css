@@ -120,6 +120,11 @@
   cursor: pointer;
 }
 
+.customer-selector .selector-table-container .customer-table th {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
 .customer-table th:nth-child(1) { width: 12%; }
 .customer-table th:nth-child(2) { width: 15%; }
 .customer-table th:nth-child(3) { width: 9%; text-align: center; }
@@ -249,7 +254,8 @@
 }
 
 .customer-history-table th {
-  color: var(--muted-foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-size: 0.75rem;
   font-weight: var(--font-weight-bold);
 }

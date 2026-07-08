@@ -191,6 +191,8 @@
 }
 
 .history-table th {
+  background: var(--primary);
+  color: var(--primary-foreground);
   padding-top: 0.625rem;
   padding-bottom: 0.625rem;
   font-size: 0.75rem;
@@ -317,8 +319,8 @@
 }
 
 .history-tag-badge {
-  background: #f3f4f6;
-  color: #5f6672;
+  background: #e5e7eb;
+  color: #3f4652;
 }
 
 .history-table .ds-badge {
@@ -331,8 +333,8 @@
 
 .history-tag-count {
   flex: 0 0 auto;
-  background: #e9ebef;
-  color: #555d69;
+  background: #d7dbe2;
+  color: #3f4652;
 }
 
 .history-status {
@@ -340,27 +342,27 @@
 }
 
 .history-status--scheduled {
-  border-color: #cfe3f4;
-  background: #f0f8ff;
-  color: #47708f;
+  border-color: #9ec8ea;
+  background: #dbeeff;
+  color: #255d84;
 }
 
 .history-status--sending {
-  border-color: #f4dfb4;
-  background: #fff9eb;
-  color: #8a6518;
+  border-color: #e8c878;
+  background: #fff0c7;
+  color: #73510f;
 }
 
 .history-status--completed {
-  border-color: #cce8dc;
-  background: #f0faf5;
-  color: #39755c;
+  border-color: #9fd4bd;
+  background: #dcf3e8;
+  color: #24664a;
 }
 
 .history-status--failed {
-  border-color: #f2cccc;
-  background: #fdf2f2;
-  color: #a44b4b;
+  border-color: #e7aaaa;
+  background: #f9dede;
+  color: #8d3030;
 }
 
 .history-status--default {
