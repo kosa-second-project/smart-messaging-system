@@ -173,6 +173,7 @@
 
 .bubble-text {
     line-height: 1.16;
+    white-space: pre-wrap;
 }
 
 .bubble-link-area,
