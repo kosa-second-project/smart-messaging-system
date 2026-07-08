@@ -278,7 +278,8 @@
 .ds-table th {
   position: sticky;
   top: 0;
-  background: var(--secondary);
+  background: var(--primary);
+  color: var(--primary-foreground);
   z-index: 10;
 }
 

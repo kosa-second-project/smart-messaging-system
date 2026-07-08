@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>특별 혜택 구매 안내</title>
+    <link rel="stylesheet" th:href="@{/css/pages/purchase.css}">
+</head>
+<body>
+<main class="purchase-page">
+    <section class="purchase-card">
+        <span class="purchase-badge">Special Gift</span>
+        <h1 class="purchase-title">
+            <span class="purchase-highlight" th:text="${customerName} ?: '고객'">고객</span>님만을 위한<br>특별 혜택이 도착했습니다!
+        </h1>
+        <p class="purchase-description">
+            준비된 한정 수량 혜택입니다.<br>아래 버튼을 눌러 구매 절차를 시작하세요.
+        </p>
+
+        <div class="customer-info-box">
+            <div class="customer-info-row">
+                <span class="customer-info-label">수신 고객명</span>
+                <span class="customer-info-val" th:text="${customerName} ?: '고객'">홍길동</span>
+            </div>
+            <div class="customer-info-row">
+                <span class="customer-info-label">휴대폰 번호</span>
+                <span class="customer-info-val" th:text="${phone} ?: '-'">010-****-0000</span>
+            </div>
+        </div>
+
+        <form th:action="@{'/p/' + ${code} + '/purchase'}" method="post">
+            <button type="submit" class="purchase-button">구매하러 가기</button>
+        </form>
+        
+        <p class="purchase-footer">본 링크는 수신자 본인만 이용 가능한 일회성 주소입니다.</p>
+    </section>
+</main>
+</body>
+</html>

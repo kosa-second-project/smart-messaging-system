@@ -64,4 +64,41 @@ class ShortUrlServiceTest {
         verify(shortUrlMapper).incrementChannelClickCount(7L, 1L);
         verify(shortUrlMapper).incrementHourlyClickCount(eq(7L), anyInt(), eq(1L));
     }
+
+    @Test
+    void 구매링크는_p로_시작하는_단축_URL을_생성한다() {
+        ReflectionTestUtils.setField(shortUrlService, "appBaseUrl", "http://localhost:8080");
+        ReflectionTestUtils.setField(shortUrlService, "shortUrlBaseUrl", "https://kosa.kr");
+        when(shortUrlMapper.insertShortUrl(org.mockito.ArgumentMatchers.any(ShortUrlVO.class))).thenReturn(1);
+        ShortUrlTargetVO target = new ShortUrlTargetVO();
+        target.setChannelId(3L);
+        when(shortUrlMapper.findTargetBySendTargetId(10L)).thenReturn(target);
+
+        String url = shortUrlService.createTrackedUrl(10L, "https://example.com/shop", ShortUrlPurpose.PURCHASE);
+
+        assertThat(url).matches("https://kosa\\.kr/p/[0-9A-Za-z]{8}");
+    }
+
+    @Test
+    void 구매확정시_is_converted를_1로_마킹하고_리다이렉트URL을_반환한다() {
+        ShortUrlVO shortUrl = new ShortUrlVO();
+        shortUrl.setPurpose("PURCHASE");
+        shortUrl.setSendTargetId(10L);
+        when(shortUrlMapper.findById("Ab3dE5gH")).thenReturn(shortUrl);
+
+        ShortUrlTargetVO target = new ShortUrlTargetVO();
+        target.setOriginalUrl("https://example.com/shop");
+        target.setPurpose("PURCHASE");
+        target.setSendTargetId(10L);
+        target.setUserUuid("user-uuid-1");
+        target.setChannelId(7L);
+        when(shortUrlMapper.findClickTargetById("Ab3dE5gH")).thenReturn(target);
+        when(shortUrlMapper.markFirstClicked("Ab3dE5gH")).thenReturn(1);
+
+        String redirectUrl = shortUrlService.purchase("Ab3dE5gH");
+
+        assertThat(redirectUrl)
+                .isEqualTo("https://example.com/shop?userUuid=user-uuid-1&channelId=7");
+        verify(shortUrlMapper).markConverted("Ab3dE5gH");
+    }
 }
