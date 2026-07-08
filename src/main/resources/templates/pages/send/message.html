@@ -88,6 +88,8 @@
                                 </div>
                             </div>
                         </div>
+                        <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnAiSuggestMessage">AI 문구 추천</button>
+                        <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnAiReviewMessage">AI 검사</button>
                         <button type="button" class="ds-button ds-button--sm ds-button--outline" id="btnSaveTemplate">템플릿 저장</button>
                     </div>
                 </div>
@@ -145,6 +147,38 @@
         </div>
     </div>
 
+
+    <div id="sendAiSuggestModal" class="ds-modal send-ai-modal" onclick="MessageComposer.closeAiSuggestOnBackdrop(event)">
+        <div class="ds-modal__backdrop"></div>
+        <div class="ds-modal__panel">
+            <div class="ds-modal__header">
+                <h3 class="ds-modal__title">AI 문구 추천</h3>
+                <button type="button" class="ds-icon-button" onclick="MessageComposer.closeAiSuggestModal()" aria-label="닫기">×</button>
+            </div>
+            <div class="ds-modal__body send-ai-modal__body">
+                <label class="send-ai-field">
+                    <span class="message-label">원하는 문구 방향</span>
+                    <textarea id="sendAiDirection" class="ds-textarea" rows="4" maxlength="500" placeholder="예: 신규 고객에게 이번 달 혜택을 친근하지만 과장되지 않게 안내해 주세요."></textarea>
+                </label>
+                <button id="btnGenerateSendAiSuggestion" type="button" class="ds-button ds-button--primary send-ai-action">추천 문구 생성</button>
+                <div id="sendAiSuggestMessage" class="send-ai-message" aria-live="polite"></div>
+                <div id="sendAiSuggestions" class="send-ai-suggestions"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sendAiReviewModal" class="ds-modal send-ai-modal" onclick="MessageComposer.closeAiReviewOnBackdrop(event)">
+        <div class="ds-modal__backdrop"></div>
+        <div class="ds-modal__panel">
+            <div class="ds-modal__header">
+                <h3 class="ds-modal__title">AI 검사 결과</h3>
+                <button type="button" class="ds-icon-button" onclick="MessageComposer.closeAiReviewModal()" aria-label="닫기">×</button>
+            </div>
+            <div class="ds-modal__body send-ai-modal__body">
+                <div id="sendAiReviewResult" class="send-ai-review-panel" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
     <script th:src="@{/js/pages/send-message.js(v=${#dates.createNow().getTime()})}"></script>
 </div>
 </body>
