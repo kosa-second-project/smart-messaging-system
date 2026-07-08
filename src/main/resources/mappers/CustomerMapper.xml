@@ -195,13 +195,13 @@
             <when test="sortOrder == 'type'">
                 (CASE
                 WHEN EXISTS (
-                    SELECT 1 FROM customer_tag_mapping ctm 
-                    JOIN tag t ON ctm.tag_id = t.id 
+                    SELECT 1 FROM customer_tag_mapping ctm
+                    JOIN tag t ON ctm.tag_id = t.id
                     WHERE ctm.customer_id = c.id AND ctm.is_deleted = 0 AND t.is_deleted = 0 AND t.name = '신규'
                 ) THEN '1'
                 WHEN EXISTS (
-                    SELECT 1 FROM customer_tag_mapping ctm 
-                    JOIN tag t ON ctm.tag_id = t.id 
+                    SELECT 1 FROM customer_tag_mapping ctm
+                    JOIN tag t ON ctm.tag_id = t.id
                     WHERE ctm.customer_id = c.id AND ctm.is_deleted = 0 AND t.is_deleted = 0 AND t.name = '휴면'
                 ) THEN '3'
                 ELSE '2'

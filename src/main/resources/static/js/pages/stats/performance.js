@@ -41,16 +41,23 @@ function loadPerformanceStats(state) {
         }, {
             performanceTrend: {
                 tooltipSuffix: "건",
+                yMin: 0,
+                yTickPrecision: 0,
+                yStepSize: 1,
                 yFormatter: countFormatter
             },
             weekdayClick: {
-                legend: false,
                 tooltipSuffix: "건",
+                yMin: 0,
+                yTickPrecision: 0,
+                yStepSize: 1,
                 yFormatter: countFormatter
             },
             hourlyClick: {
-                legend: false,
                 tooltipSuffix: "건",
+                yMin: 0,
+                yTickPrecision: 0,
+                yStepSize: 1,
                 yFormatter: countFormatter
             }
         });

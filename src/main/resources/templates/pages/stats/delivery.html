@@ -45,16 +45,7 @@
 
         <section id="statsCards" class="stats-card-grid" aria-label="발송 현황 주요 지표"></section>
 
-        <section class="stats-card stats-queue-card">
-            <div class="stats-queue-card__head">
-                <div>
-                    <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
-                    <p class="stats-card-subtitle">대량 발송 요청이 현재 처리 흐름입니다.</p>
-                </div>
-            </div>
-            <div id="statsQueueItems" class="stats-queue-grid"></div>
-            <div id="statsQueueBar" class="stats-queue-bar" aria-label="큐 상태 비중"></div>
-        </section>
+        <th:block th:replace="~{fragments/realtime-queue-status :: card}"></th:block>
 
         <section class="stats-chart-layout">
             <article class="stats-card stats-chart-card stats-chart-card--large">
@@ -85,6 +76,7 @@
         </section>
     </div>
 
+    <script th:src="@{/js/components/realtime-queue-status.js}"></script>
     <script th:src="@{/js/pages/stats/delivery.js}"></script>
 </main>
 </html>

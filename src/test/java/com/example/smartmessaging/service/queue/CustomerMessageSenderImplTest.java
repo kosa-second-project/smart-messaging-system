@@ -3,6 +3,7 @@ package com.example.smartmessaging.service.queue;
 import com.example.smartmessaging.dto.request.MessageTaskDto;
 import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.SendAttemptVO;
+import com.example.smartmessaging.dto.vo.SendResult;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.MessageRouterService;
 import com.example.smartmessaging.service.repository.HistoryMapper;
@@ -69,6 +70,34 @@ class CustomerMessageSenderImplTest {
         verify(historyMapper).updateSendTargetStatus(20L, "SENDING");
         verify(historyMapper).updateSendTargetStatus(20L, "SUCCEEDED");
         verify(historyMapper).incrementSuccessCount(10L);
+        verify(historyMapper, never()).incrementActualCostByChannel(any(), any());
+        verify(historyMapper).updateHistoryStatus(10L, "SENT");
+    }
+
+    @Test
+    void realCustomer_successAddsActualCostForSucceededChannel() {
+        MessageTaskDto task = MessageTaskDto.builder()
+                .messageId("send-10-20")
+                .sendHistoryId(10L)
+                .sendTargetId(20L)
+                .customerId(30L)
+                .userId(40L)
+                .isRealCustomer(true)
+                .phoneNumber("01011112222")
+                .fallbackSequence(List.of("SMS"))
+                .currentStep(0)
+                .build();
+
+        when(channelService.getActiveChannels()).thenReturn(List.of(channel(1L, "SMS")));
+        when(messageRouterService.send(any())).thenReturn(SendResult.success("SMS"));
+        when(historyMapper.findNextAttemptOrder(20L)).thenReturn(1);
+        when(historyMapper.countUnfinishedTargets(10L)).thenReturn(0);
+
+        sender.send(task);
+
+        verify(historyMapper).updateSendTargetStatus(20L, "SUCCEEDED");
+        verify(historyMapper).incrementSuccessCount(10L);
+        verify(historyMapper).incrementActualCostByChannel(10L, 1L);
         verify(historyMapper).updateHistoryStatus(10L, "SENT");
     }
 

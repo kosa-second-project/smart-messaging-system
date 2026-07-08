@@ -12,9 +12,11 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -29,14 +31,18 @@ public class StatsBatchLauncherService {
     // StatsBatchJobConfig에서 등록한 통계 일별 집계 Job.
     private final Job statsDailyAggregationJob;
 
+    private final ZoneId batchZoneId;
+
     public StatsBatchLauncherService(
             JobLauncher jobLauncher,
             JobExplorer jobExplorer,
-            @Qualifier("statsDailyAggregationJob") Job statsDailyAggregationJob
+            @Qualifier("statsDailyAggregationJob") Job statsDailyAggregationJob,
+            @Value("${stats.batch.zone}") String batchZone
     ) {
         this.jobLauncher = jobLauncher;
         this.jobExplorer = jobExplorer;
         this.statsDailyAggregationJob = statsDailyAggregationJob;
+        this.batchZoneId = ZoneId.of(batchZone);
     }
 
     /**
@@ -49,6 +55,7 @@ public class StatsBatchLauncherService {
             JobRestartException,
             JobInstanceAlreadyCompleteException,
             JobParametersInvalidException {
+        rejectTodayOrFutureStatDate(statDate);
         rejectIfSameDateJobRunning(statDate);
 
         JobParameters jobParameters = new JobParametersBuilder()
@@ -58,6 +65,17 @@ public class StatsBatchLauncherService {
 
         log.info("[StatsBatch] job launch requested - statDate: {}", statDate);
         return jobLauncher.run(statsDailyAggregationJob, jobParameters);
+    }
+
+    private void rejectTodayOrFutureStatDate(LocalDate statDate) {
+        LocalDate today = LocalDate.now(batchZoneId);
+
+        if (!statDate.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "오늘 또는 미래 날짜의 통계 배치는 실행할 수 없습니다. statDate="
+                            + statDate + ", today=" + today + ", zone=" + batchZoneId
+            );
+        }
     }
 
     private void rejectIfSameDateJobRunning(LocalDate statDate)

@@ -109,13 +109,14 @@ public class StatServiceImpl implements StatService {
     public StatPageResponse getPerformanceStats(StatSearchRequest request) {
         List<ChannelStatVO> channelStats = statMapper.selectChannelStats(request);
         List<ClickStatVO> clickStats = statMapper.selectPerformanceClickStats(request);
+        List<ClickStatVO> conversionStats = statMapper.selectPerformanceConversionStats(request);
 
         return StatPageResponse.builder()
-                .cards(buildPerformanceCards(channelStats))
+                .cards(buildPerformanceCards(request, channelStats))
                 .charts(List.of(
-                        buildPerformanceTrendChart(clickStats),
-                        buildWeekdayClickChart(clickStats),
-                        buildHourlyClickChart(clickStats)
+                        buildPerformanceTrendChart(clickStats, conversionStats),
+                        buildWeekdayClickChart(clickStats, conversionStats),
+                        buildHourlyClickChart(clickStats, conversionStats)
                 ))
                 .tables(List.of())
                 .build();
@@ -159,34 +160,35 @@ public class StatServiceImpl implements StatService {
 
     private List<StatCardResponse> buildCustomerCards(List<CustomerStatVO> stats) {
         CustomerStatVO latest = latestCustomerStat(stats);
-        long newCustomers = stats.stream().mapToLong(stat -> n(stat.getNewCustomerCount())).sum();
-        long joinedCustomers = stats.stream().mapToLong(stat -> n(stat.getJoinedCustomerCount())).sum();
+        long newCustomers = n(latest.getNewCustomerCount());
+        long joinedCustomers = n(latest.getJoinedCustomerCount());
 
         return List.of(
                 card("전체 고객", formatNumber(n(latest.getTotalCustomerCount())), "분석 가능 고객"),
                 card("일반 고객", formatNumber(n(latest.getNormalCustomerCount())), "주요 발송 대상"),
-                card("신규 고객", formatNumber(newCustomers), "선택 기간 누적"),
-                card("가입 고객", formatNumber(joinedCustomers), "선택 기간 누적")
+                card("신규 고객", formatNumber(newCustomers), "최근 7일 동안 가입한 고객 수"),
+                card("가입 고객", formatNumber(joinedCustomers), "어제 가입한 고객 수")
         );
     }
 
-    private List<StatCardResponse> buildPerformanceCards(List<ChannelStatVO> stats) {
+    private List<StatCardResponse> buildPerformanceCards(StatSearchRequest request, List<ChannelStatVO> stats) {
         long clickTarget = stats.stream().mapToLong(stat -> n(stat.getClickTargetCount())).sum();
         long clickCount = stats.stream().mapToLong(stat -> n(stat.getClickCount())).sum();
         long conversionTarget = stats.stream().mapToLong(stat -> n(stat.getConversionTargetCount())).sum();
         long conversionCount = stats.stream().mapToLong(stat -> n(stat.getConversionCount())).sum();
         long consentTarget = stats.stream().mapToLong(stat -> n(stat.getConsentTargetCount())).sum();
         long consentCount = stats.stream().mapToLong(stat -> n(stat.getConsentCount())).sum();
+        String channelName = performanceChannelName(request.getChannel());
 
         return List.of(
                 card("클릭수 / 전체 클릭대상수", formatNumber(clickCount) + " / " + formatNumber(clickTarget),
-                        "전체 기준 클릭률 " + formatRate(rate(clickCount, clickTarget)) + "%"),
+                        channelName + " 클릭률 " + formatRate(rate(clickCount, clickTarget)) + "%"),
                 card("전환수 / 전체 전환대상수", formatNumber(conversionCount) + " / " + formatNumber(conversionTarget),
-                        "전체 기준 전환율 " + formatRate(rate(conversionCount, conversionTarget)) + "%"),
+                        channelName + " 전환율 " + formatRate(rate(conversionCount, conversionTarget)) + "%"),
                 card("동의수 / 전체 동의대상수", formatNumber(consentCount) + " / " + formatNumber(consentTarget),
-                        "전체 기준 동의율 " + formatRate(rate(consentCount, consentTarget)) + "%"),
+                        channelName + " 동의율 " + formatRate(rate(consentCount, consentTarget)) + "%"),
                 card("수신거부수 / 전체 대상수", "0 / " + formatNumber(consentTarget),
-                        "현재 통계 테이블 기준")
+                        channelName + " 기준 동의율 " + formatRate(rate(consentCount, consentTarget)) + "%")
         );
     }
 
@@ -224,13 +226,17 @@ public class StatServiceImpl implements StatService {
     }
 
     private StatChartResponse buildFallbackSuccessChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
+        List<Integer> fallbackDegrees = summary.degrees().stream()
+                .filter(degree -> degree != null && degree > 1)
+                .toList();
+
         return StatChartResponse.builder()
                 .chartId("fallbackSuccess")
                 .title("Fallback 채널별 성공률")
                 .type("bar")
-                .labels(summary.degrees().stream().map(degree -> degree + "차").toList())
+                .labels(fallbackDegrees.stream().map(degree -> degree + "차").toList())
                 .datasets(summary.channelIds().stream()
-                        .map(channelId -> dataset(channelName(channelNames, channelId), summary.degrees().stream()
+                        .map(channelId -> dataset(channelName(channelNames, channelId), fallbackDegrees.stream()
                                 .map(degree -> (Number) round(summary.successRateByDegreeAndChannel(degree, channelId)))
                                 .toList()))
                         .toList())
@@ -350,22 +356,31 @@ public class StatServiceImpl implements StatService {
                 .build();
     }
 
-    private StatChartResponse buildPerformanceTrendChart(List<ClickStatVO> stats) {
-        List<ClickStatVO> sorted = sortClickStats(stats);
+    private StatChartResponse buildPerformanceTrendChart(List<ClickStatVO> clickStats, List<ClickStatVO> conversionStats) {
+        List<LocalDate> dates = sortedPerformanceDates(clickStats, conversionStats);
 
         return StatChartResponse.builder()
                 .chartId("performanceTrend")
-                .title("클릭 추이")
+                .title("클릭/전환 추이")
                 .type("line")
-                .labels(dateLabels(sorted, ClickStatVO::getStatDate))
-                .datasets(List.of(dataset("클릭수", sorted.stream()
-                        .map(stat -> (Number) totalHourlyClick(stat))
-                        .toList())))
+                .labels(dates.stream().map(this::dateLabel).toList())
+                .datasets(List.of(
+                        dataset("클릭수", dates.stream()
+                                .map(date -> (Number) totalByDate(clickStats, date))
+                                .toList()),
+                        dataset("전환수", dates.stream()
+                                .map(date -> (Number) totalByDate(conversionStats, date))
+                                .toList())
+                ))
                 .build();
     }
 
-    private StatChartResponse buildWeekdayClickChart(List<ClickStatVO> stats) {
-        Map<DayOfWeek, Long> clicksByWeekday = stats.stream()
+    private StatChartResponse buildWeekdayClickChart(List<ClickStatVO> clickStats, List<ClickStatVO> conversionStats) {
+        Map<DayOfWeek, Long> clicksByWeekday = clickStats.stream()
+                .filter(stat -> stat.getStatDate() != null)
+                .collect(Collectors.groupingBy(stat -> stat.getStatDate().getDayOfWeek(),
+                        Collectors.summingLong(this::totalHourlyClick)));
+        Map<DayOfWeek, Long> conversionsByWeekday = conversionStats.stream()
                 .filter(stat -> stat.getStatDate() != null)
                 .collect(Collectors.groupingBy(stat -> stat.getStatDate().getDayOfWeek(),
                         Collectors.summingLong(this::totalHourlyClick)));
@@ -381,30 +396,40 @@ public class StatServiceImpl implements StatService {
 
         return StatChartResponse.builder()
                 .chartId("weekdayClick")
-                .title("요일별 클릭수")
+                .title("요일별 클릭/전환수")
                 .type("bar")
                 .labels(List.of("월", "화", "수", "목", "금", "토", "일"))
-                .datasets(List.of(dataset("클릭수", weekdays.stream()
-                        .map(day -> (Number) clicksByWeekday.getOrDefault(day, 0L))
-                        .toList())))
+                .datasets(List.of(
+                        dataset("클릭수", weekdays.stream()
+                                .map(day -> (Number) clicksByWeekday.getOrDefault(day, 0L))
+                                .toList()),
+                        dataset("전환수", weekdays.stream()
+                                .map(day -> (Number) conversionsByWeekday.getOrDefault(day, 0L))
+                                .toList())
+                ))
                 .build();
     }
 
-    private StatChartResponse buildHourlyClickChart(List<ClickStatVO> stats) {
+    private StatChartResponse buildHourlyClickChart(List<ClickStatVO> clickStats, List<ClickStatVO> conversionStats) {
         List<Number> hourlyClicks = new ArrayList<>();
+        List<Number> hourlyConversions = new ArrayList<>();
         for (int hour = 0; hour < 24; hour++) {
             final int hourIndex = hour;
-            hourlyClicks.add(stats.stream().mapToLong(stat -> hourlyClick(stat, hourIndex)).sum());
+            hourlyClicks.add(clickStats.stream().mapToLong(stat -> hourlyClick(stat, hourIndex)).sum());
+            hourlyConversions.add(conversionStats.stream().mapToLong(stat -> hourlyClick(stat, hourIndex)).sum());
         }
 
         return StatChartResponse.builder()
                 .chartId("hourlyClick")
-                .title("시간별 클릭수")
+                .title("시간별 클릭/전환수")
                 .type("line")
                 .labels(List.of("00시", "01시", "02시", "03시", "04시", "05시", "06시", "07시",
                         "08시", "09시", "10시", "11시", "12시", "13시", "14시", "15시",
                         "16시", "17시", "18시", "19시", "20시", "21시", "22시", "23시"))
-                .datasets(List.of(dataset("클릭수", hourlyClicks)))
+                .datasets(List.of(
+                        dataset("클릭수", hourlyClicks),
+                        dataset("전환수", hourlyConversions)
+                ))
                 .build();
     }
 
@@ -489,6 +514,13 @@ public class StatServiceImpl implements StatService {
             return "이메일";
         }
         return channelType;
+    }
+
+    private String performanceChannelName(String channelType) {
+        if (channelType == null || channelType.isBlank()) {
+            return "전체";
+        }
+        return displayChannelName(channelType);
     }
 
     private DegreeStatsSummary summarizeDegreeStats(List<MessageStatByDegreeVO> stats) {
@@ -630,6 +662,29 @@ public class StatServiceImpl implements StatService {
             total += hourlyClick(stat, hour);
         }
         return total;
+    }
+
+    private long totalByDate(List<ClickStatVO> stats, LocalDate date) {
+        return stats.stream()
+                .filter(stat -> Objects.equals(stat.getStatDate(), date))
+                .mapToLong(this::totalHourlyClick)
+                .sum();
+    }
+
+    private List<LocalDate> sortedPerformanceDates(List<ClickStatVO> clickStats, List<ClickStatVO> conversionStats) {
+        List<LocalDate> dates = new ArrayList<>();
+        clickStats.stream()
+                .map(ClickStatVO::getStatDate)
+                .filter(Objects::nonNull)
+                .forEach(dates::add);
+        conversionStats.stream()
+                .map(ClickStatVO::getStatDate)
+                .filter(Objects::nonNull)
+                .forEach(dates::add);
+        return dates.stream()
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private long hourlyClick(ClickStatVO stat, int hour) {

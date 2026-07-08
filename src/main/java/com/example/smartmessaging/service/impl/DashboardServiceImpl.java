@@ -10,13 +10,10 @@ import com.example.smartmessaging.dto.response.DashboardSummaryResponse.Template
 import com.example.smartmessaging.dto.response.StatCardResponse;
 import com.example.smartmessaging.dto.response.StatChartDatasetResponse;
 import com.example.smartmessaging.dto.response.StatChartResponse;
-import com.example.smartmessaging.dto.vo.ChannelVO;
 import com.example.smartmessaging.dto.vo.CustomerStatVO;
-import com.example.smartmessaging.dto.vo.MessageStatByDegreeVO;
 import com.example.smartmessaging.dto.vo.MessageStatVO;
 import com.example.smartmessaging.dto.vo.SendHistoryVO;
 import com.example.smartmessaging.service.repository.DashboardMapper;
-import com.example.smartmessaging.service.repository.StatMapper;
 import com.example.smartmessaging.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,11 +24,8 @@ import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,24 +36,18 @@ public class DashboardServiceImpl implements DashboardService {
     private static final DecimalFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
     private static final DecimalFormat RATE_FORMATTER = new DecimalFormat("0.0");
 
-    private final StatMapper statMapper;
     private final DashboardMapper dashboardMapper;
 
     @Override
     public DashboardSummaryResponse getSummary(StatSearchRequest request) {
-        MessageStatVO messageSummary = dashboardMapper.selectMessageSummary(request);
         List<MessageStatVO> messageTrend = dashboardMapper.selectMessageTrend(request);
-        List<MessageStatByDegreeVO> channelSendSummary = dashboardMapper.selectChannelSendSummary(request);
-        CustomerStatVO latestCustomerStat = dashboardMapper.selectLatestCustomerStat(request);
         List<SendHistoryVO> recentSends = dashboardMapper.selectRecentSends();
         List<TemplatePerformance> templateTop = dashboardMapper.selectTemplatePerformanceTop(request);
-        Map<Long, String> channelNames = channelNames();
 
         return DashboardSummaryResponse.builder()
-                .cards(buildCards(messageSummary, channelSendSummary, latestCustomerStat))
+                .cards(getRealtimeCards())
                 .charts(List.of(
                         buildCostComparisonChart(messageTrend),
-                        buildChannelShareChart(channelSendSummary, channelNames),
                         buildDailySendTrendChart(messageTrend)
                 ))
                 .queueStatuses(buildQueueStatuses())
@@ -70,31 +58,32 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
+    @Override
+    public List<StatCardResponse> getRealtimeCards() {
+        return buildCards(
+                dashboardMapper.selectTodayRealtimeMessageSummary(),
+                dashboardMapper.selectRealtimeCustomerSummary()
+        );
+    }
+
     private List<StatCardResponse> buildCards(MessageStatVO messageSummary,
-                                              List<MessageStatByDegreeVO> channelSendSummary,
                                               CustomerStatVO latestCustomer) {
         MessageStatVO summary = messageSummary == null ? new MessageStatVO() : messageSummary;
         long totalSend = n(summary.getTotalSendCount());
         long totalSuccess = n(summary.getTotalSuccessCount());
-        long failCount = Math.max(totalSend - totalSuccess, 0);
+        long failCount = n(summary.getTotalFailCount());
         BigDecimal billingCost = n(summary.getBillingCost());
         BigDecimal maxCost = n(summary.getMaxCost());
         BigDecimal savingCost = maxCost.subtract(billingCost).max(BigDecimal.ZERO);
         CustomerStatVO customer = latestCustomer == null ? new CustomerStatVO() : latestCustomer;
         long activeCustomers = n(customer.getNormalCustomerCount()) + n(customer.getNewCustomerCount());
 
-        if (totalSend == 0) {
-            totalSend = channelSendSummary.stream().mapToLong(stat -> n(stat.getSendCount())).sum();
-            totalSuccess = channelSendSummary.stream().mapToLong(stat -> n(stat.getSuccessCount())).sum();
-            failCount = Math.max(totalSend - totalSuccess, 0);
-        }
-
         return List.of(
-                card("총 발송 건수", formatNumber(totalSend), ""),
-                card("발송 성공률 / 실패 현황", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", ""),
-                card("활성 고객 수 (일반, 신규)", formatNumber(activeCustomers), ""),
-                card("실제 청구 비용", formatWon(billingCost), ""),
-                card("스마트 라우팅 절감 현황", formatWon(savingCost), "")
+                card("오늘 발송 건수", formatNumber(totalSend) + "건", "오늘 기준"),
+                card("성공률 / 실패 건수", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", "오늘 기준"),
+                card("활성 고객 수", formatNumber(activeCustomers), "오늘 기준"),
+                card("청구비용", formatWon(billingCost), "오늘 기준"),
+                card("절감 현황 (오늘 기준)", formatWon(savingCost), "최대 비용 대비")
         );
     }
 
@@ -156,25 +145,6 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private StatChartResponse buildChannelShareChart(List<MessageStatByDegreeVO> stats, Map<Long, String> channelNames) {
-        Map<Long, Long> sendsByChannel = stats.stream()
-                .filter(stat -> stat.getChannelId() != null)
-                .collect(Collectors.groupingBy(MessageStatByDegreeVO::getChannelId,
-                        LinkedHashMap::new,
-                        Collectors.summingLong(stat -> n(stat.getSendCount()))));
-        long totalSend = sendsByChannel.values().stream().mapToLong(Long::longValue).sum();
-
-        return StatChartResponse.builder()
-                .chartId("channelShare")
-                .title("채널별 발송 비중")
-                .type("doughnut")
-                .labels(sendsByChannel.keySet().stream().map(channelId -> channelName(channelNames, channelId)).toList())
-                .datasets(List.of(dataset("발송 비중", sendsByChannel.values().stream()
-                        .map(count -> (Number) round(rate(count, totalSend)))
-                        .toList())))
-                .build();
-    }
-
     private StatChartResponse buildDailySendTrendChart(List<MessageStatVO> stats) {
         List<MessageStatVO> sorted = latest(sortMessageStats(stats), DASHBOARD_TREND_DAYS);
         return StatChartResponse.builder()
@@ -187,15 +157,6 @@ public class DashboardServiceImpl implements DashboardService {
                         dataset("성공", sorted.stream().map(stat -> (Number) n(stat.getTotalSuccessCount())).toList())
                 ))
                 .build();
-    }
-
-    private Map<Long, String> channelNames() {
-        return statMapper.selectActiveChannels().stream()
-                .filter(channel -> channel.getId() != null)
-                .collect(Collectors.toMap(ChannelVO::getId,
-                        channel -> displayChannelName(channel.getChannelType()),
-                        (left, right) -> left,
-                        LinkedHashMap::new));
     }
 
     private String normalizeStatus(String status) {
@@ -214,24 +175,6 @@ public class DashboardServiceImpl implements DashboardService {
 
     private boolean statusContains(String status, String keyword) {
         return status != null && status.contains(keyword);
-    }
-
-    private String displayChannelName(String channelType) {
-        if (channelType == null) {
-            return "-";
-        }
-        String upper = channelType.toUpperCase();
-        if (upper.contains("KAKAO")) {
-            return "카카오톡";
-        }
-        if (upper.contains("EMAIL") || upper.contains("MAIL")) {
-            return "이메일";
-        }
-        return channelType;
-    }
-
-    private String channelName(Map<Long, String> channelNames, Long channelId) {
-        return channelNames.getOrDefault(channelId, "채널 " + channelId);
     }
 
     private QueueStatus queueStatus(String label, long count, String color, String badge) {
@@ -325,10 +268,6 @@ public class DashboardServiceImpl implements DashboardService {
             return 0;
         }
         return ((double) numerator / denominator) * 100;
-    }
-
-    private double round(double value) {
-        return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
 
     private int n(Integer value) {

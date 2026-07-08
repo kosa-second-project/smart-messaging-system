@@ -260,4 +260,90 @@
         </if>
         ORDER BY cs.stat_date, cs.channel_id
     </select>
+
+    <select id="selectPerformanceConversionStats" parameterType="StatSearchRequest" resultType="ClickStatVO">
+        SELECT
+            NULL AS id,
+            aggregated.stat_date,
+            aggregated.channel_id,
+            aggregated.hour_00,
+            aggregated.hour_01,
+            aggregated.hour_02,
+            aggregated.hour_03,
+            aggregated.hour_04,
+            aggregated.hour_05,
+            aggregated.hour_06,
+            aggregated.hour_07,
+            aggregated.hour_08,
+            aggregated.hour_09,
+            aggregated.hour_10,
+            aggregated.hour_11,
+            aggregated.hour_12,
+            aggregated.hour_13,
+            aggregated.hour_14,
+            aggregated.hour_15,
+            aggregated.hour_16,
+            aggregated.hour_17,
+            aggregated.hour_18,
+            aggregated.hour_19,
+            aggregated.hour_20,
+            aggregated.hour_21,
+            aggregated.hour_22,
+            aggregated.hour_23
+        FROM (
+            SELECT
+                TRUNC(su.updated_at) AS stat_date,
+                st.final_channel_id AS channel_id,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 0 THEN 1 ELSE 0 END), 0) AS hour_00,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 1 THEN 1 ELSE 0 END), 0) AS hour_01,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 2 THEN 1 ELSE 0 END), 0) AS hour_02,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 3 THEN 1 ELSE 0 END), 0) AS hour_03,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 4 THEN 1 ELSE 0 END), 0) AS hour_04,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 5 THEN 1 ELSE 0 END), 0) AS hour_05,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 6 THEN 1 ELSE 0 END), 0) AS hour_06,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 7 THEN 1 ELSE 0 END), 0) AS hour_07,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 8 THEN 1 ELSE 0 END), 0) AS hour_08,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 9 THEN 1 ELSE 0 END), 0) AS hour_09,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 10 THEN 1 ELSE 0 END), 0) AS hour_10,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 11 THEN 1 ELSE 0 END), 0) AS hour_11,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 12 THEN 1 ELSE 0 END), 0) AS hour_12,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 13 THEN 1 ELSE 0 END), 0) AS hour_13,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 14 THEN 1 ELSE 0 END), 0) AS hour_14,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 15 THEN 1 ELSE 0 END), 0) AS hour_15,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 16 THEN 1 ELSE 0 END), 0) AS hour_16,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 17 THEN 1 ELSE 0 END), 0) AS hour_17,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 18 THEN 1 ELSE 0 END), 0) AS hour_18,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 19 THEN 1 ELSE 0 END), 0) AS hour_19,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 20 THEN 1 ELSE 0 END), 0) AS hour_20,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 21 THEN 1 ELSE 0 END), 0) AS hour_21,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 22 THEN 1 ELSE 0 END), 0) AS hour_22,
+                NVL(SUM(CASE WHEN EXTRACT(HOUR FROM su.updated_at) = 23 THEN 1 ELSE 0 END), 0) AS hour_23
+            FROM short_url su
+            INNER JOIN send_target st
+                    ON st.id = su.send_target_id
+                   AND NVL(st.is_deleted, 0) = 0
+            INNER JOIN send_history sh
+                    ON sh.id = st.send_history_id
+                   AND NVL(sh.is_deleted, 0) = 0
+            INNER JOIN channel c
+                    ON c.id = st.final_channel_id
+                   AND NVL(c.is_deleted, 0) = 0
+            WHERE NVL(su.is_deleted, 0) = 0
+              AND NVL(su.is_converted, 0) = 1
+              AND su.updated_at IS NOT NULL
+              AND sh.status = 'SENT'
+              AND st.final_channel_id IS NOT NULL
+            <if test="from != null">
+              AND su.updated_at &gt;= CAST(#{from} AS TIMESTAMP)
+            </if>
+            <if test="to != null">
+              AND su.updated_at &lt;  CAST(#{to} AS TIMESTAMP) + INTERVAL '1' DAY
+            </if>
+            <if test="channel != null and channel != ''">
+              AND c.channel_type = #{channel}
+            </if>
+            GROUP BY TRUNC(su.updated_at), st.final_channel_id
+        ) aggregated
+        ORDER BY aggregated.stat_date, aggregated.channel_id
+    </select>
 </mapper>

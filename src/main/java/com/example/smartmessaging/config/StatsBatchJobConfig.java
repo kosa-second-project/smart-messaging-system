@@ -28,7 +28,8 @@ public class StatsBatchJobConfig {
             Step messageStatByDegreeStep,
             Step customerStatStep,
             Step channelStatStep,
-            Step clickStatStep
+            Step clickStatStep,
+            Step templateStatStep
     ) {
         return new JobBuilder("statsDailyAggregationJob", jobRepository)
                 .start(messageStatStep)
@@ -36,6 +37,7 @@ public class StatsBatchJobConfig {
                 .next(customerStatStep)
                 .next(channelStatStep)
                 .next(clickStatStep)
+                .next(templateStatStep)
                 .build();
     }
 
@@ -183,6 +185,36 @@ public class StatsBatchJobConfig {
                     log.info("[StatsBatch] clickStatStep started - statDate: {}", statDate);
                     statsBatchService.aggregateClickStat(statDate);
                     log.info("[StatsBatch] clickStatStep finished - statDate: {}", statDate);
+
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
+
+    /**
+     * template_stat 집계 Step.
+     *
+     * send_history.template_id와 short_url 성과를 기준으로 statDate의 템플릿별 성과를 집계한다.
+     */
+    @Bean
+    public Step templateStatStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            StatsBatchService statsBatchService
+    ) {
+        return new StepBuilder("templateStatStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    String statDateParameter = chunkContext
+                            .getStepContext()
+                            .getJobParameters()
+                            .get("statDate")
+                            .toString();
+
+                    LocalDate statDate = LocalDate.parse(statDateParameter);
+
+                    log.info("[StatsBatch] templateStatStep started - statDate: {}", statDate);
+                    statsBatchService.aggregateTemplateStat(statDate);
+                    log.info("[StatsBatch] templateStatStep finished - statDate: {}", statDate);
 
                     return RepeatStatus.FINISHED;
                 }, transactionManager)

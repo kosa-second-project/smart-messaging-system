@@ -235,7 +235,9 @@ const StatsRenderer = (function() {
             절감액: "#10B981",
             클릭률: "#10B981",
             "클릭 수": "#10B981",
-            전환율: "#F59E0B"
+            클릭수: "#10B981",
+            전환율: "#F59E0B",
+            전환수: "#F59E0B"
         };
 
         return colorMap[label] || palette[index % palette.length];
