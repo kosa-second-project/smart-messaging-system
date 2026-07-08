@@ -14,7 +14,7 @@
 .ds-textarea {
   width: 100%;
   min-height: 2.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
   border-radius: var(--radius-lg);
   background: var(--input-background);
   color: var(--foreground);
@@ -22,6 +22,11 @@
   font-size: 0.875rem;
   outline: 0;
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.ds-input::placeholder,
+.ds-textarea::placeholder {
+  color: color-mix(in srgb, var(--accent-foreground) 62%, var(--muted-foreground));
 }
 
 .ds-textarea {
@@ -34,6 +39,7 @@
 .ds-select:focus,
 .ds-textarea:focus {
   border-color: var(--ring);
+  background: var(--card);
   box-shadow: var(--focus-ring);
 }
 

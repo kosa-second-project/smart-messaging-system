@@ -98,24 +98,75 @@
 }
 
 .selector-tag-button {
-  border: 1px solid transparent;
+  position: relative;
+  border: 1px solid var(--tag-bg, var(--primary));
   border-radius: var(--radius-pill);
-  background: var(--secondary);
-  color: var(--secondary-foreground);
+  background: var(--tag-bg, var(--primary));
+  color: var(--primary-foreground);
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .selector-tag-button:hover {
-  background: var(--border);
+  border-color: color-mix(in srgb, var(--tag-bg, var(--primary)) 86%, #000000);
+  background: color-mix(in srgb, var(--tag-bg, var(--primary)) 86%, #000000);
 }
 
 .selector-tag-button.selected {
-  border-color: var(--primary);
-  background: var(--accent);
-  color: var(--accent-foreground);
-  font-weight: var(--font-weight-medium);
+  border-color: color-mix(in srgb, var(--tag-bg, var(--primary)) 82%, #000000);
+  background: color-mix(in srgb, var(--tag-bg, var(--primary)) 82%, #000000);
+  color: var(--primary-foreground);
+  font-weight: 800;
+  padding-left: 1.5rem;
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px color-mix(in srgb, var(--tag-bg, var(--primary)) 64%, var(--border));
+}
+
+.selector-tag-button.selected::before {
+  content: "✓";
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.selector-panel-section[data-group="type"] .selector-tag-button {
+  --tag-bg: #1843FA;
+}
+
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag-tone="regular"],
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag="일반"] {
+  --tag-bg: #1843FA;
+}
+
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag-tone="new"],
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag="신규"] {
+  --tag-bg: #2563EB;
+}
+
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag-tone="dormant"],
+.selector-panel-section[data-group="type"] .selector-tag-button[data-tag="휴면"] {
+  --tag-bg: #075985;
+}
+
+.selector-panel-section[data-group="gender"] .selector-tag-button {
+  --tag-bg: #1D4ED8;
+}
+
+.selector-panel-section[data-group="age"] .selector-tag-button {
+  --tag-bg: #0369A1;
+}
+
+.selector-panel-section[data-group="consent"] .selector-tag-button {
+  --tag-bg: #0F5BE8;
+}
+
+.selector-panel-section[data-group="etc"] .selector-tag-button {
+  --tag-bg: #075985;
 }
 
 .selector-header-row {

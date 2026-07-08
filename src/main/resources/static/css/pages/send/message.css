@@ -639,12 +639,13 @@
 }
 
 .tag-btn {
-    background: var(--muted);
-    color: var(--muted-foreground);
-    border: 1px solid var(--border);
+    background: var(--tag-bg, var(--primary));
+    color: var(--primary-foreground);
+    border: 1px solid var(--tag-bg, var(--primary));
     padding: 0.25rem 0.75rem;
     border-radius: var(--radius-pill);
     font-size: 0.8rem;
+    font-weight: 800;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -790,11 +791,33 @@
 }
 
 .template-card .tag-badge {
-    background: #f1f3f5;
-    color: #495057;
+    background: var(--tag-bg, var(--primary));
+    color: var(--primary-foreground);
+    border: 1px solid var(--tag-bg, var(--primary));
     font-size: 0.7rem;
+    font-weight: 800;
     padding: 0.125rem 0.375rem;
     border-radius: 4px;
+}
+
+.tag-btn:nth-child(4n+1),
+.template-card .tag-badge:nth-child(4n+1) {
+    --tag-bg: #1843FA;
+}
+
+.tag-btn:nth-child(4n+2),
+.template-card .tag-badge:nth-child(4n+2) {
+    --tag-bg: #2563EB;
+}
+
+.tag-btn:nth-child(4n+3),
+.template-card .tag-badge:nth-child(4n+3) {
+    --tag-bg: #1D4ED8;
+}
+
+.tag-btn:nth-child(4n),
+.template-card .tag-badge:nth-child(4n) {
+    --tag-bg: #0369A1;
 }
 
 .template-search-footer {

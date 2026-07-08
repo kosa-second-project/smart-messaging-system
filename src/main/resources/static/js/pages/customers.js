@@ -119,6 +119,7 @@ const CustomerPage = {
                 button.className = "selector-tag-button";
                 button.textContent = tag.name;
                 button.dataset.tagId = tag.id;
+                button.dataset.tagTone = this.getTagTone(group.key, tag.name);
                 if (this.selectedTagIds.includes(Number(tag.id))) {
                     button.classList.add("selected");
                 }
@@ -156,6 +157,16 @@ const CustomerPage = {
             { key: "consent", title: "수신 동의", tags: consents },
             { key: "etc", title: "기타 태그", tags: others }
         ];
+    },
+
+    getTagTone(groupKey, tagName) {
+        const name = String(tagName || "").trim();
+        if (groupKey === "type") {
+            if (name === "신규") return "new";
+            if (name === "휴면") return "dormant";
+            return "regular";
+        }
+        return groupKey;
     },
 
     toggleTag(tagId) {
