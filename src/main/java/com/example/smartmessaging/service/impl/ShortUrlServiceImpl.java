@@ -142,7 +142,14 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     }
 
     private String buildShortUrl(String code, ShortUrlPurpose purpose) {
-        String path = purpose == ShortUrlPurpose.UNSUBSCRIBE ? "/u/" : "/r/";
+        String path;
+        if (purpose == ShortUrlPurpose.UNSUBSCRIBE) {
+            path = "/u/";
+        } else if (purpose == ShortUrlPurpose.PURCHASE) {
+            path = "/p/";
+        } else {
+            path = "/r/";
+        }
         return shortUrlBaseUrl + path + code;
     }
 

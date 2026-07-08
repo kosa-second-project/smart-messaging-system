@@ -37,14 +37,16 @@
             updated_at,
             created_by,
             updated_by,
-            is_deleted
+            is_deleted,
+            is_rejected
         ) VALUES (
             #{customerId},
             SYSTIMESTAMP,
             SYSTIMESTAMP,
             #{createdBy},
             #{createdBy},
-            0
+            0,
+            1
         )
     </insert>
 
@@ -55,7 +57,8 @@
             updated_at,
             created_by,
             updated_by,
-            is_deleted
+            is_deleted,
+            is_rejected
         )
         SELECT
             #{customerId},
@@ -63,7 +66,8 @@
             SYSTIMESTAMP,
             #{createdBy},
             #{createdBy},
-            0
+            0,
+            1
         FROM dual
         WHERE NOT EXISTS (
             SELECT 1

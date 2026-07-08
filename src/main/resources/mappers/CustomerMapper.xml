@@ -345,6 +345,7 @@
     <sql id="commonWhereConditions">
         AND NVL(is_deleted, 0) = 0
         AND NVL(is_ad_blocked, 0) = 0
+        AND (customer_type IS NULL OR customer_type != 'DORMANT')
         <if test="consentTagIds != null and consentTagIds.size() > 0">
             AND id IN (
                 SELECT customer_id
@@ -364,15 +365,16 @@
             </foreach>
         </if>
         <if test="keyword != null and keyword != ''">
-            AND (name  LIKE '%' || #{keyword} || '%'
-            OR id IN (
+            AND id IN (
+                SELECT id FROM customer WHERE name LIKE '%' || #{keyword} || '%'
+                UNION ALL
                 SELECT ctm.customer_id
                 FROM   customer_tag_mapping ctm
                 JOIN   tag t ON ctm.tag_id = t.id
                 WHERE  t.name LIKE '%' || #{keyword} || '%'
-                AND  ctm.is_deleted = 0
-                AND  t.is_deleted = 0
-            ))
+                  AND  ctm.is_deleted = 0
+                  AND  t.is_deleted = 0
+            )
         </if>
         <if test="tagIds != null and tagIds.size() > 0">
             <choose>

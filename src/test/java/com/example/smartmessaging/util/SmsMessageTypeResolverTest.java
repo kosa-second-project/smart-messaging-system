@@ -17,7 +17,7 @@ class SmsMessageTypeResolverTest {
         );
 
         assertThat(text).isEqualTo("""
-                쿠폰이 도착했습니다.
+                (광고) 쿠폰이 도착했습니다.
 
                 쿠폰 보기
                 http://localhost:8080/r/abc
