@@ -21,9 +21,21 @@ public interface CampaignDraftService {
 
     long getTotalCount(Long userId, String draftId);
 
+    void markProcessing(Long userId, String draftId, long expectedCount);
+
+    void markReady(Long userId, String draftId, long totalCount);
+
+    void markFailed(Long userId, String draftId);
+
+    Map<String, Object> getStatus(Long userId, String draftId);
+
     void removeRecipient(Long userId, String draftId, Long customerId);
 
     void addRecipient(Long userId, String draftId, Long customerId);
+
+    void removeRecipients(Long userId, String draftId, List<Long> customerIds);
+
+    void addRecipients(Long userId, String draftId, List<Long> customerIds);
 
     boolean isExpired(Long userId, String draftId);
 

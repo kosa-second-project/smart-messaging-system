@@ -7,7 +7,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 
 @Slf4j
 @Aspect
@@ -67,6 +68,12 @@ public class ServiceLoggingAspect {
             // 고객 정보(CustomerVO), 사원 정보(UsersVO) 등 민감한 개인정보를 품은 VO 객체들은 필드값을 노출하지 않고 마스킹 처리
             if (argClass.startsWith("Customer") || argClass.startsWith("Users") || argClass.startsWith("SendTarget")) {
                 maskedList.add(argClass + "{PROTECTED_PERSONAL_DATA}");
+            } else if (arg instanceof Collection<?> collection) {
+                maskedList.add(argClass + "(size=" + collection.size() + ")");
+            } else if (arg instanceof Map<?, ?> map) {
+                maskedList.add(argClass + "(size=" + map.size() + ")");
+            } else if (arg.getClass().isArray()) {
+                maskedList.add(argClass + "(length=" + java.lang.reflect.Array.getLength(arg) + ")");
             } else {
                 String strVal = arg.toString();
                 // 패스워드나 크리덴셜 관련 텍스트가 인자값에 보일 경우 강제 차단

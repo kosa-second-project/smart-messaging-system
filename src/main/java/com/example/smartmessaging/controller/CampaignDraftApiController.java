@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 발송 대상자 Draft(임시 저장) API 컨트롤러
@@ -54,24 +55,53 @@ public class CampaignDraftApiController {
             @RequestParam(required = false) String draftId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        // 기존 CustomerService의 getCustomerIds를 재활용하여 전체 ID 목록 조회
-        List<Long> allIds = customerService.getCustomerIds(request);
+        long startedAt = System.currentTimeMillis();
+        Long userId = userDetails.getUserId();
+        String finalDraftId = (draftId != null && !draftId.isBlank())
+                ? draftId
+                : draftService.createEmptyDraft(userId);
+        CustomerSearchRequest requestSnapshot = copyRequest(request);
 
-        if (allIds == null) {
-            allIds = List.of();
+        long existingCount = (draftId != null && !draftId.isBlank()) ? draftService.getTotalCount(userId, finalDraftId) : 0L;
+        draftService.markProcessing(userId, finalDraftId, existingCount);
+
+        CompletableFuture.runAsync(() -> populateDraftAsync(userId, finalDraftId, requestSnapshot));
+
+        long completedAt = System.currentTimeMillis();
+        log.info("[Draft 일괄 처리 접수] draftId={}, 기존 {}명, accept={}ms", finalDraftId, existingCount, completedAt - startedAt);
+        return ResponseEntity.ok(Map.of(
+                "draftId", finalDraftId,
+                "totalCount", existingCount,
+                "status", "PROCESSING"
+        ));
+    }
+
+    private void populateDraftAsync(Long userId, String draftId, CustomerSearchRequest request) {
+        long startedAt = System.currentTimeMillis();
+        try {
+            List<Long> allIds = customerService.getCustomerIds(request);
+            long idsLoadedAt = System.currentTimeMillis();
+            if (allIds == null) {
+                allIds = List.of();
+            }
+
+            draftService.appendDraft(userId, draftId, allIds);
+            long draftSavedAt = System.currentTimeMillis();
+
+            long totalCount = draftService.getTotalCount(userId, draftId);
+            draftService.markReady(userId, draftId, totalCount);
+            long completedAt = System.currentTimeMillis();
+            log.info("[Draft 비동기 적재 완료] draftId={}, 최종 {}명, idsLoad={}ms, redisSave={}ms, totalCount={}ms, total={}ms",
+                    draftId,
+                    totalCount,
+                    idsLoadedAt - startedAt,
+                    draftSavedAt - idsLoadedAt,
+                    completedAt - draftSavedAt,
+                    completedAt - startedAt);
+        } catch (Exception e) {
+            draftService.markFailed(userId, draftId);
+            log.error("[Draft 비동기 적재 실패] draftId={}", draftId, e);
         }
-
-        String finalDraftId;
-        // draftId 파라미터가 존재하면 기존 항목에 병합(Append), 없으면 새로 생성(Save)
-        if (draftId != null && !draftId.isBlank()) {
-            finalDraftId = draftService.appendDraft(userDetails.getUserId(), draftId, allIds);
-        } else {
-            finalDraftId = draftService.saveDraft(userDetails.getUserId(), allIds);
-        }
-
-        long totalCount = draftService.getTotalCount(userDetails.getUserId(), finalDraftId);
-        log.info("[Draft 일괄 처리] draftId={}, 최종 {}명", finalDraftId, totalCount);
-        return ResponseEntity.ok(Map.of("draftId", finalDraftId, "totalCount", totalCount));
     }
 
     /**
@@ -90,16 +120,21 @@ public class CampaignDraftApiController {
             return ResponseEntity.ok(Map.of());
         }
 
+        List<Long> addIds = new java.util.ArrayList<>();
+        List<Long> removeIds = new java.util.ArrayList<>();
         for (RecipientItem item : request.getItems()) {
             Long customerId = item.getCustomerId();
             String action = item.getAction();
             
             if ("REMOVE".equals(action)) {
-                draftService.removeRecipient(userDetails.getUserId(), draftId, customerId);
+                removeIds.add(customerId);
             } else if ("ADD".equals(action)) {
-                draftService.addRecipient(userDetails.getUserId(), draftId, customerId);
+                addIds.add(customerId);
             }
         }
+
+        draftService.removeRecipients(userDetails.getUserId(), draftId, removeIds);
+        draftService.addRecipients(userDetails.getUserId(), draftId, addIds);
 
         long totalCount = draftService.getTotalCount(userDetails.getUserId(), draftId);
         return ResponseEntity.ok(Map.of("success", true, "totalCount", totalCount));
@@ -128,6 +163,20 @@ public class CampaignDraftApiController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
+    @GetMapping("/draft/{draftId}/status")
+    public ResponseEntity<Map<String, Object>> getDraftStatus(
+            @PathVariable String draftId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(draftService.getStatus(userDetails.getUserId(), draftId));
+    }
+
+    @GetMapping("/draft/candidate-count")
+    public ResponseEntity<Map<String, Object>> getCandidateCount(
+            @ModelAttribute CustomerSearchRequest request) {
+        int count = customerService.countCustomers(request);
+        return ResponseEntity.ok(Map.of("totalCount", count));
+    }
+
     /**
      * Draft 예상 비용 산출 및 채널 자동 배정 결과 조회
      * GET /api/campaigns/draft/{draftId}/estimate-cost
@@ -138,6 +187,21 @@ public class CampaignDraftApiController {
             @RequestParam(required = false) List<String> priorities,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(draftService.estimateCost(userDetails.getUserId(), draftId, priorities));
+    }
+
+    private CustomerSearchRequest copyRequest(CustomerSearchRequest source) {
+        CustomerSearchRequest copy = new CustomerSearchRequest();
+        copy.setKeyword(source.getKeyword());
+        copy.setTagIds(source.getTagIds() == null ? null : new java.util.ArrayList<>(source.getTagIds()));
+        copy.setCustomerIds(source.getCustomerIds() == null ? null : new java.util.ArrayList<>(source.getCustomerIds()));
+        copy.setDraftId(source.getDraftId());
+        copy.setActiveTab(source.getActiveTab());
+        copy.setConsentTagIds(source.getConsentTagIds() == null ? List.of() : new java.util.ArrayList<>(source.getConsentTagIds()));
+        copy.setMatchType(source.getMatchType());
+        copy.setCursorId(source.getCursorId());
+        copy.setPage(source.getPage());
+        copy.setSize(source.getSize());
+        return copy;
     }
 
 }

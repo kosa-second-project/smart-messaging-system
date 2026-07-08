@@ -80,6 +80,16 @@ const DraftApi = {
         return _request.form('/api/campaigns/draft', params);
     },
 
+    /** 현재 필터 조건에 맞는 고객 수만 조회 */
+    getCandidateCount: function(params) {
+        return _request.json('GET', '/api/campaigns/draft/candidate-count', params);
+    },
+
+    /** Draft 백그라운드 적재 상태 조회 */
+    getStatus: function(draftId) {
+        return _request.json('GET', `/api/campaigns/draft/${draftId}/status`);
+    },
+
     /** Draft의 수신자 개별 추가/제거 (체크박스 토글) */
     patchRecipients: function(draftId, items) {
         return _request.json('PATCH', `/api/campaigns/draft/${draftId}/recipients`, { items: items });

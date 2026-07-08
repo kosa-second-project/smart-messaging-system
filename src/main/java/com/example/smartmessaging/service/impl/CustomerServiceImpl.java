@@ -29,6 +29,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerMapper customerMapper;
     private final CampaignDraftService draftService;
+    private volatile List<Long> consentTagIdsCache;
 
     // ==========================================
     // 1. 고객 관리 탭 비즈니스 로직 (Customer Management)
@@ -184,8 +185,12 @@ public class CustomerServiceImpl implements CustomerService {
 
 
     private void applySystemTagIds(CustomerSearchRequest request) {
-        List<TagVO> tags = customerMapper.findAllTags();
-        request.setConsentTagIds(findTagIds(tags, Set.of("카카오 동의", "sms 동의", "SMS 동의", "이메일 동의")));
+        List<Long> cachedIds = consentTagIdsCache;
+        if (cachedIds == null) {
+            cachedIds = findTagIds(customerMapper.findAllTags(), Set.of("카카오 동의", "sms 동의", "SMS 동의", "이메일 동의"));
+            consentTagIdsCache = cachedIds;
+        }
+        request.setConsentTagIds(cachedIds);
     }
 
     private List<Long> findTagIds(List<TagVO> tags, Set<String> names) {
@@ -215,5 +220,12 @@ public class CustomerServiceImpl implements CustomerService {
         // 페이지네이션 없이 필터 조건에 맞는 전체 고객 ID 목록 반환
         // "필터 결과 전체 선택" 기능에서 사용
         return customerMapper.findIdsBySearch(request);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countCustomers(CustomerSearchRequest request) {
+        applySystemTagIds(request);
+        return customerMapper.countBySearch(request);
     }
 }

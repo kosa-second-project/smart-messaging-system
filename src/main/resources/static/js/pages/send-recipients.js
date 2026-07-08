@@ -2,6 +2,8 @@
 // 3. 1단계: 수신자 선택 기능 제어 객체
 // ==========================================
 const RecipientSelector = {
+    addAllInProgress: false,
+
     init: function () {
         this.bindEvents();
         this.loadTagMapAndRender();
@@ -197,7 +199,14 @@ const RecipientSelector = {
 
         // 10. "현재 회원 모두 추가" 버튼 클릭 → POST /api/campaigns/draft 로 Redis에 저장
         $(document).on("click", "#btnAddAllFiltered", function () {
+            if (self.addAllInProgress) {
+                return;
+            }
+
+            const $button = $(this);
             const params = self.getQueryParams(false);
+            self.addAllInProgress = true;
+            $button.prop("disabled", true);
 
             DraftApi.addAllFiltered(params)
                 .done(function (res) {
@@ -208,11 +217,22 @@ const RecipientSelector = {
                     // 삭제하지 않음. 백엔드에서 동일한 draftId에 이어서(Append) 담아줌.
                     SendPage.state.draftId = res.draftId;
                     SendPage.state.draftTotalCount = res.totalCount || 0;
-                    self.renderAll();
-                    alert(`총 ${res.totalCount || '?'}명의 회원이 선택 목록에 추가되었습니다.`);
+                    SendPage.state.draftProcessing = res.status === "PROCESSING";
+                    self.updateSelectedCount();
+                    self.setNextButtonProcessing(SendPage.state.draftProcessing);
+                    if (SendPage.state.draftProcessing) {
+                        self.pollDraftStatus(res.draftId);
+                    } else {
+                        self.renderAll();
+                    }
+                    alert("현재 필터 조건의 회원을 선택 목록에 추가하고 있습니다.");
                 })
                 .fail(function () {
                     alert("수신자 목록 저장에 실패했습니다.");
+                })
+                .always(function () {
+                    self.addAllInProgress = false;
+                    $button.prop("disabled", false);
                 });
         });
 
@@ -542,7 +562,8 @@ const RecipientSelector = {
 
     // 4. 선택 카운트만 갱신 (API 호출 없음)
     updateSelectedCount: function () {
-        $("#lblSelectedCount").text(SendPage.state.draftTotalCount || 0);
+        const count = SendPage.state.draftTotalCount || 0;
+        $("#lblSelectedCount").text(SendPage.state.draftProcessing ? `${count} (저장 중)` : count);
     },
 
     // 5. 후보 카운트 갱신 (selected 탭에서만 별도 API 호출)
@@ -550,13 +571,54 @@ const RecipientSelector = {
         const params = this.getQueryParams(false);
         delete params.customerIds;
 
-        CustomerApi.getIds(params)
-            .done(function (ids) {
-                $("#lblCandidateCount").text(ids ? ids.length : 0);
+        DraftApi.getCandidateCount(params)
+            .done(function (res) {
+                $("#lblCandidateCount").text(res && res.totalCount !== undefined ? res.totalCount : 0);
             })
             .fail(function () {
                 $("#lblCandidateCount").text("0");
             });
+    },
+
+    setNextButtonProcessing: function (isProcessing) {
+        const $btn = $("[data-action='next-step']");
+        if (!$btn.data("original-text")) {
+            $btn.data("original-text", $btn.text());
+        }
+        $btn.prop("disabled", isProcessing).text(isProcessing ? "수신자 저장 중..." : ($btn.data("original-text") || "다음 단계"));
+    },
+
+    pollDraftStatus: function (draftId) {
+        const self = this;
+        window.clearTimeout(this.draftStatusTimer);
+        this.draftStatusTimer = window.setTimeout(function () {
+            DraftApi.getStatus(draftId)
+                .done(function (res) {
+                    const status = res && res.status ? res.status : "READY";
+                    if (res && res.totalCount !== undefined) {
+                        SendPage.state.draftTotalCount = Number(res.totalCount);
+                    }
+
+                    if (status === "PROCESSING") {
+                        self.updateSelectedCount();
+                        self.pollDraftStatus(draftId);
+                        return;
+                    }
+
+                    SendPage.state.draftProcessing = false;
+                    self.setNextButtonProcessing(false);
+                    self.updateSelectedCount();
+
+                    if (status === "FAILED") {
+                        alert("수신자 목록 저장에 실패했습니다. 다시 시도해주세요.");
+                        return;
+                    }
+
+                    self.renderAll();
+                })
+                .fail(function () {
+                    self.pollDraftStatus(draftId);
+                });
+        }, 1200);
     }
 };
-
