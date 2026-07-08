@@ -129,12 +129,12 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--tag-bg, var(--primary));
   border-radius: var(--radius-pill);
-  background: var(--card);
-  color: var(--muted-foreground);
+  background: var(--tag-bg, var(--primary));
+  color: var(--primary-foreground);
   font-size: 0.75rem;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
 }
 
@@ -316,8 +316,9 @@
 }
 
 .history-tag-badge {
-  background: #f3f4f6;
-  color: #5f6672;
+  background: var(--tag-bg, var(--primary));
+  color: var(--primary-foreground);
+  font-weight: 800;
 }
 
 .history-table .ds-badge {
@@ -330,8 +331,9 @@
 
 .history-tag-count {
   flex: 0 0 auto;
-  background: #e9ebef;
-  color: #555d69;
+  background: color-mix(in srgb, var(--primary) 86%, #000000);
+  color: var(--primary-foreground);
+  font-weight: 800;
 }
 
 .history-status {
@@ -560,10 +562,10 @@ body.history-modal-open {
   min-height: 1.375rem;
   flex: 0 0 auto;
   padding: 0.125rem 0.5rem;
-  background: #e9ebef;
-  color: #5f6672;
+  background: var(--tag-bg, var(--primary));
+  color: var(--primary-foreground);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .history-detail__summary {
