@@ -17,6 +17,7 @@ public class MessageStatVO extends BaseVO {
     private Long id;
     private Integer totalSendCount;
     private Integer totalSuccessCount;
+    private Integer totalFailCount;
     private BigDecimal billingCost;
     private BigDecimal maxCost;
     private LocalDate date;

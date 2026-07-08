@@ -188,7 +188,7 @@ public class StatServiceImpl implements StatService {
                 card("동의수 / 전체 동의대상수", formatNumber(consentCount) + " / " + formatNumber(consentTarget),
                         channelName + " 동의율 " + formatRate(rate(consentCount, consentTarget)) + "%"),
                 card("수신거부수 / 전체 대상수", "0 / " + formatNumber(consentTarget),
-                        channelName + " 기준")
+                        channelName + " 기준 동의율 " + formatRate(rate(consentCount, consentTarget)) + "%")
         );
     }
 

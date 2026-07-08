@@ -14,11 +14,15 @@ import java.util.List;
 public interface DashboardMapper {
     MessageStatVO selectMessageSummary(StatSearchRequest request);
 
+    MessageStatVO selectTodayRealtimeMessageSummary();
+
     List<MessageStatVO> selectMessageTrend(StatSearchRequest request);
 
     List<MessageStatByDegreeVO> selectChannelSendSummary(StatSearchRequest request);
 
     CustomerStatVO selectLatestCustomerStat(StatSearchRequest request);
+
+    CustomerStatVO selectRealtimeCustomerSummary();
 
     List<SendHistoryVO> selectRecentSends();
 

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="card" class="stats-card stats-queue-card dashboard-queue-card">
+    <div class="stats-queue-card__head">
+        <div>
+            <div class="dashboard-queue-title-row">
+                <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
+                <span id="dashboardQueueStateBadge" class="dashboard-queue-state dashboard-queue-state--idle">현재 대기 중</span>
+            </div>
+            <p id="dashboardQueueMessage" class="stats-card-subtitle">처리할 메시지가 없습니다.</p>
+        </div>
+        <div class="dashboard-queue-refresh">
+            <span>마지막 갱신</span>
+            <time id="dashboardQueueRefreshedAt">-</time>
+        </div>
+    </div>
+    <div id="dashboardQueueItems" class="stats-queue-grid"></div>
+    <div id="dashboardQueueBar" class="stats-queue-bar" aria-label="발송 큐 상태 비율"></div>
+</section>
+</body>
+</html>

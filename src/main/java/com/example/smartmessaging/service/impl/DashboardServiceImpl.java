@@ -47,16 +47,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardSummaryResponse getSummary(StatSearchRequest request) {
-        MessageStatVO messageSummary = dashboardMapper.selectMessageSummary(request);
         List<MessageStatVO> messageTrend = dashboardMapper.selectMessageTrend(request);
         List<MessageStatByDegreeVO> channelSendSummary = dashboardMapper.selectChannelSendSummary(request);
-        CustomerStatVO latestCustomerStat = dashboardMapper.selectLatestCustomerStat(request);
         List<SendHistoryVO> recentSends = dashboardMapper.selectRecentSends();
         List<TemplatePerformance> templateTop = dashboardMapper.selectTemplatePerformanceTop(request);
         Map<Long, String> channelNames = channelNames();
 
         return DashboardSummaryResponse.builder()
-                .cards(buildCards(messageSummary, channelSendSummary, latestCustomerStat))
+                .cards(getRealtimeCards())
                 .charts(List.of(
                         buildCostComparisonChart(messageTrend),
                         buildChannelShareChart(channelSendSummary, channelNames),
@@ -70,31 +68,32 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
+    @Override
+    public List<StatCardResponse> getRealtimeCards() {
+        return buildCards(
+                dashboardMapper.selectTodayRealtimeMessageSummary(),
+                dashboardMapper.selectRealtimeCustomerSummary()
+        );
+    }
+
     private List<StatCardResponse> buildCards(MessageStatVO messageSummary,
-                                              List<MessageStatByDegreeVO> channelSendSummary,
                                               CustomerStatVO latestCustomer) {
         MessageStatVO summary = messageSummary == null ? new MessageStatVO() : messageSummary;
         long totalSend = n(summary.getTotalSendCount());
         long totalSuccess = n(summary.getTotalSuccessCount());
-        long failCount = Math.max(totalSend - totalSuccess, 0);
+        long failCount = n(summary.getTotalFailCount());
         BigDecimal billingCost = n(summary.getBillingCost());
         BigDecimal maxCost = n(summary.getMaxCost());
         BigDecimal savingCost = maxCost.subtract(billingCost).max(BigDecimal.ZERO);
         CustomerStatVO customer = latestCustomer == null ? new CustomerStatVO() : latestCustomer;
         long activeCustomers = n(customer.getNormalCustomerCount()) + n(customer.getNewCustomerCount());
 
-        if (totalSend == 0) {
-            totalSend = channelSendSummary.stream().mapToLong(stat -> n(stat.getSendCount())).sum();
-            totalSuccess = channelSendSummary.stream().mapToLong(stat -> n(stat.getSuccessCount())).sum();
-            failCount = Math.max(totalSend - totalSuccess, 0);
-        }
-
         return List.of(
-                card("총 발송 건수", formatNumber(totalSend), ""),
-                card("발송 성공률 / 실패 현황", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", ""),
-                card("활성 고객 수 (일반, 신규)", formatNumber(activeCustomers), ""),
-                card("실제 청구 비용", formatWon(billingCost), ""),
-                card("스마트 라우팅 절감 현황", formatWon(savingCost), "")
+                card("오늘 발송 건수", formatNumber(totalSend), "실시간"),
+                card("성공률 / 실패 건수 (오늘 기준)", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", "실시간"),
+                card("활성 고객 수 (오늘 기준)", formatNumber(activeCustomers), "일반 + 신규"),
+                card("오늘 기준 청구비용", formatWon(billingCost), "실시간"),
+                card("절감 현황 (오늘 기준)", formatWon(savingCost), "최대 비용 대비")
         );
     }
 

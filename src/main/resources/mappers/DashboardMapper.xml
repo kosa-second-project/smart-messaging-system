@@ -35,6 +35,58 @@
         WHERE <include refid="messageStatFilter"/>
     </select>
 
+    <select id="selectTodayRealtimeMessageSummary" resultMap="messageStatResultMap">
+        WITH today_window AS (
+            SELECT
+                CAST(TRUNC(CURRENT_DATE) AS TIMESTAMP) AS start_at,
+                CAST(TRUNC(CURRENT_DATE) + 1 AS TIMESTAMP) AS end_at
+            FROM dual
+        ),
+        today_histories AS (
+            SELECT sh.*
+            FROM send_history sh
+            CROSS JOIN today_window tw
+            WHERE NVL(sh.is_deleted, 0) = 0
+              AND (
+                    (sh.created_at &gt;= tw.start_at AND sh.created_at &lt; tw.end_at)
+                 OR (sh.scheduled_at &gt;= tw.start_at AND sh.scheduled_at &lt; tw.end_at)
+                 OR (sh.completed_at &gt;= tw.start_at AND sh.completed_at &lt; tw.end_at)
+              )
+        ),
+        target_costs AS (
+            SELECT
+                NVL(SUM(NVL(st.cost, 0)), 0) AS max_cost
+            FROM today_histories th
+            INNER JOIN send_target st
+                    ON st.send_history_id = th.id
+                   AND NVL(st.is_deleted, 0) = 0
+        ),
+        success_costs AS (
+            SELECT
+                NVL(SUM(NVL(c.cost_per_msg, 0)), 0) AS billing_cost
+            FROM today_histories th
+            INNER JOIN send_target st
+                    ON st.send_history_id = th.id
+                   AND NVL(st.is_deleted, 0) = 0
+            INNER JOIN send_attempt sa
+                    ON sa.send_target_id = st.id
+                   AND NVL(sa.is_deleted, 0) = 0
+                   AND NVL(sa.is_succeeded, 0) = 1
+            INNER JOIN channel c
+                    ON c.id = sa.channel_id
+                   AND NVL(c.is_deleted, 0) = 0
+        )
+        SELECT
+            NVL(SUM(NVL(th.total_target_count, 0)), 0) AS total_send_count,
+            NVL(SUM(NVL(th.success_count, 0)), 0) AS total_success_count,
+            NVL(SUM(NVL(th.fail_count, 0)), 0) AS total_fail_count,
+            MAX(success_costs.billing_cost) AS billing_cost,
+            MAX(target_costs.max_cost) AS max_cost
+        FROM today_histories th
+        CROSS JOIN target_costs
+        CROSS JOIN success_costs
+    </select>
+
     <select id="selectMessageTrend" parameterType="StatSearchRequest" resultMap="messageStatResultMap">
         SELECT
             trend.stat_date,
@@ -113,6 +165,27 @@
             ORDER BY cs.stat_date DESC
             FETCH FIRST 1 ROW ONLY
         ) latest_customer
+    </select>
+
+    <select id="selectRealtimeCustomerSummary" resultMap="customerStatResultMap">
+        SELECT
+            SUM(CASE
+                WHEN c.joined_at &lt; SYSTIMESTAMP - INTERVAL '7' DAY
+                 AND (
+                        c.last_active_at IS NULL
+                        OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12)
+                     )
+                THEN 1
+                ELSE 0
+            END) AS normal_customer_count,
+            SUM(CASE
+                WHEN c.joined_at &gt;= SYSTIMESTAMP - INTERVAL '7' DAY
+                THEN 1
+                ELSE 0
+            END) AS new_customer_count
+        FROM customer c
+        WHERE NVL(c.is_deleted, 0) = 0
+          AND c.joined_at &lt;= SYSTIMESTAMP
     </select>
 
     <select id="selectRecentSends" resultType="SendHistoryVO">

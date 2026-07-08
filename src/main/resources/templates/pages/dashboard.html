@@ -10,23 +10,7 @@
     <div class="dashboard-shell">
         <section id="dashboardStatsCards" class="stats-card-grid dashboard-kpi-grid" aria-label="대시보드 주요 지표"></section>
 
-        <section class="stats-card stats-queue-card dashboard-queue-card">
-            <div class="stats-queue-card__head">
-                <div>
-                    <div class="dashboard-queue-title-row">
-                        <h3 class="stats-card-title">실시간 발송 큐 상태</h3>
-                        <span id="dashboardQueueStateBadge" class="dashboard-queue-state dashboard-queue-state--idle">현재 대기 중</span>
-                    </div>
-                    <p id="dashboardQueueMessage" class="stats-card-subtitle">처리할 메시지가 없습니다.</p>
-                </div>
-                <div class="dashboard-queue-refresh">
-                    <span>마지막 갱신</span>
-                    <time id="dashboardQueueRefreshedAt">-</time>
-                </div>
-            </div>
-            <div id="dashboardQueueItems" class="stats-queue-grid"></div>
-            <div id="dashboardQueueBar" class="stats-queue-bar" aria-label="발송 큐 상태 비율"></div>
-        </section>
+        <th:block th:replace="~{fragments/realtime-queue-status :: card}"></th:block>
         <section class="dashboard-chart-row">
             <article class="stats-card stats-chart-card dashboard-cost-card">
                 <h3 class="stats-card-title">비용 비교 현황</h3>
@@ -110,6 +94,7 @@
         </section>
     </div>
 
+    <script th:src="@{/js/components/realtime-queue-status.js}"></script>
     <script th:src="@{/js/pages/dashboard.js}"></script>
 </main>
 </html>

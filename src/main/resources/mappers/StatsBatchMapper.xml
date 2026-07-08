@@ -543,9 +543,9 @@
     <insert id="insertTemplateStat">
         INSERT INTO template_stat (
             template_id,
-            rank,
+            "RANK",
             stat_date,
-            count,
+            "COUNT",
             click_target_count,
             click_count,
             conversion_target_count,
@@ -555,29 +555,6 @@
             created_by,
             updated_by,
             is_deleted
-        )
-        WITH template_aggregated AS (
-            SELECT
-                sh.template_id,
-                NVL(SUM(sh.total_target_count), 0) AS send_count,
-                COUNT(su.id) AS click_target_count,
-                SUM(CASE WHEN NVL(su.is_clicked, 0) = 1 THEN 1 ELSE 0 END) AS click_count,
-                COUNT(su.id) AS conversion_target_count,
-                SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) AS conversion_count
-            FROM send_history sh
-            LEFT JOIN send_target st
-                   ON st.send_history_id = sh.id
-                  AND NVL(st.is_deleted, 0) = 0
-            LEFT JOIN short_url su
-                   ON su.send_target_id = st.id
-                  AND NVL(su.is_deleted, 0) = 0
-                  AND NVL(su.purpose, 'CLICK') IN ('CLICK', 'PURCHASE')
-            WHERE sh.status = 'SENT'
-              AND sh.template_id IS NOT NULL
-              AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
-              AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
-              AND NVL(sh.is_deleted, 0) = 0
-            GROUP BY sh.template_id
         )
         SELECT
             template_id,
@@ -589,7 +566,7 @@
                     END DESC,
                     click_count DESC,
                     template_id ASC
-            ) AS rank,
+            ) AS "RANK",
             #{statDate},
             send_count,
             click_target_count,
@@ -601,7 +578,50 @@
             #{systemUserId},
             #{systemUserId},
             0
-        FROM template_aggregated
+        FROM (
+            SELECT
+                send_aggregated.template_id,
+                send_aggregated.send_count,
+                NVL(url_aggregated.click_target_count, 0) AS click_target_count,
+                NVL(url_aggregated.click_count, 0) AS click_count,
+                NVL(url_aggregated.conversion_target_count, 0) AS conversion_target_count,
+                NVL(url_aggregated.conversion_count, 0) AS conversion_count
+            FROM (
+                SELECT
+                    sh.template_id,
+                    NVL(SUM(sh.total_target_count), 0) AS send_count
+                FROM send_history sh
+                WHERE sh.status = 'SENT'
+                  AND sh.template_id IS NOT NULL
+                  AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                  AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+                  AND NVL(sh.is_deleted, 0) = 0
+                GROUP BY sh.template_id
+            ) send_aggregated
+            LEFT JOIN (
+                SELECT
+                    sh.template_id,
+                    COUNT(su.id) AS click_target_count,
+                    SUM(CASE WHEN NVL(su.is_clicked, 0) = 1 THEN 1 ELSE 0 END) AS click_count,
+                    COUNT(su.id) AS conversion_target_count,
+                    SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) AS conversion_count
+                FROM send_history sh
+                LEFT JOIN send_target st
+                       ON st.send_history_id = sh.id
+                      AND NVL(st.is_deleted, 0) = 0
+                LEFT JOIN short_url su
+                       ON su.send_target_id = st.id
+                      AND NVL(su.is_deleted, 0) = 0
+                      AND NVL(su.purpose, 'CLICK') IN ('CLICK', 'PURCHASE')
+                WHERE sh.status = 'SENT'
+                  AND sh.template_id IS NOT NULL
+                  AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+                  AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+                  AND NVL(sh.is_deleted, 0) = 0
+                GROUP BY sh.template_id
+            ) url_aggregated
+                   ON url_aggregated.template_id = send_aggregated.template_id
+        ) template_aggregated
     </insert>
 
 </mapper>
