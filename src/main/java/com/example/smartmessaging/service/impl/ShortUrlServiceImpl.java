@@ -90,9 +90,6 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         if (firstClick) {
             recordClickStats(target);
         }
-        if (purpose == ShortUrlPurpose.PURCHASE || isInternalPurchaseUrl(target.getOriginalUrl())) {
-            return buildShortUrl(code, ShortUrlPurpose.PURCHASE);
-        }
         return appendTrackingParameters(target.getOriginalUrl(), target);
     }
 
@@ -124,8 +121,7 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     @Transactional
     public ShortUrlTargetVO getPurchaseTarget(String code) {
         ShortUrlVO shortUrl = getExisting(code);
-        ShortUrlPurpose purpose = ShortUrlPurpose.from(shortUrl.getPurpose());
-        if (purpose != ShortUrlPurpose.PURCHASE && !isInternalPurchaseUrl(shortUrl.getOriginalUrl())) {
+        if (ShortUrlPurpose.from(shortUrl.getPurpose()) != ShortUrlPurpose.PURCHASE) {
             throw new BusinessException("구매 링크가 아닙니다.", ErrorCode.INVALID_INPUT_VALUE);
         }
         ShortUrlTargetVO target = shortUrlMapper.findClickTargetById(code);
@@ -145,12 +141,12 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     @Override
     @Transactional
     public String purchase(String code) {
-        getPurchaseTarget(code);
+        ShortUrlTargetVO target = getPurchaseTarget(code);
         
         // 구매 전환 처리 (is_converted = 1)
         shortUrlMapper.markConverted(code);
         
-        return code;
+        return appendTrackingParameters(target.getOriginalUrl(), target);
     }
 
     private String createShortUrlRow(Long sendTargetId, String originalUrl, ShortUrlPurpose purpose) {
@@ -219,18 +215,6 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         return builder.build().toUriString();
     }
 
-    private boolean isInternalPurchaseUrl(String originalUrl) {
-        if (originalUrl == null || originalUrl.isBlank()) {
-            return false;
-        }
-        try {
-            String path = UriComponentsBuilder.fromUriString(originalUrl.trim()).build().getPath();
-            return "/purchase".equals(path);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
     private String generateCode() {
         StringBuilder code = new StringBuilder(CODE_LENGTH);
         for (int i = 0; i < CODE_LENGTH; i++) {
@@ -258,9 +242,6 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     private String resolveOriginalUrl(String originalUrl, ShortUrlPurpose purpose) {
         if (purpose == ShortUrlPurpose.UNSUBSCRIBE && (originalUrl == null || originalUrl.isBlank())) {
             return appBaseUrl + "/u/complete";
-        }
-        if (purpose == ShortUrlPurpose.PURCHASE && (originalUrl == null || originalUrl.isBlank())) {
-            return appBaseUrl + "/purchase";
         }
         return originalUrl;
     }
