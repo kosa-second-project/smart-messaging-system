@@ -721,6 +721,9 @@ function saveTemplate() {
 }
 
 function openTemplateAiPanel() {
+    if (!validateTemplateForSuggestionSetup()) {
+        return;
+    }
     document.getElementById("templateAiModal").classList.add("is-open");
     document.getElementById("templateAiPanel").hidden = false;
     document.getElementById("templateAiDirection").focus();
@@ -746,10 +749,10 @@ function generateTemplateSuggestions() {
     const message = document.getElementById("templateAiMessage");
     message.classList.remove("is-error");
     const direction = document.getElementById("templateAiDirection").value.trim();
+    if (!validateTemplateForSuggestionSetup()) {
+        return;
+    }
     const missing = [];
-    if (!getSelectedChannelTypes().length) missing.push("채널");
-    if (!document.getElementById("templateCategory").value) missing.push("카테고리");
-    if (!document.getElementById("templatePurpose").value) missing.push("광고 여부");
     if (!direction) missing.push("원하는 문구 방향");
     if (missing.length) {
         message.innerText = `${missing.join(", ")} 항목을 입력해 주세요.`;
@@ -790,6 +793,28 @@ function generateTemplateSuggestions() {
             templateGenerating = false;
             setGeneratingState(false);
         });
+}
+
+function validateTemplateForSuggestionSetup() {
+    if (!getSelectedChannelTypes().length) {
+        alert("하나 이상의 채널을 선택해 주세요.");
+        document.querySelector("input[name='templateChannel']")?.focus();
+        return false;
+    }
+
+    const category = document.getElementById("templateCategory");
+    if (!category.value) {
+        category.reportValidity();
+        category.focus();
+        return false;
+    }
+
+    if (!document.getElementById("templatePurpose").value) {
+        alert("광고 여부를 선택해 주세요.");
+        return false;
+    }
+
+    return true;
 }
 
 function setGeneratingState(loading) {
