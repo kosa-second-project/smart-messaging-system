@@ -27,6 +27,7 @@ public interface HistoryMapper {
     List<String> findPurposeOptions();
 
     void updateSendTargetStatus(@Param("sendTargetId") Long sendTargetId, @Param("status") String status);
+    void updateSendTargetSuccess(@Param("sendTargetId") Long sendTargetId, @Param("channelId") Long channelId);
     List<SendTargetVO> findFailedTargetsForRetry(@Param("sendHistoryId") Long sendHistoryId, @Param("limit") int limit);
     void updateSendTargetStatusByIds(@Param("targetIds") List<Long> targetIds, @Param("status") String status);
     void decrementFailCount(@Param("sendHistoryId") Long sendHistoryId, @Param("count") int count);
@@ -36,4 +37,5 @@ public interface HistoryMapper {
     void incrementSuccessCount(@Param("sendHistoryId") Long sendHistoryId);
     void incrementFailCount(@Param("sendHistoryId") Long sendHistoryId);
     void updateHistoryStatus(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);
+    void finalizeSendHistory(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);
 }

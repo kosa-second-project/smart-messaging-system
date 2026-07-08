@@ -7,6 +7,7 @@ import com.example.smartmessaging.dto.vo.SendResult;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.MessageRouterService;
 import com.example.smartmessaging.service.repository.HistoryMapper;
+import com.example.smartmessaging.util.SmsMessageTypeResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,28 +45,43 @@ public class CustomerMessageSenderImpl implements MessageSender {
             }
 
             if (!isRealCustomer(task)) {
-                saveMockSuccess(task, step + 1, channelId, channelType);
+                String actualChannelType = resolveActualChannelType(task, channelType);
+                Long actualChannelId = findChannelId(actualChannelType);
+                if (actualChannelId == null) {
+                    saveAttempt(task, step + 1, null, false, "UNSUPPORTED-" + actualChannelType);
+                    continue;
+                }
+                saveMockSuccess(task, step + 1, actualChannelId, actualChannelType);
                 return;
             }
 
             SendResult result = sendReal(task, step, channelType);
+            String resultChannelType = normalizeChannelType(result.getChannel());
+            if (resultChannelType.isBlank()) {
+                resultChannelType = channelType;
+            }
+            Long resultChannelId = findChannelId(resultChannelType);
+            if (resultChannelId == null) {
+                resultChannelId = channelId;
+            }
+
             saveAttempt(
                     task,
                     step + 1,
-                    channelId,
+                    resultChannelId,
                     result.isSuccess(),
-                    result.isSuccess() ? "REAL-" + channelType : result.getErrorCode()
+                    result.isSuccess() ? "REAL-" + resultChannelType : result.getErrorCode()
             );
 
             if (result.isSuccess()) {
-                historyMapper.updateSendTargetStatus(task.getSendTargetId(), "SUCCEEDED");
+                historyMapper.updateSendTargetSuccess(task.getSendTargetId(), resultChannelId);
                 historyMapper.incrementSuccessCount(task.getSendHistoryId());
                 completeHistoryIfFinished(task.getSendHistoryId());
                 return;
             }
 
             log.warn("[CustomerMessageSender] real send failed. fallback continues. messageId={}, targetId={}, channel={}, error={}",
-                    task.getMessageId(), task.getSendTargetId(), channelType, result.getErrorCode());
+                    task.getMessageId(), task.getSendTargetId(), resultChannelType, result.getErrorCode());
         }
 
         historyMapper.updateSendTargetStatus(task.getSendTargetId(), "FAILED");
@@ -85,7 +101,7 @@ public class CustomerMessageSenderImpl implements MessageSender {
                 task.getMessageId(), task.getSendTargetId(), task.getCustomerId(), channelType, selectRecipient(task, channelType));
 
         saveAttempt(task, attemptOrder, channelId, true, "MOCK-" + task.getMessageId());
-        historyMapper.updateSendTargetStatus(task.getSendTargetId(), "SUCCEEDED");
+        historyMapper.updateSendTargetSuccess(task.getSendTargetId(), channelId);
         historyMapper.incrementSuccessCount(task.getSendHistoryId());
         completeHistoryIfFinished(task.getSendHistoryId());
     }
@@ -114,8 +130,36 @@ public class CustomerMessageSenderImpl implements MessageSender {
 
     private void completeHistoryIfFinished(Long sendHistoryId) {
         if (historyMapper.countUnfinishedTargets(sendHistoryId) == 0) {
-            historyMapper.updateHistoryStatus(sendHistoryId, "SENT");
+            historyMapper.finalizeSendHistory(sendHistoryId, "SENT");
         }
+    }
+
+    private String resolveActualChannelType(MessageTaskDto task, String channelType) {
+        String normalized = normalizeChannelType(channelType);
+        if ("SMS".equals(normalized) || "LMS".equals(normalized)) {
+            return SmsMessageTypeResolver.resolve(
+                    normalized,
+                    personalize(task.getTitle(), task.getCustomerName()),
+                    SmsMessageTypeResolver.buildMessageText(
+                            personalize(task.getContent(), task.getCustomerName()),
+                            task.getPurpose(),
+                            task.getActionButtonName(),
+                            task.getActionUrl(),
+                            task.getUnsubscribeUrl()
+                    )
+            );
+        }
+        return normalized;
+    }
+
+    private String personalize(String text, String customerName) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String name = customerName == null || customerName.isBlank() ? "\uACE0\uAC1D" : customerName.trim();
+        return text
+                .replace("#{\uACE0\uAC1D\uBA85}", name)
+                .replace("#{\uC774\uB984}", name);
     }
 
     private Long findChannelId(String channelType) {

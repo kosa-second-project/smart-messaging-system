@@ -199,7 +199,7 @@ public class HistoryServiceImpl implements HistoryService {
             return retryResponse(sendHistoryId, 0, 0, 0, "재발송할 실패 대상자가 없습니다.");
         }
         if (publishedCount == 0 && historyMapper.countUnfinishedTargets(sendHistoryId) == 0) {
-            sendPreparationMapper.updateHistoryStatus(sendHistoryId, "SENT");
+            historyMapper.finalizeSendHistory(sendHistoryId, "SENT");
         }
 
         String message = publishedCount + "건을 재발송 큐에 등록했습니다.";
@@ -258,6 +258,7 @@ public class HistoryServiceImpl implements HistoryService {
                 .campaignId(campaign.getId())
                 .customerId(plan.getCustomerId())
                 .isRealCustomer(plan.getRecipient().getIsRealCustomer())
+                .customerName(plan.getRecipient().getCustomerName())
                 .userId(campaign.getUserId())
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())

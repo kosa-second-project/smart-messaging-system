@@ -44,10 +44,15 @@ public class RecipientChannelResolverImpl implements RecipientChannelResolver {
             }
 
             ChannelVO firstChannel = availableChannels.get(0);
+            BigDecimal maxAvailableCost = availableChannels.stream()
+                    .map(channel -> channel.getCostPerMsg() != null ? channel.getCostPerMsg() : BigDecimal.ZERO)
+                    .max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
             plans.add(RecipientSendPlan.builder()
                     .customerId(recipient.getCustomerId())
                     .firstChannelId(firstChannel.getId())
                     .estimatedCost(firstChannel.getCostPerMsg() != null ? firstChannel.getCostPerMsg() : BigDecimal.ZERO)
+                    .maxAvailableCost(maxAvailableCost)
                     .fallbackSequence(availableChannels.stream()
                             .map(channel -> normalizeChannelType(channel.getChannelType()))
                             .toList())
