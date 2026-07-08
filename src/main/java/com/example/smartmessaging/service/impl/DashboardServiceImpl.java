@@ -89,10 +89,10 @@ public class DashboardServiceImpl implements DashboardService {
         long activeCustomers = n(customer.getNormalCustomerCount()) + n(customer.getNewCustomerCount());
 
         return List.of(
-                card("오늘 발송 건수", formatNumber(totalSend), "실시간"),
-                card("성공률 / 실패 건수 (오늘 기준)", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", "실시간"),
-                card("활성 고객 수 (오늘 기준)", formatNumber(activeCustomers), "일반 + 신규"),
-                card("오늘 기준 청구비용", formatWon(billingCost), "실시간"),
+                card("오늘 발송 건수", formatNumber(totalSend) + "건", "오늘 기준"),
+                card("성공률 / 실패 건수", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", "오늘 기준"),
+                card("활성 고객 수", formatNumber(activeCustomers), "오늘 기준"),
+                card("청구비용", formatWon(billingCost), "오늘 기준"),
                 card("절감 현황 (오늘 기준)", formatWon(savingCost), "최대 비용 대비")
         );
     }

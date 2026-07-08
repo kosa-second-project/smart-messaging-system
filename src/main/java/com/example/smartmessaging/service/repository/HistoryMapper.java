@@ -34,6 +34,7 @@ public interface HistoryMapper {
     void insertSendAttempt(SendAttemptVO attempt);
     int countUnfinishedTargets(@Param("sendHistoryId") Long sendHistoryId);
     void incrementSuccessCount(@Param("sendHistoryId") Long sendHistoryId);
+    void incrementActualCostByChannel(@Param("sendHistoryId") Long sendHistoryId, @Param("channelId") Long channelId);
     void incrementFailCount(@Param("sendHistoryId") Long sendHistoryId);
     void updateHistoryStatus(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);
 }

@@ -47,11 +47,9 @@
             FROM send_history sh
             CROSS JOIN today_window tw
             WHERE NVL(sh.is_deleted, 0) = 0
-              AND (
-                    (sh.created_at &gt;= tw.start_at AND sh.created_at &lt; tw.end_at)
-                 OR (sh.scheduled_at &gt;= tw.start_at AND sh.scheduled_at &lt; tw.end_at)
-                 OR (sh.completed_at &gt;= tw.start_at AND sh.completed_at &lt; tw.end_at)
-              )
+              AND sh.status = 'SENT'
+              AND sh.completed_at &gt;= tw.start_at
+              AND sh.completed_at &lt; tw.end_at
         ),
         target_costs AS (
             SELECT
@@ -63,18 +61,8 @@
         ),
         success_costs AS (
             SELECT
-                NVL(SUM(NVL(c.cost_per_msg, 0)), 0) AS billing_cost
+                NVL(SUM(NVL(th.actual_cost, 0)), 0) AS billing_cost
             FROM today_histories th
-            INNER JOIN send_target st
-                    ON st.send_history_id = th.id
-                   AND NVL(st.is_deleted, 0) = 0
-            INNER JOIN send_attempt sa
-                    ON sa.send_target_id = st.id
-                   AND NVL(sa.is_deleted, 0) = 0
-                   AND NVL(sa.is_succeeded, 0) = 1
-            INNER JOIN channel c
-                    ON c.id = sa.channel_id
-                   AND NVL(c.is_deleted, 0) = 0
         )
         SELECT
             NVL(SUM(NVL(th.total_target_count, 0)), 0) AS total_send_count,

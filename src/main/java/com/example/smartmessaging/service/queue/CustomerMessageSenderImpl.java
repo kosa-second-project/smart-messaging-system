@@ -60,6 +60,7 @@ public class CustomerMessageSenderImpl implements MessageSender {
             if (result.isSuccess()) {
                 historyMapper.updateSendTargetStatus(task.getSendTargetId(), "SUCCEEDED");
                 historyMapper.incrementSuccessCount(task.getSendHistoryId());
+                historyMapper.incrementActualCostByChannel(task.getSendHistoryId(), channelId);
                 completeHistoryIfFinished(task.getSendHistoryId());
                 return;
             }

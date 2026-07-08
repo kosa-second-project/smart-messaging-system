@@ -386,6 +386,20 @@
           AND is_deleted = 0
     </update>
 
+    <update id="incrementActualCostByChannel">
+        UPDATE send_history sh
+        SET actual_cost = NVL(sh.actual_cost, 0) + NVL((
+                SELECT c.cost_per_msg
+                FROM channel c
+                WHERE c.id = #{channelId}
+                  AND NVL(c.is_deleted, 0) = 0
+            ), 0),
+            updated_at = SYSTIMESTAMP
+        WHERE sh.id = #{sendHistoryId}
+          AND sh.is_deleted = 0
+          AND #{channelId} IS NOT NULL
+    </update>
+
     <update id="incrementFailCount">
         UPDATE send_history
         SET fail_count = fail_count + 1,
