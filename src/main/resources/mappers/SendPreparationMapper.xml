@@ -106,6 +106,22 @@
         )
     </insert>
 
+    <select id="findSendTargetsByUserUuids" resultType="com.example.smartmessaging.dto.vo.SendTargetVO">
+        SELECT
+            id,
+            send_history_id AS sendHistoryId,
+            customer_id AS customerId,
+            final_channel_id AS finalChannelId,
+            status,
+            cost,
+            user_uuid AS userUuid
+        FROM send_target
+        WHERE NVL(is_deleted, 0) = 0
+          AND user_uuid IN
+        <foreach collection="userUuids" item="userUuid" open="(" separator="," close=")">
+            #{userUuid}
+        </foreach>
+    </select>
     <select id="selectSendHistoryById" resultType="com.example.smartmessaging.dto.vo.SendHistoryVO">
         SELECT *
         FROM send_history
