@@ -139,9 +139,9 @@ public class CustomerMessageSenderImpl implements MessageSender {
         if ("SMS".equals(normalized) || "LMS".equals(normalized)) {
             return SmsMessageTypeResolver.resolve(
                     normalized,
-                    task.getTitle(),
+                    personalize(task.getTitle(), task.getCustomerName()),
                     SmsMessageTypeResolver.buildMessageText(
-                            task.getContent(),
+                            personalize(task.getContent(), task.getCustomerName()),
                             task.getPurpose(),
                             task.getActionButtonName(),
                             task.getActionUrl(),
@@ -150,6 +150,16 @@ public class CustomerMessageSenderImpl implements MessageSender {
             );
         }
         return normalized;
+    }
+
+    private String personalize(String text, String customerName) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String name = customerName == null || customerName.isBlank() ? "\uACE0\uAC1D" : customerName.trim();
+        return text
+                .replace("#{\uACE0\uAC1D\uBA85}", name)
+                .replace("#{\uC774\uB984}", name);
     }
 
     private Long findChannelId(String channelType) {

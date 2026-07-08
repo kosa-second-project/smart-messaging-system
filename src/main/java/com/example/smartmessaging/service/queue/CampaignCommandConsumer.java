@@ -149,6 +149,7 @@ public class CampaignCommandConsumer {
                 .campaignId(command.getSendHistoryId())
                 .customerId(plan.getCustomerId())
                 .isRealCustomer(plan.getRecipient().getIsRealCustomer())
+                .customerName(plan.getRecipient().getCustomerName())
                 .userId(command.getUserId())
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())

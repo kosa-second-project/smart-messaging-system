@@ -258,6 +258,7 @@ public class HistoryServiceImpl implements HistoryService {
                 .campaignId(campaign.getId())
                 .customerId(plan.getCustomerId())
                 .isRealCustomer(plan.getRecipient().getIsRealCustomer())
+                .customerName(plan.getRecipient().getCustomerName())
                 .userId(campaign.getUserId())
                 .phoneNumber(plan.getRecipient().getPhone())
                 .email(plan.getRecipient().getEmail())

@@ -34,7 +34,9 @@ public class MessageRouterServiceImpl implements MessageRouterService {
         }
 
         String currentChannel = task.getFallbackSequence().get(task.getCurrentStep());
-        log.info("[MessageRouter] Routing messageId={} to channel={}, step={}/{}", 
+        String personalizedTitle = personalize(task.getTitle(), task.getCustomerName());
+        String personalizedContent = personalize(task.getContent(), task.getCustomerName());
+        log.info("[MessageRouter] Routing messageId={} to channel={}, step={}/{}",
                 task.getMessageId(), currentChannel, task.getCurrentStep() + 1, task.getFallbackSequence().size());
 
         try {
@@ -45,8 +47,8 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                     }
                     boolean kakaoSuccess = kakaoMessageService.sendFeedMessageToAll(
                             task.getKakaoAccessToken(),
-                            task.getTitle(),
-                            task.getContent(),
+                            personalizedTitle,
+                            personalizedContent,
                             task.getActionButtonName(),
                             task.getActionUrl()
                     );
@@ -59,9 +61,9 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                 case "LMS":
                     String resolvedMessageType = SmsMessageTypeResolver.resolve(
                             currentChannel,
-                            task.getTitle(),
+                            personalizedTitle,
                             SmsMessageTypeResolver.buildMessageText(
-                                    task.getContent(),
+                                    personalizedContent,
                                     task.getPurpose(),
                                     task.getActionButtonName(),
                                     task.getActionUrl(),
@@ -70,8 +72,8 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                     );
                     return smsMessageService.sendTextMessage(
                             task.getPhoneNumber(),
-                            task.getTitle(),
-                            task.getContent(),
+                            personalizedTitle,
+                            personalizedContent,
                             resolvedMessageType,
                             task.getPurpose(),
                             task.getActionButtonName(),
@@ -81,8 +83,8 @@ public class MessageRouterServiceImpl implements MessageRouterService {
                 case "EMAIL":
                     return emailMessageService.sendEmail(
                             task.getEmail(),
-                            task.getTitle(),
-                            task.getContent(),
+                            personalizedTitle,
+                            personalizedContent,
                             task.getActionButtonName(),
                             task.getActionUrl()
                     );
@@ -93,5 +95,15 @@ public class MessageRouterServiceImpl implements MessageRouterService {
             log.error("[MessageRouter] Exception occurred sending via channel={}", currentChannel, e);
             return SendResult.fail(currentChannel, "SYSTEM_ERROR", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
         }
+    }
+
+    private String personalize(String text, String customerName) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String name = customerName == null || customerName.isBlank() ? "\uACE0\uAC1D" : customerName.trim();
+        return text
+                .replace("#{\uACE0\uAC1D\uBA85}", name)
+                .replace("#{\uC774\uB984}", name);
     }
 }
