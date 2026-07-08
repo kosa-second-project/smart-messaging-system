@@ -10,6 +10,8 @@ import com.example.smartmessaging.dto.response.PageResponseDTO;
 import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import com.example.smartmessaging.service.repository.HistoryMapper;
+import com.example.smartmessaging.service.repository.SendPreparationMapper;
+import com.example.smartmessaging.service.queue.MessageQueuePublisher;
 import com.example.smartmessaging.service.impl.HistoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,22 @@ class HistoryServiceTest {
     @BeforeEach
     void setUp() {
         historyMapper = mock(HistoryMapper.class);
-        historyService = new HistoryServiceImpl(historyMapper);
+        SendPreparationMapper sendPreparationMapper = mock(SendPreparationMapper.class);
+        ChannelService channelService = mock(ChannelService.class);
+        RecipientChannelResolver recipientChannelResolver = mock(RecipientChannelResolver.class);
+        ShortUrlService shortUrlService = mock(ShortUrlService.class);
+        MessageQueuePublisher messageQueuePublisher = mock(MessageQueuePublisher.class);
+        TokenCryptoService tokenCryptoService = mock(TokenCryptoService.class);
+
+        historyService = new HistoryServiceImpl(
+                historyMapper,
+                sendPreparationMapper,
+                channelService,
+                recipientChannelResolver,
+                shortUrlService,
+                messageQueuePublisher,
+                tokenCryptoService
+        );
     }
 
     @Test

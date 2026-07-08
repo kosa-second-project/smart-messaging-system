@@ -54,6 +54,40 @@
         </if>
     </sql>
 
+    <!-- 고객 유형(일반, 신규, 휴면) 필터 조건 공통 SQL (customer_type 컬럼 매칭) -->
+    <sql id="customerTypeFilterConditions">
+        <if test="customerTypes != null and customerTypes.size() > 0">
+            AND (
+            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
+                <choose>
+                    <when test="typeItem == 'NEW'">
+                        c.customer_type = 'NEW'
+                    </when>
+                    <when test="typeItem == 'DORMANT'">
+                        c.customer_type = 'DORMANT'
+                    </when>
+                    <otherwise>
+                        c.customer_type = 'NORMAL'
+                    </otherwise>
+                </choose>
+            </foreach>
+            )
+        </if>
+        <if test="customerType != null and customerType != ''">
+            <choose>
+                <when test="customerType == '신규'">
+                    AND c.customer_type = 'NEW'
+                </when>
+                <when test="customerType == '휴면'">
+                    AND c.customer_type = 'DORMANT'
+                </when>
+                <when test="customerType == '일반'">
+                    AND c.customer_type = 'NORMAL'
+                </when>
+            </choose>
+        </if>
+    </sql>
+
     <!-- 1-1. 단일 고객 상세 조회 -->
     <select id="selectCustomerById" resultMap="CustomerResultMap" parameterType="long">
         SELECT
@@ -61,10 +95,10 @@
             c.name AS name,
             c.phone AS phone,
             CASE
-                WHEN c.joined_at >= SYSTIMESTAMP - 7 THEN '신규'
-                WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '휴면'
+                WHEN c.customer_type = 'NEW' THEN '신규'
+                WHEN c.customer_type = 'DORMANT' THEN '휴면'
                 ELSE '일반'
-                END AS customerType,
+            END AS customerType,
             TO_CHAR(c.joined_at, 'YYYY-MM-DD') AS joinedAt,
             (
                 SELECT TO_CHAR(MAX(sh.created_at), 'YYYY-MM-DD')
@@ -102,9 +136,9 @@
         c.name AS name,
         c.phone AS phone,
         CASE
-        WHEN c.joined_at >= SYSTIMESTAMP - 7 THEN '신규'
-        WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '휴면'
-        ELSE '일반'
+            WHEN c.customer_type = 'NEW' THEN '신규'
+            WHEN c.customer_type = 'DORMANT' THEN '휴면'
+            ELSE '일반'
         END AS customerType,
         TO_CHAR(c.joined_at, 'YYYY-MM-DD') AS joinedAt,
         NULL AS lastSend,
@@ -139,41 +173,8 @@
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
-        <!-- 고객 유형 필터 (일반, 신규, 휴면 - 실시간 계산식 매칭) -->
-        <if test="customerTypes != null and customerTypes.size() > 0">
-            AND (
-            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
-                <choose>
-                    <when test="typeItem == 'NEW'">
-                        c.joined_at &gt;= SYSTIMESTAMP - 7
-                    </when>
-                    <when test="typeItem == 'DORMANT'">
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                    </when>
-                    <otherwise>
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                    </otherwise>
-                </choose>
-            </foreach>
-            )
-        </if>
-        <if test="customerType != null and customerType != ''">
-            <choose>
-                <when test="customerType == '신규'">
-                    AND c.joined_at >= SYSTIMESTAMP - 7
-                </when>
-                <when test="customerType == '휴면'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                </when>
-                <when test="customerType == '일반'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND (c.last_active_at IS NULL OR c.last_active_at >= ADD_MONTHS(SYSTIMESTAMP, -12))
-                </when>
-            </choose>
-        </if>
+        <!-- 고객 유형 필터 (일반, 신규, 휴면 - 태그 기반 매칭) -->
+        <include refid="customerTypeFilterConditions"/>
         <!-- 타겟 태그 검색 -->
         <if test="searchTag != null and searchTag != ''">
             AND c.id IN (
@@ -193,8 +194,16 @@
             </when>
             <when test="sortOrder == 'type'">
                 (CASE
-                WHEN c.joined_at &gt;= SYSTIMESTAMP - 7 THEN '1'
-                WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '3'
+                WHEN EXISTS (
+                    SELECT 1 FROM customer_tag_mapping ctm 
+                    JOIN tag t ON ctm.tag_id = t.id 
+                    WHERE ctm.customer_id = c.id AND ctm.is_deleted = 0 AND t.is_deleted = 0 AND t.name = '신규'
+                ) THEN '1'
+                WHEN EXISTS (
+                    SELECT 1 FROM customer_tag_mapping ctm 
+                    JOIN tag t ON ctm.tag_id = t.id 
+                    WHERE ctm.customer_id = c.id AND ctm.is_deleted = 0 AND t.is_deleted = 0 AND t.name = '휴면'
+                ) THEN '3'
                 ELSE '2'
                 END) ASC, c.name ASC
             </when>
@@ -220,39 +229,8 @@
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
-        <if test="customerTypes != null and customerTypes.size() > 0">
-            AND (
-            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
-                <choose>
-                    <when test="typeItem == 'NEW'">
-                        c.joined_at &gt;= SYSTIMESTAMP - 7
-                    </when>
-                    <when test="typeItem == 'DORMANT'">
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                    </when>
-                    <otherwise>
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                    </otherwise>
-                </choose>
-            </foreach>
-            )
-        </if>
-        <if test="customerType != null and customerType != ''">
-            <choose>
-                <when test="customerType == '신규'">
-                    AND c.joined_at >= SYSTIMESTAMP - 7
-                </when>
-                <when test="customerType == '휴면'">
-                    AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                </when>
-                <when test="customerType == '일반'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND (c.last_active_at IS NULL OR c.last_active_at >= ADD_MONTHS(SYSTIMESTAMP, -12))
-                </when>
-            </choose>
-        </if>
+        <!-- 고객 유형 필터 (일반, 신규, 휴면 - 태그 기반 매칭) -->
+        <include refid="customerTypeFilterConditions"/>
         <if test="searchTag != null and searchTag != ''">
             AND c.id IN (
             SELECT ctm.customer_id
@@ -266,13 +244,13 @@
         <include refid="manageTagFilterConditions"/>
     </select>
 
-    <!-- 3-1. 고객 유형별 집계 통계 조회 -->
+    <!-- 3-1. 고객 유형별 집계 통계 조회 (성능 최적화: customer_type 컬럼 직접 집계) -->
     <select id="selectCustomerStats" resultType="CustomerStatResponseDTO">
         SELECT
             COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS totalCount,
-            COUNT(CASE WHEN is_deleted = 0 AND joined_at &lt; SYSTIMESTAMP - 7 AND (last_active_at IS NULL OR last_active_at >= ADD_MONTHS(SYSTIMESTAMP, -12)) THEN 1 END) AS regularCount,
-            COUNT(CASE WHEN is_deleted = 0 AND joined_at >= SYSTIMESTAMP - 7 THEN 1 END) AS newCount,
-            COUNT(CASE WHEN is_deleted = 0 AND joined_at &lt; SYSTIMESTAMP - 7 AND last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN 1 END) AS dormantCount
+            COUNT(CASE WHEN is_deleted = 0 AND customer_type = 'NEW' THEN 1 END) AS newCount,
+            COUNT(CASE WHEN is_deleted = 0 AND customer_type = 'DORMANT' THEN 1 END) AS dormantCount,
+            COUNT(CASE WHEN is_deleted = 0 AND customer_type = 'NORMAL' THEN 1 END) AS regularCount
         FROM customer
     </select>
 
@@ -324,41 +302,8 @@
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
-        <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
-        <if test="customerTypes != null and customerTypes.size() > 0">
-            AND (
-            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
-                <choose>
-                    <when test="typeItem == 'NEW'">
-                        c.joined_at &gt;= SYSTIMESTAMP - 7
-                    </when>
-                    <when test="typeItem == 'DORMANT'">
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                    </when>
-                    <otherwise>
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                    </otherwise>
-                </choose>
-            </foreach>
-            )
-        </if>
-        <if test="customerType != null and customerType != ''">
-            <choose>
-                <when test="customerType == '신규'">
-                    AND c.joined_at &gt;= SYSTIMESTAMP - 7
-                </when>
-                <when test="customerType == '휴면'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                </when>
-                <when test="customerType == '일반'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                </when>
-            </choose>
-        </if>
+        <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면 - 태그 기반 매칭) -->
+        <include refid="customerTypeFilterConditions"/>
         <include refid="manageTagFilterConditions"/>
         ORDER BY
         <choose>
@@ -367,8 +312,8 @@
             </when>
             <when test="sortOrder == 'type'">
                 (CASE
-                WHEN c.joined_at &gt;= SYSTIMESTAMP - 7 THEN '1'
-                WHEN c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12) THEN '3'
+                WHEN c.customer_type = 'NEW' THEN '1'
+                WHEN c.customer_type = 'DORMANT' THEN '3'
                 ELSE '2'
                 END) ASC, c.name ASC
             </when>
@@ -391,41 +336,8 @@
         <if test="phone != null and phone != ''">
             AND c.phone LIKE '%' || #{phone} || '%'
         </if>
-        <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면) -->
-        <if test="customerTypes != null and customerTypes.size() > 0">
-            AND (
-            <foreach item="typeItem" collection="customerTypes" separator=" OR ">
-                <choose>
-                    <when test="typeItem == 'NEW'">
-                        c.joined_at &gt;= SYSTIMESTAMP - 7
-                    </when>
-                    <when test="typeItem == 'DORMANT'">
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                    </when>
-                    <otherwise>
-                        c.joined_at &lt; SYSTIMESTAMP - 7
-                        AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                    </otherwise>
-                </choose>
-            </foreach>
-            )
-        </if>
-        <if test="customerType != null and customerType != ''">
-            <choose>
-                <when test="customerType == '신규'">
-                    AND c.joined_at &gt;= SYSTIMESTAMP - 7
-                </when>
-                <when test="customerType == '휴면'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND c.last_active_at &lt; ADD_MONTHS(SYSTIMESTAMP, -12)
-                </when>
-                <when test="customerType == '일반'">
-                    AND c.joined_at &lt; SYSTIMESTAMP - 7
-                    AND (c.last_active_at IS NULL OR c.last_active_at &gt;= ADD_MONTHS(SYSTIMESTAMP, -12))
-                </when>
-            </choose>
-        </if>
+        <!-- 수신거부 고객 유형 필터 (일반, 신규, 휴면 - 태그 기반 매칭) -->
+        <include refid="customerTypeFilterConditions"/>
         <include refid="manageTagFilterConditions"/>
     </select>
 
