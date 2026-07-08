@@ -86,6 +86,8 @@ const StatsChart = (function() {
                     max: options.yMax,
                     grid: { color: gridColor, borderDash: [3, 3] },
                     ticks: {
+                        precision: options.yTickPrecision,
+                        stepSize: options.yStepSize,
                         color: labelColor,
                         font: { family: fontFamily, size: 11 },
                         callback: function(value) {
@@ -262,16 +264,17 @@ const StatsChart = (function() {
             },
             options: {
                 ...baseOptions({
-                    yFormatter: function(value) { return `${(value / 10000).toFixed(0)}만`; }
+                    yFormatter: function(value) { return Number(value).toLocaleString(); }
                 }),
                 scales: {
                     x: baseOptions({}).scales.x,
                     y: {
                         grid: { color: gridColor, borderDash: [3, 3] },
                         ticks: {
+                            precision: 0,
                             color: labelColor,
                             font: { family: fontFamily, size: 11 },
-                            callback: function(value) { return `${(value / 10000).toFixed(0)}만`; }
+                            callback: function(value) { return Number(value).toLocaleString(); }
                         },
                         border: { display: false }
                     },

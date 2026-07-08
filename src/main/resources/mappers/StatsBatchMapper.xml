@@ -512,4 +512,96 @@
         ) aggregated
     </insert>
 
+    <!--
+        특정 날짜의 기존 template_stat 활성 row를 soft-delete 처리한다.
+
+        template_stat은 stat_date + template_id 기준으로 하루치 템플릿별 성과를 저장한다.
+        같은 날짜를 재집계할 수 있도록 기존 활성 row를 비활성화한 뒤 새 row를 insert 한다.
+    -->
+    <update id="softDeleteTemplateStat">
+        UPDATE template_stat
+        SET
+            is_deleted = 1,
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{systemUserId}
+        WHERE stat_date = #{statDate}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!--
+        send_history와 short_url 기준으로 템플릿별 성과 통계를 insert 한다.
+
+        수집 기준:
+        - count: 해당 statDate에 완료된 발송 중 템플릿별 총 대상 수
+        - click_target_count: 클릭률 대상 short_url 수. 수신거부 링크는 제외한다.
+        - click_count: 그중 실제 클릭된 short_url 수
+        - conversion_target_count: 전환율 대상 short_url 수. 현재는 클릭률 대상과 동일하게 본다.
+        - conversion_count: short_url에서 전환 처리된 수
+
+        send_history.template_id가 있는 완료 발송만 템플릿 성과 대상으로 본다.
+    -->
+    <insert id="insertTemplateStat">
+        INSERT INTO template_stat (
+            template_id,
+            rank,
+            stat_date,
+            count,
+            click_target_count,
+            click_count,
+            conversion_target_count,
+            conversion_count,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            is_deleted
+        )
+        WITH template_aggregated AS (
+            SELECT
+                sh.template_id,
+                NVL(SUM(sh.total_target_count), 0) AS send_count,
+                COUNT(su.id) AS click_target_count,
+                SUM(CASE WHEN NVL(su.is_clicked, 0) = 1 THEN 1 ELSE 0 END) AS click_count,
+                COUNT(su.id) AS conversion_target_count,
+                SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) AS conversion_count
+            FROM send_history sh
+            LEFT JOIN send_target st
+                   ON st.send_history_id = sh.id
+                  AND NVL(st.is_deleted, 0) = 0
+            LEFT JOIN short_url su
+                   ON su.send_target_id = st.id
+                  AND NVL(su.is_deleted, 0) = 0
+                  AND NVL(su.purpose, 'CLICK') IN ('CLICK', 'PURCHASE')
+            WHERE sh.status = 'SENT'
+              AND sh.template_id IS NOT NULL
+              AND sh.completed_at &gt;= CAST(#{statDate} AS TIMESTAMP)
+              AND sh.completed_at &lt;  CAST(#{statDate} AS TIMESTAMP) + INTERVAL '1' DAY
+              AND NVL(sh.is_deleted, 0) = 0
+            GROUP BY sh.template_id
+        )
+        SELECT
+            template_id,
+            ROW_NUMBER() OVER (
+                ORDER BY
+                    CASE
+                        WHEN click_target_count = 0 THEN 0
+                        ELSE click_count / click_target_count
+                    END DESC,
+                    click_count DESC,
+                    template_id ASC
+            ) AS rank,
+            #{statDate},
+            send_count,
+            click_target_count,
+            click_count,
+            conversion_target_count,
+            conversion_count,
+            SYSTIMESTAMP,
+            SYSTIMESTAMP,
+            #{systemUserId},
+            #{systemUserId},
+            0
+        FROM template_aggregated
+    </insert>
+
 </mapper>

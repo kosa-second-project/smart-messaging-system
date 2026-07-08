@@ -94,4 +94,20 @@ public interface StatsBatchMapper {
             @Param("statDate") LocalDate statDate,
             @Param("systemUserId") Long systemUserId
     );
+
+    /**
+     * 특정 통계일자의 기존 template_stat 활성 row를 soft-delete 처리한다.
+     */
+    int softDeleteTemplateStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
+
+    /**
+     * send_history와 short_url을 기준으로 특정 날짜의 템플릿별 성과 통계를 insert 한다.
+     */
+    int insertTemplateStat(
+            @Param("statDate") LocalDate statDate,
+            @Param("systemUserId") Long systemUserId
+    );
 }
