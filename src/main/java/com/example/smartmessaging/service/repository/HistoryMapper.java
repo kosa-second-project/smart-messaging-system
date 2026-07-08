@@ -31,12 +31,8 @@ public interface HistoryMapper {
     List<SendTargetVO> findFailedTargetsForRetry(@Param("sendHistoryId") Long sendHistoryId, @Param("limit") int limit);
     void updateSendTargetStatusByIds(@Param("targetIds") List<Long> targetIds, @Param("status") String status);
     void decrementFailCount(@Param("sendHistoryId") Long sendHistoryId, @Param("count") int count);
-    int findNextAttemptOrder(@Param("sendTargetId") Long sendTargetId);
     void insertSendAttempt(SendAttemptVO attempt);
-    int countUnfinishedTargets(@Param("sendHistoryId") Long sendHistoryId);
-    void incrementSuccessCount(@Param("sendHistoryId") Long sendHistoryId);
-    void incrementActualCostByChannel(@Param("sendHistoryId") Long sendHistoryId, @Param("channelId") Long channelId);
-    void incrementFailCount(@Param("sendHistoryId") Long sendHistoryId);
     void updateHistoryStatus(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);
+    List<Long> findReadyToFinalizeHistoryIds(@Param("limit") int limit);
     void finalizeSendHistory(@Param("sendHistoryId") Long sendHistoryId, @Param("status") String status);
 }

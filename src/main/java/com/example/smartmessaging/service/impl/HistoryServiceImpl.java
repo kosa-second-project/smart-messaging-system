@@ -198,7 +198,7 @@ public class HistoryServiceImpl implements HistoryService {
         if (retryTargetCount == 0) {
             return retryResponse(sendHistoryId, 0, 0, 0, "재발송할 실패 대상자가 없습니다.");
         }
-        if (publishedCount == 0 && historyMapper.countUnfinishedTargets(sendHistoryId) == 0) {
+        if (publishedCount == 0) {
             historyMapper.finalizeSendHistory(sendHistoryId, "SENT");
         }
 

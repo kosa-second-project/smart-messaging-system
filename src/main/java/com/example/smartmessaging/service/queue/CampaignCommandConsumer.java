@@ -18,16 +18,24 @@ import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,6 +45,7 @@ import java.util.UUID;
 public class CampaignCommandConsumer {
 
     private static final int CHUNK_SIZE = 1000;
+    private static final int TARGET_INSERT_CHUNK_SIZE = 500;
 
     private final CampaignDraftService draftService;
     private final ChannelService channelService;
@@ -45,6 +54,8 @@ public class CampaignCommandConsumer {
     private final RecipientChannelResolver recipientChannelResolver;
     private final ShortUrlService shortUrlService;
     private final MessageQueuePublisher messageQueuePublisher;
+    private final SqlSessionFactory sqlSessionFactory;
+    private final PlatformTransactionManager transactionManager;
 
     @RabbitListener(queues = RabbitMQConfig.CAMP_COMMAND_QUEUE)
     @Transactional
@@ -79,25 +90,7 @@ public class CampaignCommandConsumer {
                 return;
             }
 
-            int published = 0;
-            for (RecipientSendPlan plan : plans) {
-                SendTargetVO target = SendTargetVO.builder()
-                        .sendHistoryId(command.getSendHistoryId())
-                        .customerId(plan.getCustomerId())
-                        .finalChannelId(plan.getFirstChannelId())
-                        .status("PENDING")
-                        .cost(plan.getMaxAvailableCost())
-                        .userUuid(createTrackingUserUuid())
-                        .build();
-                target.setCreatedBy(command.getUserId());
-                sendPreparationMapper.insertSendTarget(target);
-
-                String actionUrl = createActionUrl(command, target, plan);
-                if (!isScheduled) {
-                    messageQueuePublisher.publish(buildTask(command, target, plan, actionUrl));
-                    published++;
-                }
-            }
+            int published = persistTargetsAndPublish(command, plans, isScheduled);
 
             draftService.deleteDraft(command.getUserId(), command.getDraftId());
 
@@ -109,6 +102,73 @@ public class CampaignCommandConsumer {
             sendPreparationMapper.updateHistoryStatus(command.getSendHistoryId(), "FAILED");
             rabbitChannel.basicNack(deliveryTag, false, false);
         }
+    }
+
+    private int persistTargetsAndPublish(CampaignCommandQueueDto command, List<RecipientSendPlan> plans, boolean isScheduled) {
+        int published = 0;
+        for (int i = 0; i < plans.size(); i += TARGET_INSERT_CHUNK_SIZE) {
+            List<RecipientSendPlan> planChunk = plans.subList(i, Math.min(plans.size(), i + TARGET_INSERT_CHUNK_SIZE));
+            List<SendTargetVO> targetChunk = new ArrayList<>(planChunk.size());
+            List<String> userUuids = new ArrayList<>(planChunk.size());
+
+            for (RecipientSendPlan plan : planChunk) {
+                SendTargetVO target = buildTarget(command, plan);
+                targetChunk.add(target);
+                userUuids.add(target.getUserUuid());
+            }
+
+            insertSendTargetsInBatch(targetChunk);
+            Map<String, SendTargetVO> persistedTargets = findPersistedTargetsByUserUuid(userUuids);
+
+            for (int j = 0; j < planChunk.size(); j++) {
+                RecipientSendPlan plan = planChunk.get(j);
+                SendTargetVO target = persistedTargets.get(targetChunk.get(j).getUserUuid());
+                if (target == null || target.getId() == null) {
+                    throw new IllegalStateException("Inserted send_target not found. userUuid=" + targetChunk.get(j).getUserUuid());
+                }
+
+                String actionUrl = createActionUrl(command, target, plan);
+                if (!isScheduled) {
+                    messageQueuePublisher.publish(buildTask(command, target, plan, actionUrl));
+                    published++;
+                }
+            }
+        }
+        return published;
+    }
+
+    private void insertSendTargetsInBatch(List<SendTargetVO> targets) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transactionTemplate.executeWithoutResult(status -> {
+            SqlSessionTemplate batchSession = new SqlSessionTemplate(sqlSessionFactory, ExecutorType.BATCH);
+            SendPreparationMapper batchMapper = batchSession.getMapper(SendPreparationMapper.class);
+            for (SendTargetVO target : targets) {
+                batchMapper.insertSendTarget(target);
+            }
+            batchSession.flushStatements();
+        });
+    }
+    private SendTargetVO buildTarget(CampaignCommandQueueDto command, RecipientSendPlan plan) {
+        SendTargetVO target = SendTargetVO.builder()
+                .sendHistoryId(command.getSendHistoryId())
+                .customerId(plan.getCustomerId())
+                .finalChannelId(plan.getFirstChannelId())
+                .status("PENDING")
+                .cost(plan.getMaxAvailableCost())
+                .userUuid(createTrackingUserUuid())
+                .build();
+        target.setCreatedBy(command.getUserId());
+        target.setUpdatedBy(command.getUserId());
+        return target;
+    }
+
+    private Map<String, SendTargetVO> findPersistedTargetsByUserUuid(List<String> userUuids) {
+        Map<String, SendTargetVO> result = new HashMap<>();
+        for (SendTargetVO target : sendPreparationMapper.findSendTargetsByUserUuids(userUuids)) {
+            result.put(target.getUserUuid(), target);
+        }
+        return result;
     }
 
     private List<SendRecipientCandidateVO> findRecipientCandidates(List<Long> customerIds) {

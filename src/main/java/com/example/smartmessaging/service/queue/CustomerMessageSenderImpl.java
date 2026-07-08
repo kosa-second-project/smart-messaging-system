@@ -36,9 +36,11 @@ public class CustomerMessageSenderImpl implements MessageSender {
             return;
         }
 
+        List<ChannelVO> activeChannels = channelService.getActiveChannels();
+
         for (int step = Math.max(0, task.getCurrentStep()); step < sequence.size(); step++) {
             String channelType = normalizeChannelType(sequence.get(step));
-            Long channelId = findChannelId(channelType);
+            Long channelId = findChannelId(channelType, activeChannels);
             if (channelId == null) {
                 saveAttempt(task, step + 1, null, false, "UNSUPPORTED-" + channelType);
                 continue;
@@ -46,7 +48,7 @@ public class CustomerMessageSenderImpl implements MessageSender {
 
             if (!isRealCustomer(task)) {
                 String actualChannelType = resolveActualChannelType(task, channelType);
-                Long actualChannelId = findChannelId(actualChannelType);
+                Long actualChannelId = findChannelId(actualChannelType, activeChannels);
                 if (actualChannelId == null) {
                     saveAttempt(task, step + 1, null, false, "UNSUPPORTED-" + actualChannelType);
                     continue;
@@ -60,7 +62,7 @@ public class CustomerMessageSenderImpl implements MessageSender {
             if (resultChannelType.isBlank()) {
                 resultChannelType = channelType;
             }
-            Long resultChannelId = findChannelId(resultChannelType);
+            Long resultChannelId = findChannelId(resultChannelType, activeChannels);
             if (resultChannelId == null) {
                 resultChannelId = channelId;
             }
@@ -75,9 +77,6 @@ public class CustomerMessageSenderImpl implements MessageSender {
 
             if (result.isSuccess()) {
                 historyMapper.updateSendTargetSuccess(task.getSendTargetId(), resultChannelId);
-                historyMapper.incrementSuccessCount(task.getSendHistoryId());
-                historyMapper.incrementActualCostByChannel(task.getSendHistoryId(), channelId);
-                completeHistoryIfFinished(task.getSendHistoryId());
                 return;
             }
 
@@ -86,8 +85,6 @@ public class CustomerMessageSenderImpl implements MessageSender {
         }
 
         historyMapper.updateSendTargetStatus(task.getSendTargetId(), "FAILED");
-        historyMapper.incrementFailCount(task.getSendHistoryId());
-        completeHistoryIfFinished(task.getSendHistoryId());
     }
 
     private SendResult sendReal(MessageTaskDto task, int step, String channelType) {
@@ -103,23 +100,18 @@ public class CustomerMessageSenderImpl implements MessageSender {
 
         saveAttempt(task, attemptOrder, channelId, true, "MOCK-" + task.getMessageId());
         historyMapper.updateSendTargetSuccess(task.getSendTargetId(), channelId);
-        historyMapper.incrementSuccessCount(task.getSendHistoryId());
-        completeHistoryIfFinished(task.getSendHistoryId());
     }
 
     private void markFailed(MessageTaskDto task, int attemptOrder, Long channelId, String reason) {
         saveAttempt(task, attemptOrder, channelId, false, reason);
         historyMapper.updateSendTargetStatus(task.getSendTargetId(), "FAILED");
-        historyMapper.incrementFailCount(task.getSendHistoryId());
-        completeHistoryIfFinished(task.getSendHistoryId());
     }
 
     private void saveAttempt(MessageTaskDto task, int attemptOrder, Long channelId, boolean success, String messageIdOrReason) {
         Long auditUserId = task.getUserId() != null ? task.getUserId() : 1L;
-        int nextAttemptOrder = historyMapper.findNextAttemptOrder(task.getSendTargetId());
         SendAttemptVO attempt = SendAttemptVO.builder()
                 .sendTargetId(task.getSendTargetId())
-                .attemptOrder(nextAttemptOrder)
+                .attemptOrder(attemptOrder)
                 .channelId(channelId)
                 .isSucceeded(success)
                 .solapiMessageId(messageIdOrReason)
@@ -129,11 +121,6 @@ public class CustomerMessageSenderImpl implements MessageSender {
         historyMapper.insertSendAttempt(attempt);
     }
 
-    private void completeHistoryIfFinished(Long sendHistoryId) {
-        if (historyMapper.countUnfinishedTargets(sendHistoryId) == 0) {
-            historyMapper.finalizeSendHistory(sendHistoryId, "SENT");
-        }
-    }
 
     private String resolveActualChannelType(MessageTaskDto task, String channelType) {
         String normalized = normalizeChannelType(channelType);
@@ -163,8 +150,8 @@ public class CustomerMessageSenderImpl implements MessageSender {
                 .replace("#{\uC774\uB984}", name);
     }
 
-    private Long findChannelId(String channelType) {
-        return channelService.getActiveChannels().stream()
+    private Long findChannelId(String channelType, List<ChannelVO> activeChannels) {
+        return activeChannels.stream()
                 .filter(channel -> normalizeChannelType(channel.getChannelType()).equals(channelType))
                 .map(ChannelVO::getId)
                 .findFirst()
