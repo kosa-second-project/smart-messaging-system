@@ -7,10 +7,6 @@
         <result property="date" column="stat_date"/>
     </resultMap>
 
-    <resultMap id="messageStatByDegreeResultMap" type="MessageStatByDegreeVO" autoMapping="true">
-        <result property="date" column="stat_date"/>
-    </resultMap>
-
     <resultMap id="customerStatResultMap" type="CustomerStatVO" autoMapping="true">
         <result property="date" column="stat_date"/>
     </resultMap>
@@ -95,29 +91,6 @@
             FETCH FIRST 7 ROWS ONLY
         ) trend
         ORDER BY trend.stat_date
-    </select>
-
-    <select id="selectChannelSendSummary" parameterType="StatSearchRequest" resultMap="messageStatByDegreeResultMap">
-        SELECT
-            msbd.channel_id,
-            SUM(COALESCE(msbd.send_count, 0)) AS send_count,
-            SUM(COALESCE(msbd.success_count, 0)) AS success_count
-        FROM message_stat_by_degree msbd
-        INNER JOIN channel c
-                ON c.id = msbd.channel_id
-               AND c.is_deleted = 0
-        WHERE msbd.is_deleted = 0
-        <if test="from != null">
-          AND msbd.stat_date &gt;= #{from}
-        </if>
-        <if test="to != null">
-          AND msbd.stat_date &lt;= #{to}
-        </if>
-        <if test="channel != null and channel != ''">
-          AND c.channel_type = #{channel}
-        </if>
-        GROUP BY msbd.channel_id
-        ORDER BY msbd.channel_id
     </select>
 
     <select id="selectLatestCustomerStat" parameterType="StatSearchRequest" resultMap="customerStatResultMap">

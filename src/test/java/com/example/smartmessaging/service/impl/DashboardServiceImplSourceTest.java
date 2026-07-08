@@ -17,12 +17,13 @@ class DashboardServiceImplSourceTest {
 
         assertThat(source)
                 .contains(
-                        "dashboardMapper.selectMessageSummary(request)",
+                        "dashboardMapper.selectTodayRealtimeMessageSummary()",
                         "dashboardMapper.selectMessageTrend(request)",
-                        "dashboardMapper.selectChannelSendSummary(request)",
-                        "dashboardMapper.selectLatestCustomerStat(request)"
+                        "dashboardMapper.selectRealtimeCustomerSummary()"
                 )
                 .doesNotContain(
+                        "dashboardMapper.selectChannelSendSummary(request)",
+                        "statMapper.selectActiveChannels()",
                         "statMapper.selectMessageStats(request)",
                         "statMapper.selectDeliveryMessageStatByDegrees(request)",
                         "statMapper.selectCustomerStats(request)"

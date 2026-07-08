@@ -4,6 +4,7 @@ let dashboardCardsTimer = null;
 $(function() {
     bindModal();
     loadDashboardSummary();
+    loadDashboardChannelShare();
     dashboardCardsTimer = window.setInterval(loadRealtimeCards, DASHBOARD_CARDS_REFRESH_MS);
     $(window).on("beforeunload", function() {
         window.clearInterval(dashboardCardsTimer);
@@ -14,13 +15,30 @@ $(function() {
 function loadDashboardSummary() {
     ApiClient.get("/api/dashboard/summary").done(function(response) {
         const charts = response.charts || [];
-        const channelShare = findChart(charts, "channelShare");
 
         renderMetricCards(response.cards || []);
         renderCharts(charts);
-        renderChannelLegend(toChartEntries(channelShare));
         renderHistory(response.recentSends || []);
         renderTemplates(response.templatePerformance || []);
+    });
+}
+
+function loadDashboardChannelShare() {
+    const period = StatsRenderer.defaultPeriod(7);
+
+    ApiClient.get("/api/stats/channel", {
+        from: period.start,
+        to: period.end
+    }).done(function(response) {
+        StatsRenderer.renderCharts(response.charts, {
+            channelShare: "#dashboardChannelShareChart"
+        }, {
+            channelShare: {
+                legend: false,
+                tooltipSuffix: "%"
+            }
+        });
+        renderDashboardChannelShareLegend(StatsRenderer.findById(response.charts, "channelShare"));
     });
 }
 
@@ -39,7 +57,6 @@ function renderMetricCards(cards) {
 
 function renderCharts(charts) {
     const costChart = findChart(charts, "costComparison");
-    const channelChart = findChart(charts, "channelShare");
     const dailyChart = findChart(charts, "dailySendTrend");
 
     if (costChart) {
@@ -49,25 +66,27 @@ function renderCharts(charts) {
         });
     }
 
-    if (channelChart) {
-        StatsChart.doughnut(document.querySelector("#dashboardChannelChart"), toChartEntries(channelChart), {
-            legend: false,
-            tooltipSuffix: "%"
-        });
-    }
-
     if (dailyChart) {
         StatsChart.composedTrend(document.querySelector("#dashboardDailyChart"), toDailyRows(dailyChart));
     }
 }
 
-function renderChannelLegend(channelRows) {
-    $("#dashboardChannelLegend").html(channelRows.map(function(channel) {
+function renderDashboardChannelShareLegend(chart) {
+    if (!chart || !chart.datasets?.length) {
+        return;
+    }
+
+    const values = chart.datasets[0].data || [];
+    const colors = ["#F7E600", "#1843FA", "#10B981", "#0EA5E9"];
+
+    $("#dashboardChannelShareLegend").html((chart.labels || []).map(function(label, index) {
+        const color = colors[index % colors.length];
+
         return `
-            <div class="dashboard-channel-legend__item">
-                <span class="dashboard-channel-legend__swatch" style="background:${escapeHtml(channel.color)}"></span>
-                <span class="dashboard-channel-legend__label">${escapeHtml(channel.label)}</span>
-                <span class="dashboard-channel-legend__value">${Number(channel.value || 0).toLocaleString()}%</span>
+            <div class="stats-channel-share__legend-row">
+                <span class="stats-channel-share__swatch" style="background:${color}"></span>
+                <span>${escapeHtml(label)}</span>
+                <span class="stats-channel-share__value">${escapeHtml(values[index])}%</span>
             </div>
         `;
     }).join(""));
@@ -189,18 +208,6 @@ function bindModal() {
 function findChart(charts, chartId) {
     return (charts || []).find(function(chart) {
         return chart.chartId === chartId;
-    });
-}
-
-function toChartEntries(chart) {
-    const colors = ["#F7E600", "#1843FA", "#10B981", "#0EA5E9", "#8B5CF6", "#EF4444"];
-    const dataset = chart?.datasets?.[0] || {};
-    return (chart?.labels || []).map(function(label, index) {
-        return {
-            label,
-            value: dataset.data?.[index] || 0,
-            color: colors[index % colors.length]
-        };
     });
 }
 
