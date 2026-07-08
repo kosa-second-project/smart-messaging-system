@@ -19,6 +19,8 @@ public interface SendPreparationMapper {
 
     int insertSendTarget(SendTargetVO target);
 
+    List<SendTargetVO> findSendTargetsByUserUuids(@Param("userUuids") List<String> userUuids);
+
     SendHistoryVO selectSendHistoryById(@Param("id") Long id);
 
     void updateHistoryStatus(@Param("id") Long id, @Param("status") String status);

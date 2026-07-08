@@ -69,6 +69,13 @@
     <sql id="successRateExpression">
         CASE
             WHEN NVL(sh.total_target_count, 0) = 0 THEN 0
+            WHEN sh.status = 'SENDING' THEN (
+                SELECT (COUNT(*) * 100.0) / sh.total_target_count
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            )
             ELSE (NVL(sh.success_count, 0) * 100.0) / sh.total_target_count
         END
     </sql>
@@ -150,8 +157,20 @@
             sh.title,
             sh.purpose,
             NVL(sh.total_target_count, 0) AS total_target_count,
-            NVL(sh.success_count, 0) AS success_count,
-            NVL(sh.fail_count, 0) AS fail_count,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.success_count, 0) END AS success_count,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status IN ('FAILED', 'SKIPPED')
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.fail_count, 0) END AS fail_count,
             <include refid="successRateExpression"/> AS success_rate,
             sh.estimated_saving,
             sh.status
@@ -188,10 +207,46 @@
             sh.purpose,
             sh.status,
             NVL(sh.total_target_count, 0) AS total_target_count,
-            NVL(sh.success_count, 0) AS success_count,
-            NVL(sh.fail_count, 0) AS fail_count,
-            NVL(sh.actual_cost, 0) AS actual_cost,
-            NVL(sh.estimated_saving, 0) AS estimated_saving,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.success_count, 0) END AS success_count,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status IN ('FAILED', 'SKIPPED')
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.fail_count, 0) END AS fail_count,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT NVL(SUM(NVL(c.cost_per_msg, 0)), 0)
+                FROM send_target st
+                JOIN send_attempt sa
+                  ON sa.send_target_id = st.id
+                 AND NVL(sa.is_deleted, 0) = 0
+                 AND sa.is_succeeded = 1
+                JOIN channel c
+                  ON c.id = sa.channel_id
+                 AND NVL(c.is_deleted, 0) = 0
+                WHERE st.send_history_id = sh.id
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.actual_cost, 0) END AS actual_cost,
+            CASE WHEN sh.status = 'SENDING' THEN (
+                SELECT NVL(SUM(GREATEST(NVL(st.cost, 0) - NVL(c.cost_per_msg, 0), 0)), 0)
+                FROM send_target st
+                JOIN send_attempt sa
+                  ON sa.send_target_id = st.id
+                 AND NVL(sa.is_deleted, 0) = 0
+                 AND sa.is_succeeded = 1
+                JOIN channel c
+                  ON c.id = sa.channel_id
+                 AND NVL(c.is_deleted, 0) = 0
+                WHERE st.send_history_id = sh.id
+                  AND NVL(st.is_deleted, 0) = 0
+            ) ELSE NVL(sh.estimated_saving, 0) END AS estimated_saving,
             <include refid="successRateExpression"/> AS success_rate
         FROM send_history sh
         WHERE sh.id = #{sendHistoryId}
@@ -376,12 +431,6 @@
         WHERE id = #{sendHistoryId}
           AND is_deleted = 0
     </update>
-    <select id="findNextAttemptOrder" resultType="int">
-        SELECT NVL(MAX(attempt_order), 0) + 1
-        FROM send_attempt
-        WHERE send_target_id = #{sendTargetId}
-          AND NVL(is_deleted, 0) = 0
-    </select>
     <insert id="insertSendAttempt" parameterType="com.example.smartmessaging.dto.vo.SendAttemptVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO send_attempt (
             send_target_id,
@@ -400,43 +449,9 @@
         )
     </insert>
 
-    <select id="countUnfinishedTargets" resultType="int">
-        SELECT COUNT(*)
-        FROM send_target
-        WHERE send_history_id = #{sendHistoryId}
-          AND status IN ('PENDING', 'SENDING')
-          AND NVL(is_deleted, 0) = 0
-    </select>
 
-    <update id="incrementSuccessCount">
-        UPDATE send_history
-        SET success_count = success_count + 1,
-            updated_at = SYSTIMESTAMP
-        WHERE id = #{sendHistoryId}
-          AND is_deleted = 0
-    </update>
 
-    <update id="incrementActualCostByChannel">
-        UPDATE send_history sh
-        SET actual_cost = NVL(sh.actual_cost, 0) + NVL((
-                SELECT c.cost_per_msg
-                FROM channel c
-                WHERE c.id = #{channelId}
-                  AND NVL(c.is_deleted, 0) = 0
-            ), 0),
-            updated_at = SYSTIMESTAMP
-        WHERE sh.id = #{sendHistoryId}
-          AND sh.is_deleted = 0
-          AND #{channelId} IS NOT NULL
-    </update>
 
-    <update id="incrementFailCount">
-        UPDATE send_history
-        SET fail_count = fail_count + 1,
-            updated_at = SYSTIMESTAMP
-        WHERE id = #{sendHistoryId}
-          AND is_deleted = 0
-    </update>
 
     <update id="updateHistoryStatus">
         UPDATE send_history
@@ -446,6 +461,23 @@
           AND is_deleted = 0
     </update>
 
+
+    <select id="findReadyToFinalizeHistoryIds" resultType="long">
+        SELECT sh.id
+        FROM send_history sh
+        WHERE sh.status = 'SENDING'
+          AND NVL(sh.is_deleted, 0) = 0
+          AND NVL(sh.total_target_count, 0) > 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM send_target st
+              WHERE st.send_history_id = sh.id
+                AND st.status IN ('PENDING', 'SENDING')
+                AND NVL(st.is_deleted, 0) = 0
+          )
+        ORDER BY sh.id ASC
+        FETCH NEXT #{limit} ROWS ONLY
+    </select>
     <update id="finalizeSendHistory">
         UPDATE send_history sh
         SET status = #{status},
