@@ -26,4 +26,18 @@ class StatsBatchControllerTest {
                 .containsEntry("status", HttpStatus.CONFLICT.value())
                 .containsEntry("message", "이미 같은 statDate의 통계 배치가 실행 중입니다.");
     }
+
+    @Test
+    void invalid_batch_request_returns_400() {
+        StatsBatchController controller = new StatsBatchController(mock(StatsBatchLauncherService.class));
+        IllegalArgumentException exception =
+                new IllegalArgumentException("오늘 또는 미래 날짜의 통계 배치는 실행할 수 없습니다.");
+
+        ResponseEntity<Map<String, Object>> response = controller.handleInvalidBatchRequest(exception);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody())
+                .containsEntry("status", HttpStatus.BAD_REQUEST.value())
+                .containsEntry("message", "오늘 또는 미래 날짜의 통계 배치는 실행할 수 없습니다.");
+    }
 }

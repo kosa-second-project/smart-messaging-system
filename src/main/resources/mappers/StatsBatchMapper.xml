@@ -532,7 +532,7 @@
         send_history와 short_url 기준으로 템플릿별 성과 통계를 insert 한다.
 
         수집 기준:
-        - count: 해당 statDate에 완료된 발송 중 템플릿별 총 대상 수
+        - template_count: 해당 statDate에 완료된 발송 중 템플릿별 총 대상 수
         - click_target_count: 클릭률 대상 short_url 수. 수신거부 링크는 제외한다.
         - click_count: 그중 실제 클릭된 short_url 수
         - conversion_target_count: 전환율 대상 short_url 수. 현재는 클릭률 대상과 동일하게 본다.
@@ -543,9 +543,9 @@
     <insert id="insertTemplateStat">
         INSERT INTO template_stat (
             template_id,
-            "RANK",
+            template_rank,
             stat_date,
-            "COUNT",
+            template_count,
             click_target_count,
             click_count,
             conversion_target_count,
@@ -566,7 +566,7 @@
                     END DESC,
                     click_count DESC,
                     template_id ASC
-            ) AS "RANK",
+            ) AS template_rank,
             #{statDate},
             send_count,
             click_target_count,

@@ -39,8 +39,22 @@ class StatsBatchLauncherServiceTest {
         statsBatchLauncherService = new StatsBatchLauncherService(
                 jobLauncher,
                 jobExplorer,
-                statsDailyAggregationJob
+                statsDailyAggregationJob,
+                "Asia/Seoul"
         );
+    }
+
+    @Test
+    void today_or_future_statDate_is_rejected() throws Exception {
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+
+        assertThatThrownBy(() -> statsBatchLauncherService.run(today))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("오늘 또는 미래 날짜의 통계 배치는 실행할 수 없습니다.")
+                .hasMessageContaining("statDate=" + today);
+
+        verify(jobExplorer, never()).findRunningJobExecutions(any(String.class));
+        verify(jobLauncher, never()).run(any(Job.class), any(JobParameters.class));
     }
 
     @Test
