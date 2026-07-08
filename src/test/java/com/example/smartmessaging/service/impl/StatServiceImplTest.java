@@ -47,6 +47,7 @@ class StatServiceImplTest {
         assertThat(response.getCards().get(2).getValue()).isEqualTo("7");
         assertThat(response.getCards().get(2).getSubText()).isEqualTo("최근 7일 동안 가입한 고객 수");
         assertThat(response.getCards().get(3).getTitle()).isEqualTo("가입 고객");
-        assertThat(response.getCards().get(3).getValue()).isEqualTo("7");
+        assertThat(response.getCards().get(3).getValue()).isEqualTo("4");
+        assertThat(response.getCards().get(3).getSubText()).isEqualTo("어제 가입한 고객 수");
     }
 }

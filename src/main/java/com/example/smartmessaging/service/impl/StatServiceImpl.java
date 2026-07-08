@@ -160,13 +160,13 @@ public class StatServiceImpl implements StatService {
     private List<StatCardResponse> buildCustomerCards(List<CustomerStatVO> stats) {
         CustomerStatVO latest = latestCustomerStat(stats);
         long newCustomers = n(latest.getNewCustomerCount());
-        long joinedCustomers = stats.stream().mapToLong(stat -> n(stat.getJoinedCustomerCount())).sum();
+        long joinedCustomers = n(latest.getJoinedCustomerCount());
 
         return List.of(
                 card("전체 고객", formatNumber(n(latest.getTotalCustomerCount())), "분석 가능 고객"),
                 card("일반 고객", formatNumber(n(latest.getNormalCustomerCount())), "주요 발송 대상"),
                 card("신규 고객", formatNumber(newCustomers), "최근 7일 동안 가입한 고객 수"),
-                card("가입 고객", formatNumber(joinedCustomers), "선택 기간 누적")
+                card("가입 고객", formatNumber(joinedCustomers), "어제 가입한 고객 수")
         );
     }
 
