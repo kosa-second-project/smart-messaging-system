@@ -58,7 +58,7 @@ public class CampaignScheduler {
 
                 List<SendTargetVO> targets = sendPreparationMapper.selectPendingTargetsByHistoryId(campaign.getId());
                 if (targets.isEmpty()) {
-                    sendPreparationMapper.updateHistoryStatus(campaign.getId(), "SENT");
+                    historyMapper.finalizeSendHistory(campaign.getId(), "SENT");
                     continue;
                 }
 
@@ -90,7 +90,7 @@ public class CampaignScheduler {
                 }
 
                 if (published == 0) {
-                    sendPreparationMapper.updateHistoryStatus(campaign.getId(), "SENT");
+                    historyMapper.finalizeSendHistory(campaign.getId(), "SENT");
                 }
                 log.info("[CampaignScheduler] reserved campaign published sendHistoryId={}, published={}", campaign.getId(), published);
             } catch (Exception e) {

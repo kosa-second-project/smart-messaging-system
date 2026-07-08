@@ -816,7 +816,7 @@ const MessageComposer = {
     },
 
     buildPreviewParts: function (usePlaceholder) {
-        const body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
+        let body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
         const buttonName = ($("#linkButtonName").val() || "자세히 보기").trim();
         const linkUrl = ($("#linkUrl").val() || "").trim();
         const purpose = $(".purpose-btn.active").data("val") || "INFO";
@@ -826,6 +826,10 @@ const MessageComposer = {
             unsubscribe: ""
         };
 
+        if (purpose === "AD" && body && !body.startsWith("(광고)")) {
+            body = "(광고) " + body;
+            parts.body = body;
+        }
         if (linkUrl) {
             parts.actionLink = buttonName + "\n" + this.getPreviewShortUrl("r");
         }

@@ -13,6 +13,7 @@ import com.example.smartmessaging.service.CampaignDraftService;
 import com.example.smartmessaging.service.ChannelService;
 import com.example.smartmessaging.service.RecipientChannelResolver;
 import com.example.smartmessaging.service.ShortUrlService;
+import com.example.smartmessaging.service.repository.HistoryMapper;
 import com.example.smartmessaging.service.repository.SendPreparationMapper;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class CampaignCommandConsumer {
     private final CampaignDraftService draftService;
     private final ChannelService channelService;
     private final SendPreparationMapper sendPreparationMapper;
+    private final HistoryMapper historyMapper;
     private final RecipientChannelResolver recipientChannelResolver;
     private final ShortUrlService shortUrlService;
     private final MessageQueuePublisher messageQueuePublisher;
@@ -70,7 +72,7 @@ public class CampaignCommandConsumer {
             sendPreparationMapper.updateHistoryTotalTargetCount(command.getSendHistoryId(), targetCount);
 
             if (targetCount == 0) {
-                sendPreparationMapper.updateHistoryStatus(command.getSendHistoryId(), "SENT");
+                historyMapper.finalizeSendHistory(command.getSendHistoryId(), "SENT");
                 draftService.deleteDraft(command.getUserId(), command.getDraftId());
                 rabbitChannel.basicAck(deliveryTag, false);
                 log.info("[CampaignCommandConsumer] no sendable targets sendHistoryId={}", command.getSendHistoryId());
@@ -84,7 +86,7 @@ public class CampaignCommandConsumer {
                         .customerId(plan.getCustomerId())
                         .finalChannelId(plan.getFirstChannelId())
                         .status("PENDING")
-                        .cost(plan.getEstimatedCost())
+                        .cost(plan.getMaxAvailableCost())
                         .userUuid(createTrackingUserUuid())
                         .build();
                 target.setCreatedBy(command.getUserId());

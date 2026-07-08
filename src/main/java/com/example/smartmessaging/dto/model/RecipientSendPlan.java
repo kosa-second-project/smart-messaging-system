@@ -13,6 +13,7 @@ public class RecipientSendPlan {
     private Long customerId;
     private Long firstChannelId;
     private BigDecimal estimatedCost;
+    private BigDecimal maxAvailableCost;
     private List<String> fallbackSequence;
     private SendRecipientCandidateVO recipient;
 }
