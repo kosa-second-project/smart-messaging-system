@@ -260,6 +260,35 @@ class AiSuggestionServiceTest {
         verify(ragPromptContextService, times(1)).buildSuggestionPromptContext(request);
     }
 
+    @Test
+    void ad_suggestion_without_ad_label_and_unsubscribe_passes_candidate_validation() {
+        AiSuggestionRequestDTO request = request(MessageType.AD);
+        when(geminiSuggestionClient.generate(anyString())).thenReturn(
+                response(new AiSuggestionItemResponseDTO("쿠폰 혜택 안내", "#{고객명}님, 오늘의 쿠폰 혜택을 확인해보세요."))
+        );
+
+        AiSuggestionResponseDTO result = service.suggest(request);
+
+        assertThat(result.suggestions()).singleElement().satisfies(suggestion -> {
+            assertThat(suggestion.title()).isEqualTo("쿠폰 혜택 안내");
+            assertThat(suggestion.content()).doesNotContain("(광고)", "수신거부");
+        });
+        verify(geminiSuggestionClient, times(1)).generate(anyString());
+    }
+
+    @Test
+    void suggestion_prompt_says_ad_label_and_unsubscribe_are_not_forced() {
+        String prompt = service.buildPrompt(
+                request(MessageType.AD),
+                List.of("#{고객명}"),
+                java.util.Set.of()
+        );
+
+        assertThat(prompt)
+                .contains("광고 표기 '(광고)'와 수신거부 문구는 추천/검사 대상이 아니므로")
+                .contains("후보 본문에 강제로 포함하지 마십시오");
+    }
+
     private AiSuggestionRequestDTO request(MessageType messageType) {
         return new AiSuggestionRequestDTO(
                 AiContextType.MESSAGE_SEND,

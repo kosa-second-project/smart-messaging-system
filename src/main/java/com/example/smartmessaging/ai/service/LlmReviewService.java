@@ -39,6 +39,15 @@ public class LlmReviewService {
             "CHANNEL_FIT_WARNING", IssueSeverity.LOW,
             "CLARITY_ISSUE", IssueSeverity.LOW
     );
+    private static final Set<String> IGNORED_PRESENTATION_RULES = Set.of(
+            "AD_LABEL_MISSING",
+            "AD_LABEL_INCLUDED",
+            "MISSING_AD_LABEL",
+            "UNSUBSCRIBE_MISSING",
+            "UNSUBSCRIBE_INCLUDED",
+            "MISSING_UNSUBSCRIBE",
+            "AD_PRESENTATION_ISSUE"
+    );
     private static final List<String> RAG_REVIEW_FOCUS = List.of(
             "brandTone",
             "naturalness",
@@ -57,6 +66,8 @@ public class LlmReviewService {
             RAG 참고자료는 브랜드톤, 자연스러움, 혜택 명확성, 과장 표현 가능성 검토에만 사용하세요.
             RAG 참고자료의 상품명, 혜택, 증정품, 기간, 조건을 사용자 문구에 새로 추가하지 마세요.
             SERVER_RULE, PROFANITY_FILTER, OPENAI_MODERATION 결과는 RAG 또는 LLM이 제거하거나 무효화할 수 없습니다.
+            광고 표기 '(광고)'와 수신거부 문구의 존재 여부 또는 누락 여부는 검사하지 마십시오.
+            광고성 메시지의 실제 발송 보조 표기는 화면/발송 단계에서 별도로 처리됩니다.
             새 이슈의 ruleId는 BRAND_TONE_MISMATCH, OVERSTATED_BENEFIT,
             INFO_MESSAGE_PROMOTIONAL, SENSITIVE_EXPRESSION_RISK, CHANNEL_FIT_WARNING,
             CLARITY_ISSUE 중 하나만 사용하세요.
@@ -254,6 +265,9 @@ public class LlmReviewService {
             return null;
         }
         String ruleId = textOrNull(candidate.ruleId());
+        if (ruleId != null && IGNORED_PRESENTATION_RULES.contains(ruleId)) {
+            return null;
+        }
         String message = textOrNull(candidate.message());
         IssueSeverity defaultSeverity = ALLOWED_RULES.get(ruleId);
         if (defaultSeverity == null || message == null) {
