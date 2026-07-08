@@ -695,8 +695,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-height: 430px;
-    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
@@ -1174,27 +1172,29 @@
         grid-template-columns: 1fr;
     }
 }
+
 /* 템플릿 검색 카드 목록 영역 전체 사용 */
 .template-search-section .template-search-body {
     min-height: 0;
 }
 
 .template-search-section .template-search-box {
-    height: 100%;
     min-height: 0;
 }
 
 .template-search-section .template-list-container {
     flex: 1 1 0;
     min-height: 0;
-    overflow-y: auto;
+    overflow-y: scroll;
     margin-top: 0.25rem;
+    padding-right: 8px;
 }
 
 .template-search-section .template-search-footer {
     flex: 0 0 auto;
     margin-top: 0.5rem;
 }
+
 /* 메시지 작성 AI 보조 모달 */
 .send-ai-modal .ds-modal__panel {
     width: min(680px, calc(100vw - 40px));
@@ -1284,7 +1284,22 @@
     font-weight: 700;
 }
 
-.send-ai-status--PASS { background: #dcfce7; color: #166534; }
-.send-ai-status--NOTICE { background: #e0f2fe; color: #075985; }
-.send-ai-status--WARNING { background: #fef3c7; color: #92400e; }
-.send-ai-status--FAIL { background: #fee2e2; color: #991b1b; }
+.send-ai-status--PASS {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.send-ai-status--NOTICE {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.send-ai-status--WARNING {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.send-ai-status--FAIL {
+    background: #fee2e2;
+    color: #991b1b;
+}

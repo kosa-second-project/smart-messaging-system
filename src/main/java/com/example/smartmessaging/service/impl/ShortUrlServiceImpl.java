@@ -117,6 +117,38 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         return target;
     }
 
+    @Override
+    @Transactional
+    public ShortUrlTargetVO getPurchaseTarget(String code) {
+        ShortUrlVO shortUrl = getExisting(code);
+        if (ShortUrlPurpose.from(shortUrl.getPurpose()) != ShortUrlPurpose.PURCHASE) {
+            throw new BusinessException("구매 링크가 아닙니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+        ShortUrlTargetVO target = shortUrlMapper.findClickTargetById(code);
+        if (target == null) {
+            throw new BusinessException("구매 대상을 찾을 수 없습니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+        
+        // 페이지가 열렸으므로 링크 클릭 처리 및 통계 수집
+        boolean firstClick = shortUrlMapper.markFirstClicked(code) > 0;
+        if (firstClick) {
+            recordClickStats(target);
+        }
+        
+        return target;
+    }
+
+    @Override
+    @Transactional
+    public String purchase(String code) {
+        ShortUrlTargetVO target = getPurchaseTarget(code);
+        
+        // 구매 전환 처리 (is_converted = 1)
+        shortUrlMapper.markConverted(code);
+        
+        return appendTrackingParameters(target.getOriginalUrl(), target);
+    }
+
     private String createShortUrlRow(Long sendTargetId, String originalUrl, ShortUrlPurpose purpose) {
         for (int i = 0; i < MAX_GENERATE_ATTEMPTS; i++) {
             String code = generateCode();
@@ -142,7 +174,14 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     }
 
     private String buildShortUrl(String code, ShortUrlPurpose purpose) {
-        String path = purpose == ShortUrlPurpose.UNSUBSCRIBE ? "/u/" : "/r/";
+        String path;
+        if (purpose == ShortUrlPurpose.UNSUBSCRIBE) {
+            path = "/u/";
+        } else if (purpose == ShortUrlPurpose.PURCHASE) {
+            path = "/p/";
+        } else {
+            path = "/r/";
+        }
         return shortUrlBaseUrl + path + code;
     }
 

@@ -51,7 +51,13 @@ public final class SmsMessageTypeResolver {
             String actionUrl,
             String unsubscribeUrl
     ) {
-        StringBuilder text = new StringBuilder(content == null ? "" : content.trim());
+        String trimmedContent = content == null ? "" : content.trim();
+        StringBuilder text = new StringBuilder();
+        if (isAdvertising(purpose) && !trimmedContent.startsWith("(광고)")) {
+            text.append("(광고) ");
+        }
+        text.append(trimmedContent);
+
         if (!isBlank(actionUrl)) {
             text.append("\n\n")
                     .append(isBlank(actionButtonName) ? "자세히 보기" : actionButtonName.trim())

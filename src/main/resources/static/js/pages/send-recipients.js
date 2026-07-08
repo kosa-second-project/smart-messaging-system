@@ -124,7 +124,7 @@ const RecipientSelector = {
                 SendPage.state.currentCursorIndex = 0;
                 SendPage.state.cursorHistory = [null];
                 self.renderAll();
-            }, 100);
+            }, 300);
         });
 
         // 5. 테이블 개별 체크박스 토글 → Redis Draft와 즉시 동기화
@@ -437,7 +437,7 @@ const RecipientSelector = {
             hasPrevious: SendPage.state.currentCursorIndex > 0,
             hasNext: SendPage.state.hasNext,
             allowUnknownPages: true,
-            onPageChange: function(pageNumber) {
+            onPageChange: function (pageNumber) {
                 const targetIndex = pageNumber - 1;
                 if (targetIndex === SendPage.state.currentCursorIndex) {
                     return;
@@ -459,13 +459,13 @@ const RecipientSelector = {
                     self.renderTableOnly();
                 }
             },
-            onPrevious: function() {
+            onPrevious: function () {
                 if (SendPage.state.currentCursorIndex > 0) {
                     SendPage.state.currentCursorIndex--;
                     self.renderTableOnly();
                 }
             },
-            onNext: function() {
+            onNext: function () {
                 if (SendPage.state.hasNext) {
                     SendPage.state.currentCursorIndex++;
                     if (SendPage.state.cursorHistory.length <= SendPage.state.currentCursorIndex) {
@@ -474,7 +474,7 @@ const RecipientSelector = {
                     self.renderTableOnly();
                 }
             },
-            onPageSizeChange: function(size) {
+            onPageSizeChange: function (size) {
                 SendPage.state.pageSize = size;
                 SendPage.state.currentCursorIndex = 0;
                 SendPage.state.cursorHistory = [null];

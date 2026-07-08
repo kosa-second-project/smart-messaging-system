@@ -53,4 +53,30 @@ public class ShortUrlController {
             return "pages/unsubscribe/invalid";
         }
     }
+
+    @GetMapping("/p/{code}")
+    public String purchaseConfirm(@PathVariable String code, Model model) {
+        try {
+            ShortUrlTargetVO target = shortUrlService.getPurchaseTarget(code);
+            model.addAttribute("code", code);
+            model.addAttribute("customerName", target.getCustomerName());
+            model.addAttribute("phone", MaskingUtils.maskPhone(target.getPhone()));
+            model.addAttribute("originalUrl", target.getOriginalUrl());
+            return "pages/purchase/confirm";
+        } catch (BusinessException e) {
+            model.addAttribute("message", e.getMessage());
+            return "pages/unsubscribe/invalid";
+        }
+    }
+
+    @PostMapping("/p/{code}/purchase")
+    public String purchase(@PathVariable String code, Model model) {
+        try {
+            String redirectUrl = shortUrlService.purchase(code);
+            return "redirect:" + redirectUrl;
+        } catch (BusinessException e) {
+            model.addAttribute("message", e.getMessage());
+            return "pages/unsubscribe/invalid";
+        }
+    }
 }

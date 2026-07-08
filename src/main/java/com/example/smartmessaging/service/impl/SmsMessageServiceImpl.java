@@ -99,6 +99,7 @@ public class SmsMessageServiceImpl implements SmsMessageService {
                     normalizedChannel, MaskingUtils.maskPhone(normalizedTo));
             return SendResult.success(normalizedChannel);
         } catch (SolapiMessageNotReceivedException e) {
+            log.warn("[SMS Service] SOLAPI did not receive message. Failed messages list: {}", e.getFailedMessageList());
             log.warn("[SMS Service] SOLAPI did not receive message channel={}, to={}, failedCount={}",
                     normalizedChannel,
                     MaskingUtils.maskPhone(normalizedTo),

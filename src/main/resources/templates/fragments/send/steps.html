@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head></head>
+
 <body>
     <!-- activeStep 모델 값에 의해서 completed, active 클래스를 타임리프로 동적 부여 -->
     <div th:fragment="stepsFragment(activeStep)" class="send-steps" id="sendStepsWrapper">
-        <div class="step-item" th:classappend="${activeStep == 1 ? 'active' : (activeStep > 1 ? 'completed' : '')}" data-step="1">
+        <div class="step-item" th:classappend="${activeStep == 1 ? 'active' : (activeStep > 1 ? 'completed' : '')}"
+            data-step="1">
             <span class="step-number">1</span>
             <span class="step-text">수신자 선택</span>
         </div>
-        <div class="step-arrow">&gt;</div>
-        <div class="step-item" th:classappend="${activeStep == 2 ? 'active' : (activeStep > 2 ? 'completed' : '')}" data-step="2">
+
+        <div class="step-item" th:classappend="${activeStep == 2 ? 'active' : (activeStep > 2 ? 'completed' : '')}"
+            data-step="2">
             <span class="step-number">2</span>
             <span class="step-text">메시지 작성</span>
         </div>
-        <div class="step-arrow">&gt;</div>
+
         <div class="step-item" th:classappend="${activeStep == 3 ? 'active' : ''}" data-step="3">
             <span class="step-number">3</span>
             <span class="step-text">검토 및 발송</span>
         </div>
     </div>
 </body>
+
 </html>

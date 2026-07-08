@@ -20,4 +20,8 @@ public interface ShortUrlService {
     ShortUrlTargetVO getUnsubscribeTarget(String code);
 
     ShortUrlTargetVO unsubscribe(String code);
+
+    ShortUrlTargetVO getPurchaseTarget(String code);
+
+    String purchase(String code);
 }
