@@ -115,6 +115,22 @@ class LlmReviewServiceTest {
     }
 
     @Test
+    void 광고_표기와_수신거부_관련_LLM_ruleId는_허용_규칙에서_제외된다() {
+        LlmReviewResponseDTO response = new LlmReviewResponseDTO(null, List.of(
+                newIssue("UNSUBSCRIBE_MISSING", "MEDIUM", "content", "수신거부", "수신거부가 없습니다."),
+                newIssue("AD_LABEL_MISSING", "MEDIUM", "content", "(광고)", "광고 표기가 없습니다."),
+                newIssue("CLARITY_ISSUE", "LOW", "content", "혜택", "혜택 조건이 모호합니다.")
+        ), null);
+        when(geminiReviewClient.review(anyString(), anyString())).thenReturn(response);
+
+        LlmReviewService.ReviewResult result = llmReviewService.review(request(), List.of());
+
+        assertThat(result.newIssues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
+                .containsExactly("CLARITY_ISSUE");
+    }
+
+    @Test
     void 오탐_가능성은_외부_검사만_한_단계_완화하고_서버_룰은_변경하지_않는다() {
         ValidationIssueResponseDTO serverIssue = issue(
                 "UNSUPPORTED_VARIABLE",
@@ -216,6 +232,29 @@ class LlmReviewServiceTest {
                 .contains("\"ragContext\"")
                 .contains("[RAG Reference Materials]")
                 .contains("brand tone reference");
+    }
+
+    @Test
+    void review_system_prompt_says_ad_label_and_unsubscribe_are_not_review_targets() {
+        assertThat(LlmReviewService.SYSTEM_PROMPT)
+                .contains("광고 표기 '(광고)'와 수신거부 문구의 존재 여부 또는 누락 여부는 검사하지 마십시오")
+                .contains("실제 발송 보조 표기는 화면/발송 단계에서 별도로 처리됩니다");
+    }
+
+    @Test
+    void presentation_related_llm_rule_ids_are_ignored() {
+        LlmReviewResponseDTO response = new LlmReviewResponseDTO(null, List.of(
+                newIssue("UNSUBSCRIBE_MISSING", "MEDIUM", "content", "수신거부", "수신거부가 없습니다."),
+                newIssue("AD_LABEL_MISSING", "MEDIUM", "content", "(광고)", "광고 표기가 없습니다."),
+                newIssue("CLARITY_ISSUE", "LOW", "content", "혜택", "혜택 조건이 모호합니다.")
+        ), null);
+        when(geminiReviewClient.review(anyString(), anyString())).thenReturn(response);
+
+        LlmReviewService.ReviewResult result = llmReviewService.review(request(), List.of());
+
+        assertThat(result.newIssues())
+                .extracting(ValidationIssueResponseDTO::ruleId)
+                .containsExactly("CLARITY_ISSUE");
     }
 
     private AiReviewRequestDTO request() {

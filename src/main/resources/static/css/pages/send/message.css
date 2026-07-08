@@ -1105,3 +1105,186 @@
         --send-preview-scale: 0.78;
     }
 }
+
+/* 메시지 작성 화면 상단 우선순위 카드 압축 */
+.message-step-container .top-cards-grid--message {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.routing-section .message-card-header {
+    align-items: center;
+    padding: 0.85rem 1rem;
+}
+
+.routing-section .message-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.routing-section .section-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.routing-section .ds-card__body {
+    padding: 0.75rem 1rem 1rem;
+}
+
+.routing-section .channel-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.routing-section .channel-card {
+    min-height: 44px;
+    grid-template-columns: 18px 26px minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+}
+
+.routing-section .channel-rank {
+    width: 26px;
+    height: 26px;
+    font-size: 0.82rem;
+}
+
+.routing-section .channel-name {
+    font-size: 0.9rem;
+}
+
+.routing-section .channel-meta {
+    font-size: 0.74rem;
+}
+
+.routing-section .priority-badge {
+    min-width: 46px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.78rem;
+}
+
+@media (max-width: 992px) {
+    .routing-section .channel-list {
+        grid-template-columns: 1fr;
+    }
+}
+/* 템플릿 검색 카드 목록 영역 전체 사용 */
+.template-search-section .template-search-body {
+    min-height: 0;
+}
+
+.template-search-section .template-search-box {
+    height: 100%;
+    min-height: 0;
+}
+
+.template-search-section .template-list-container {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    margin-top: 0.25rem;
+}
+
+.template-search-section .template-search-footer {
+    flex: 0 0 auto;
+    margin-top: 0.5rem;
+}
+/* 메시지 작성 AI 보조 모달 */
+.send-ai-modal .ds-modal__panel {
+    width: min(680px, calc(100vw - 40px));
+    max-height: min(760px, calc(100vh - 48px));
+    display: flex;
+    flex-direction: column;
+}
+
+.send-ai-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    overflow-y: auto;
+}
+
+.send-ai-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.send-ai-action {
+    align-self: flex-end;
+}
+
+.send-ai-message {
+    min-height: 1.25rem;
+    color: var(--muted-foreground, #64748b);
+    font-size: 0.875rem;
+}
+
+.send-ai-message.is-error,
+.send-ai-summary.is-error {
+    color: var(--destructive, #ef4444);
+}
+
+.send-ai-suggestions,
+.send-ai-review-issues {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.send-ai-suggestion,
+.send-ai-review-issue,
+.send-ai-rewrite {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.875rem;
+    background: #fff;
+}
+
+.send-ai-suggestion strong,
+.send-ai-rewrite strong {
+    display: block;
+    margin-bottom: 0.4rem;
+}
+
+.send-ai-suggestion p,
+.send-ai-review-issue p,
+.send-ai-rewrite p,
+.send-ai-summary {
+    margin: 0 0 0.65rem;
+    color: var(--muted-foreground, #64748b);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.send-ai-suggestion .ds-button,
+.send-ai-rewrite .ds-button {
+    margin-top: 0.35rem;
+}
+
+.send-ai-review-header,
+.send-ai-review-issue__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.send-ai-status {
+    border-radius: 999px;
+    padding: 0.18rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.send-ai-status--PASS { background: #dcfce7; color: #166534; }
+.send-ai-status--NOTICE { background: #e0f2fe; color: #075985; }
+.send-ai-status--WARNING { background: #fef3c7; color: #92400e; }
+.send-ai-status--FAIL { background: #fee2e2; color: #991b1b; }

@@ -159,4 +159,47 @@ class TemplatePageSourceTest {
                 .contains("const TEMPLATE_AVAILABLE_VARIABLES = [\"#{고객명}\"]")
                 .doesNotContain("const TEMPLATE_AVAILABLE_VARIABLES = [\"#{고객명}\", \"#{주문번호}\", \"#{쿠폰명}\"]");
     }
+
+    @Test
+    void template_purpose_label_uses_advertising_text() throws Exception {
+        String template = Files.readString(
+                Path.of("src/main/resources/templates/pages/templates.html"),
+                StandardCharsets.UTF_8
+        );
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(template).contains("data-purpose-value=\"AD\">광고성</button>");
+        assertThat(script)
+                .contains("{ value: \"AD\", label: \"광고성\" }")
+                .contains("return normalizePurpose(purpose) === \"AD\" ? \"광고성\" : \"정보성\"");
+    }
+
+    @Test
+    void template_create_preview_adds_ad_prefix_and_unsubscribe_only_for_preview() throws Exception {
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+        String previewFunction = script.substring(
+                script.indexOf("function renderFormPreview"),
+                script.indexOf("function renderMessagePreview")
+        );
+        String saveFunction = script.substring(
+                script.indexOf("function saveTemplate"),
+                script.indexOf("function renderFormPreview")
+        );
+
+        assertThat(previewFunction)
+                .contains("buildTemplateFormPreviewContent(content)")
+                .contains("(광고)")
+                .contains("수신거부:")
+                .contains("https://kosa.kr/u/Qr7xK2Lm");
+        assertThat(saveFunction)
+                .doesNotContain("buildTemplateFormPreviewContent")
+                .doesNotContain("(광고)")
+                .doesNotContain("https://kosa.kr/u/Qr7xK2Lm");
+    }
 }

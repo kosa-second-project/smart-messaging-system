@@ -124,7 +124,7 @@ const RecipientSelector = {
                 SendPage.state.currentCursorIndex = 0;
                 SendPage.state.cursorHistory = [null];
                 self.renderAll();
-            }, 300);
+            }, 100);
         });
 
         // 5. 테이블 개별 체크박스 토글 → Redis Draft와 즉시 동기화

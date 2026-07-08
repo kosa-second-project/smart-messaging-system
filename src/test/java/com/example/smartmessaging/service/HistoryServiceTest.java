@@ -35,14 +35,21 @@ class HistoryServiceTest {
     @BeforeEach
     void setUp() {
         historyMapper = mock(HistoryMapper.class);
+        SendPreparationMapper sendPreparationMapper = mock(SendPreparationMapper.class);
+        ChannelService channelService = mock(ChannelService.class);
+        RecipientChannelResolver recipientChannelResolver = mock(RecipientChannelResolver.class);
+        ShortUrlService shortUrlService = mock(ShortUrlService.class);
+        MessageQueuePublisher messageQueuePublisher = mock(MessageQueuePublisher.class);
+        TokenCryptoService tokenCryptoService = mock(TokenCryptoService.class);
+
         historyService = new HistoryServiceImpl(
                 historyMapper,
-                mock(SendPreparationMapper.class),
-                mock(ChannelService.class),
-                mock(RecipientChannelResolver.class),
-                mock(ShortUrlService.class),
-                mock(MessageQueuePublisher.class),
-                mock(TokenCryptoService.class)
+                sendPreparationMapper,
+                channelService,
+                recipientChannelResolver,
+                shortUrlService,
+                messageQueuePublisher,
+                tokenCryptoService
         );
     }
 

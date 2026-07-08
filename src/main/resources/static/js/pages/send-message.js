@@ -23,6 +23,8 @@ const MessageComposer = {
     lastValidMessageFields: null,
     previewActionCode: "Ab3dE5gH",
     previewUnsubscribeCode: "Qr7xK2Lm",
+    aiGenerating: false,
+    aiReviewing: false,
 
     init: function () {
         this.loadChannels();
@@ -653,6 +655,17 @@ const MessageComposer = {
         $(document).on("click", ".js-insert-variable", function () {
             self.insertVariable($(this).data("variable") || "");
         });
+        $("#btnAiSuggestMessage").on("click", function () {
+            self.openAiSuggestModal();
+        });
+
+        $("#btnGenerateSendAiSuggestion").on("click", function () {
+            self.generateAiSuggestions();
+        });
+
+        $("#btnAiReviewMessage").on("click", function () {
+            self.reviewMessageWithAi();
+        });
     },
 
     addTemplateFilter: function (filterKey, value) {
@@ -816,7 +829,7 @@ const MessageComposer = {
     },
 
     buildPreviewParts: function (usePlaceholder) {
-        const body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
+        let body = this.normalizePreviewText($("#messageContent").val()) || (usePlaceholder ? "발송할 메시지 내용을 입력해주세요." : "");
         const buttonName = ($("#linkButtonName").val() || "자세히 보기").trim();
         const linkUrl = ($("#linkUrl").val() || "").trim();
         const purpose = $(".purpose-btn.active").data("val") || "INFO";
@@ -826,6 +839,10 @@ const MessageComposer = {
             unsubscribe: ""
         };
 
+        if (purpose === "AD" && body && !body.startsWith("(광고)")) {
+            body = "(광고) " + body;
+            parts.body = body;
+        }
         if (linkUrl) {
             parts.actionLink = buttonName + "\n" + this.getPreviewShortUrl("r");
         }
@@ -996,6 +1013,247 @@ const MessageComposer = {
         }
         return label + ": 스킵 - " + (result.errorMessage || "이번 테스트 발송 대상이 아닙니다.");
     },
+    getAiReviewSignature: function () {
+        return JSON.stringify({
+            title: ($("#messageTitle").val() || "").trim(),
+            content: ($("#messageContent").val() || "").trim(),
+            purpose: $(".purpose-btn.active").data("val") || "INFO",
+            channels: this.getCurrentChannelTypes().slice().sort(),
+            linkButtonName: ($("#linkButtonName").val() || "").trim(),
+            linkUrl: ($("#linkUrl").val() || "").trim()
+        });
+    },
+
+    invalidateAiReview: function () {
+        this.aiReviewSignature = null;
+        this.aiReviewStatus = null;
+        sessionStorage.removeItem("messageAiReviewSignature");
+        sessionStorage.removeItem("messageAiReviewStatus");
+    },
+
+    markAiReviewComplete: function (status) {
+        this.aiReviewSignature = this.getAiReviewSignature();
+        this.aiReviewStatus = status || "NOTICE";
+        sessionStorage.setItem("messageAiReviewSignature", this.aiReviewSignature);
+        sessionStorage.setItem("messageAiReviewStatus", this.aiReviewStatus);
+    },
+
+    hasValidAiReview: function () {
+        const signature = this.getAiReviewSignature();
+        const savedSignature = this.aiReviewSignature || sessionStorage.getItem("messageAiReviewSignature");
+        return Boolean(savedSignature && savedSignature === signature);
+    },
+    openAiSuggestModal: function () {
+        $("#sendAiSuggestModal").addClass("is-open");
+        $("#sendAiDirection").focus();
+    },
+
+    closeAiSuggestModal: function () {
+        $("#sendAiSuggestModal").removeClass("is-open");
+    },
+
+    closeAiSuggestOnBackdrop: function (event) {
+        if (event.target.id === "sendAiSuggestModal" || event.target.classList.contains("ds-modal__backdrop")) {
+            this.closeAiSuggestModal();
+        }
+    },
+
+    openAiReviewModal: function () {
+        $("#sendAiReviewModal").addClass("is-open");
+    },
+
+    closeAiReviewModal: function () {
+        $("#sendAiReviewModal").removeClass("is-open");
+    },
+
+    closeAiReviewOnBackdrop: function (event) {
+        if (event.target.id === "sendAiReviewModal" || event.target.classList.contains("ds-modal__backdrop")) {
+            this.closeAiReviewModal();
+        }
+    },
+
+    buildAiRequestBase: function () {
+        return {
+            contextType: "MESSAGE_SEND",
+            messageType: $(".purpose-btn.active").data("val") || "INFO",
+            channels: this.getCurrentChannelTypes(),
+            customerTags: [],
+            category: "CRM",
+            availableVariables: ["#{고객명}"]
+        };
+    },
+
+    getCurrentChannelTypes: function () {
+        const types = this.channels
+            .map(channel => this.normalizeChannelType(channel.originalType || channel.channelType))
+            .filter(Boolean);
+        return Array.from(new Set(types.length ? types : ["SMS"]));
+    },
+
+    generateAiSuggestions: function () {
+        if (this.aiGenerating) {
+            return;
+        }
+        const direction = ($("#sendAiDirection").val() || "").trim();
+        const $message = $("#sendAiSuggestMessage");
+        $message.removeClass("is-error").text("");
+        if (!direction) {
+            $message.addClass("is-error").text("원하는 문구 방향을 입력해 주세요.");
+            return;
+        }
+
+        const body = this.buildAiRequestBase();
+        body.direction = direction;
+        this.aiGenerating = true;
+        const $button = $("#btnGenerateSendAiSuggestion");
+        $button.prop("disabled", true).text("생성 중...");
+        $("#sendAiSuggestions").empty();
+        $message.text("조건에 맞는 문구를 생성하고 있습니다...");
+
+        $.ajax({
+            url: "/api/ai/suggestions",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(body),
+            success: (data) => {
+                const suggestions = (data.suggestions || []).slice(0, 3);
+                if (!suggestions.length) {
+                    $message.addClass("is-error").text("추천 가능한 문구가 없습니다.");
+                    return;
+                }
+                $message.text(suggestions.length + "개의 문구를 생성했습니다.");
+                this.renderAiSuggestions(suggestions);
+            },
+            error: (xhr) => {
+                const response = xhr.responseJSON || {};
+                $message.addClass("is-error").text(response.message || "AI 문구 생성에 실패했습니다.");
+            },
+            complete: () => {
+                this.aiGenerating = false;
+                $button.prop("disabled", false).text("추천 문구 생성");
+            }
+        });
+    },
+
+    renderAiSuggestions: function (suggestions) {
+        const $wrapper = $("#sendAiSuggestions");
+        $wrapper.empty();
+        suggestions.forEach((suggestion, index) => {
+            const $card = $(
+                `<article class="send-ai-suggestion">
+                    <strong>${index + 1}. ${escapeHtml(suggestion.title || "추천 문구")}</strong>
+                    <p>${escapeHtml(suggestion.content || "")}</p>
+                    <button type="button" class="ds-button ds-button--sm ds-button--outline">이 문구 적용</button>
+                </article>`
+            );
+            $card.find("button").on("click", () => {
+                this.applyAiSuggestion(suggestion);
+            });
+            $wrapper.append($card);
+        });
+    },
+
+    applyAiSuggestion: function (suggestion) {
+        $("#messageTitle").val(suggestion.title || "").trigger("input");
+        $("#messageContent").val(suggestion.content || "").trigger("input");
+        this.persistCurrentMessageFields();
+        this.closeAiSuggestModal();
+    },
+
+    reviewMessageWithAi: function () {
+        if (this.aiReviewing) {
+            return;
+        }
+        const title = ($("#messageTitle").val() || "").trim();
+        const content = ($("#messageContent").val() || "").trim();
+        if (!title) {
+            alert("AI 검사 전에 제목을 입력해 주세요.");
+            $("#messageTitle").focus();
+            return;
+        }
+        if (!content) {
+            alert("AI 검사 전에 내용을 입력해 주세요.");
+            $("#messageContent").focus();
+            return;
+        }
+        if (!this.validateMessageLength()) {
+            return;
+        }
+
+        const body = {
+            ...this.buildAiRequestBase(),
+            title: title,
+            content: content,
+            templateId: null,
+            userId: null
+        };
+
+        this.aiReviewing = true;
+        const $button = $("#btnAiReviewMessage");
+        $button.prop("disabled", true).text("검사 중...");
+        this.openAiReviewModal();
+        $("#sendAiReviewResult").html('<p class="send-ai-summary">문구를 검사하고 있습니다...</p>');
+
+        $.ajax({
+            url: "/api/ai/messages/review",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(body),
+            success: (data) => {
+                this.markAiReviewComplete((data || {}).status);
+                this.renderAiReview(data || {});
+            },
+            error: (xhr) => {
+                const response = xhr.responseJSON || {};
+                $("#sendAiReviewResult").html(`<p class="send-ai-summary is-error">${escapeHtml(response.message || "AI 검사에 실패했습니다.")}</p>`);
+            },
+            complete: () => {
+                this.aiReviewing = false;
+                $button.prop("disabled", false).text("AI 검사");
+            }
+        });
+    },
+
+    renderAiReview: function (data) {
+        const status = data.status || "NOTICE";
+        const issues = data.issues || [];
+        const issueHtml = issues.length
+            ? issues.map(issue => `
+                <article class="send-ai-review-issue">
+                    <div class="send-ai-review-issue__header">
+                        <strong>${escapeHtml(issue.message || issue.ruleId || "검사 항목")}</strong>
+                        <span class="send-ai-status send-ai-status--${escapeHtml(issue.status || status)}">${escapeHtml(issue.status || status)}</span>
+                    </div>
+                    ${issue.targetText ? `<p><strong>대상</strong> ${escapeHtml(issue.targetText)}</p>` : ""}
+                    ${issue.suggestion ? `<p><strong>수정 제안</strong> ${escapeHtml(issue.suggestion)}</p>` : ""}
+                </article>
+            `).join("")
+            : '<p class="send-ai-summary">발견된 이슈가 없습니다.</p>';
+
+        $("#sendAiReviewResult").html(`
+            <div class="send-ai-review-header">
+                <strong>AI 검사 결과</strong>
+                <span class="send-ai-status send-ai-status--${escapeHtml(status)}">${escapeHtml(status)}</span>
+            </div>
+            <p class="send-ai-summary">${escapeHtml(data.summary || "검사가 완료되었습니다.")}</p>
+            <div class="send-ai-review-issues">${issueHtml}</div>
+            ${data.suggestedRewrite ? `
+                <div class="send-ai-rewrite">
+                    <strong>AI 수정 문구</strong>
+                    <p>${escapeHtml(data.suggestedRewrite)}</p>
+                    <button id="btnApplySendAiRewrite" type="button" class="ds-button ds-button--sm ds-button--outline">수정 문구 적용</button>
+                </div>
+            ` : ""}
+        `);
+
+        if (data.suggestedRewrite) {
+            $("#btnApplySendAiRewrite").on("click", () => {
+                $("#messageContent").val(data.suggestedRewrite).trigger("input");
+                this.persistCurrentMessageFields();
+                this.closeAiReviewModal();
+            });
+        }
+    },
     getCurrentChannelIds: function () {
         return this.channels
             .map(channel => channel.id)
@@ -1020,5 +1278,11 @@ const MessageComposer = {
         $textarea.trigger("input");
     }
 };
-
-
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}

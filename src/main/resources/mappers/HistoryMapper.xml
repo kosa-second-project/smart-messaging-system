@@ -222,6 +222,29 @@
             WHERE st.send_history_id = #{sendHistoryId}
               AND NVL(sa.is_deleted, 0) = 0
             GROUP BY sa.attempt_order, sa.channel_id
+        ), display_channels AS (
+            SELECT channel_id, MIN(sort_order) AS sort_order
+            FROM (
+                SELECT
+                    shr.channel_id,
+                    MIN(shr.priority_order) AS sort_order
+                FROM send_history_routing shr
+                WHERE shr.send_history_id = #{sendHistoryId}
+                  AND NVL(shr.is_deleted, 0) = 0
+                GROUP BY shr.channel_id
+                UNION ALL
+                SELECT
+                    sa.channel_id,
+                    999 AS sort_order
+                FROM send_attempt sa
+                JOIN send_target st
+                  ON st.id = sa.send_target_id
+                 AND NVL(st.is_deleted, 0) = 0
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND sa.channel_id IS NOT NULL
+                  AND NVL(sa.is_deleted, 0) = 0
+            )
+            GROUP BY channel_id
         )
         SELECT
             ao.attempt_order AS attempt_order,
@@ -230,16 +253,14 @@
             NVL(ac.success_count, 0) AS success_count,
             NVL(ac.fail_count, 0) AS fail_count
         FROM attempt_orders ao
-        CROSS JOIN send_history_routing shr
+        CROSS JOIN display_channels dc
         JOIN channel c
-          ON c.id = shr.channel_id
+          ON c.id = dc.channel_id
          AND NVL(c.is_deleted, 0) = 0
         LEFT JOIN attempt_counts ac
           ON ac.attempt_order = ao.attempt_order
-         AND ac.channel_id = shr.channel_id
-        WHERE shr.send_history_id = #{sendHistoryId}
-          AND NVL(shr.is_deleted, 0) = 0
-        ORDER BY ao.attempt_order ASC, shr.priority_order ASC
+         AND ac.channel_id = dc.channel_id
+        ORDER BY ao.attempt_order ASC, dc.sort_order ASC, c.channel_type ASC
     </select>
 
     <select id="findChannelsByHistoryIds"
@@ -306,6 +327,15 @@
     <update id="updateSendTargetStatus">
         UPDATE send_target
         SET status = #{status},
+            updated_at = SYSTIMESTAMP
+        WHERE id = #{sendTargetId}
+          AND is_deleted = 0
+    </update>
+
+    <update id="updateSendTargetSuccess">
+        UPDATE send_target
+        SET status = 'SUCCEEDED',
+            final_channel_id = #{channelId},
             updated_at = SYSTIMESTAMP
         WHERE id = #{sendTargetId}
           AND is_deleted = 0
@@ -414,6 +444,69 @@
             updated_at = SYSTIMESTAMP
         WHERE id = #{sendHistoryId}
           AND is_deleted = 0
+    </update>
+
+    <update id="finalizeSendHistory">
+        UPDATE send_history sh
+        SET status = #{status},
+            success_count = (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            fail_count = (
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND st.status IN ('FAILED', 'SKIPPED')
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            estimated_cost = (
+                SELECT NVL(SUM(NVL(st.cost, 0)), 0)
+                FROM send_target st
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND st.status = 'SUCCEEDED'
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            actual_cost = (
+                SELECT NVL(SUM(NVL(c.cost_per_msg, 0)), 0)
+                FROM send_target st
+                JOIN send_attempt sa
+                  ON sa.send_target_id = st.id
+                 AND NVL(sa.is_deleted, 0) = 0
+                 AND sa.is_succeeded = 1
+                JOIN channel c
+                  ON c.id = sa.channel_id
+                 AND NVL(c.is_deleted, 0) = 0
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            estimated_saving = (
+                SELECT NVL(SUM(GREATEST(NVL(st.cost, 0) - NVL(c.cost_per_msg, 0), 0)), 0)
+                FROM send_target st
+                JOIN send_attempt sa
+                  ON sa.send_target_id = st.id
+                 AND NVL(sa.is_deleted, 0) = 0
+                 AND sa.is_succeeded = 1
+                JOIN channel c
+                  ON c.id = sa.channel_id
+                 AND NVL(c.is_deleted, 0) = 0
+                WHERE st.send_history_id = #{sendHistoryId}
+                  AND NVL(st.is_deleted, 0) = 0
+            ),
+            completed_at = SYSTIMESTAMP,
+            updated_at = SYSTIMESTAMP
+        WHERE sh.id = #{sendHistoryId}
+          AND sh.is_deleted = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM send_target st
+              WHERE st.send_history_id = #{sendHistoryId}
+                AND st.status IN ('PENDING', 'SENDING')
+                AND NVL(st.is_deleted, 0) = 0
+          )
     </update>
 </mapper>
 

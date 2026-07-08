@@ -20,6 +20,7 @@ let templateOptions = {
 const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}"];
 const TEMPLATE_SMS_MAX_BYTES = 90;
 const TEMPLATE_EXTENDED_MAX_BYTES = 1000;
+const TEMPLATE_AD_PREVIEW_UNSUBSCRIBE_URL = "https://kosa.kr/u/Qr7xK2Lm";
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();
@@ -85,6 +86,7 @@ function bindTemplateEvents() {
             document.querySelectorAll("[data-purpose-value]").forEach(item => {
                 item.classList.toggle("is-active", item.dataset.purposeValue === button.dataset.purposeValue);
             });
+            renderFormPreview();
             invalidateTemplateReview();
         });
     });
@@ -719,6 +721,9 @@ function saveTemplate() {
 }
 
 function openTemplateAiPanel() {
+    if (!validateTemplateForSuggestionSetup()) {
+        return;
+    }
     document.getElementById("templateAiModal").classList.add("is-open");
     document.getElementById("templateAiPanel").hidden = false;
     document.getElementById("templateAiDirection").focus();
@@ -744,10 +749,10 @@ function generateTemplateSuggestions() {
     const message = document.getElementById("templateAiMessage");
     message.classList.remove("is-error");
     const direction = document.getElementById("templateAiDirection").value.trim();
+    if (!validateTemplateForSuggestionSetup()) {
+        return;
+    }
     const missing = [];
-    if (!getSelectedChannelTypes().length) missing.push("채널");
-    if (!document.getElementById("templateCategory").value) missing.push("카테고리");
-    if (!document.getElementById("templatePurpose").value) missing.push("광고 여부");
     if (!direction) missing.push("원하는 문구 방향");
     if (missing.length) {
         message.innerText = `${missing.join(", ")} 항목을 입력해 주세요.`;
@@ -788,6 +793,28 @@ function generateTemplateSuggestions() {
             templateGenerating = false;
             setGeneratingState(false);
         });
+}
+
+function validateTemplateForSuggestionSetup() {
+    if (!getSelectedChannelTypes().length) {
+        alert("하나 이상의 채널을 선택해 주세요.");
+        document.querySelector("input[name='templateChannel']")?.focus();
+        return false;
+    }
+
+    const category = document.getElementById("templateCategory");
+    if (!category.value) {
+        category.reportValidity();
+        category.focus();
+        return false;
+    }
+
+    if (!document.getElementById("templatePurpose").value) {
+        alert("광고 여부를 선택해 주세요.");
+        return false;
+    }
+
+    return true;
 }
 
 function setGeneratingState(loading) {
@@ -1020,11 +1047,20 @@ function renderFormPreview() {
         return;
     }
 
-    const component = createCommonMessagePreview(title, content, templatePreviewMode);
+    const component = createCommonMessagePreview(title, buildTemplateFormPreviewContent(content), templatePreviewMode);
     previewDiv.innerHTML = "";
     if (component) {
         previewDiv.appendChild(component);
     }
+}
+
+function buildTemplateFormPreviewContent(content) {
+    if (document.getElementById("templatePurpose")?.value !== "AD") {
+        return content;
+    }
+
+    const body = content || "";
+    return `(광고) ${body}\n수신거부:\n${TEMPLATE_AD_PREVIEW_UNSUBSCRIBE_URL}`;
 }
 
 function renderMessagePreview(title, content, mode, compact = false) {
@@ -1099,7 +1135,7 @@ function getCategoryLabel(category) {
 
 function buildPurposeOptions(options) {
     const defaults = [
-        { value: "AD", label: "광고" },
+        { value: "AD", label: "광고성" },
         { value: "INFO", label: "정보성" }
     ];
     const rows = options.map(option => ({
@@ -1117,7 +1153,7 @@ function normalizePurpose(purpose) {
 }
 
 function getPurposeLabel(purpose) {
-    return normalizePurpose(purpose) === "AD" ? "광고" : "정보성";
+    return normalizePurpose(purpose) === "AD" ? "광고성" : "정보성";
 }
 
 function flattenText(text) {
