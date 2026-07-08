@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout/default-layout}">
 <head>
     <title>템플릿 관리</title>
@@ -70,11 +71,12 @@
                         <th>채널</th>
                         <th class="template-col-lg">사용 횟수</th>
                         <th>최근 수정</th>
+                        <th sec:authorize="hasAuthority('ROLE_ADMIN')" class="template-action-col">관리</th>
                     </tr>
                     </thead>
                     <tbody id="templateTableBody">
                     <tr>
-                        <td colspan="6" class="template-empty-cell">데이터를 불러오는 중입니다...</td>
+                        <td th:colspan="${#authorization.expression('hasAuthority(''ROLE_ADMIN'')') ? 7 : 6}" class="template-empty-cell">데이터를 불러오는 중입니다...</td>
                     </tr>
                     </tbody>
                 </table>
@@ -98,7 +100,7 @@
             <div class="ds-modal__backdrop"></div>
             <div class="ds-modal__panel template-add-modal">
                 <div class="ds-modal__header">
-                    <h3 class="ds-modal__title">새 템플릿 추가</h3>
+                    <h3 id="templateFormModalTitle" class="ds-modal__title">새 템플릿 추가</h3>
                     <button type="button" class="ds-icon-button" onclick="closeAddTemplateModal()" aria-label="닫기">×</button>
                 </div>
 
@@ -219,6 +221,9 @@
         <div th:replace="~{fragments/components/message-preview :: preview}"></div>
     </template>
 
+    <script th:inline="javascript">
+        window.templateIsAdmin = [[${#authorization.expression('hasAuthority(''ROLE_ADMIN'')')}]];
+    </script>
     <script th:src="@{/js/pages/templates.js}"></script>
 </main>
 </html>

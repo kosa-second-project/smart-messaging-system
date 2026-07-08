@@ -13,6 +13,8 @@ import com.example.smartmessaging.service.repository.TemplateMapper;
 import com.example.smartmessaging.service.TemplateService;
 import com.example.smartmessaging.dto.response.TemplateFilterOptionResponse;
 import com.example.smartmessaging.dto.vo.TemplateCategory;
+import com.example.smartmessaging.exception.BusinessException;
+import com.example.smartmessaging.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -80,6 +82,46 @@ public class TemplateServiceImpl implements TemplateService {
         return template.getId();
     }
 
+    @Override
+    @Transactional
+    public void updateTemplate(Long userId, Long templateId, TemplateSaveRequest request) {
+        ensureTemplateExists(userId, templateId);
+
+        TemplateVO template = toTemplateVO(userId, templateId, request);
+        int updatedCount = templateMapper.updateTemplate(template);
+        if (updatedCount == 0) {
+            throw templateNotFound();
+        }
+
+        // 채널 매핑은 부분 수정 대신 기존 매핑을 비활성화하고 요청값으로 다시 구성한다.
+        TemplateChannelVO deleteChannels = TemplateChannelVO.builder()
+                .templateId(templateId)
+                .build();
+        templateMapper.softDeleteTemplateChannels(deleteChannels);
+        saveTemplateChannels(templateId, request.getChannelIds());
+    }
+
+    @Override
+    @Transactional
+    public void deleteTemplate(Long userId, Long templateId) {
+        ensureTemplateExists(userId, templateId);
+
+        TemplateVO template = TemplateVO.builder()
+                .id(templateId)
+                .userId(userId)
+                .build();
+        int deletedCount = templateMapper.softDeleteTemplate(template);
+        if (deletedCount == 0) {
+            throw templateNotFound();
+        }
+
+        // 템플릿 삭제 시 연결 채널도 함께 soft delete 처리해 조회 결과에서 제외한다.
+        TemplateChannelVO deleteChannels = TemplateChannelVO.builder()
+                .templateId(templateId)
+                .build();
+        templateMapper.softDeleteTemplateChannels(deleteChannels);
+    }
+
     private void attachChannels(List<TemplateResponse> templates) {
         if (templates.isEmpty()) {
             return;
@@ -128,5 +170,16 @@ public class TemplateServiceImpl implements TemplateService {
                     .build();
             templateMapper.insertTemplateChannel(templateChannel);
         }
+    }
+
+    private void ensureTemplateExists(Long userId, Long templateId) {
+        // 수정/삭제 권한은 SecurityConfig에서 관리자만 통과시키고, 서비스에서는 대상 존재 여부만 확인한다.
+        if (templateMapper.selectTemplateDetail(userId, templateId) == null) {
+            throw templateNotFound();
+        }
+    }
+
+    private BusinessException templateNotFound() {
+        return new BusinessException("템플릿을 찾을 수 없습니다.", ErrorCode.TEMPLATE_NOT_FOUND);
     }
 }

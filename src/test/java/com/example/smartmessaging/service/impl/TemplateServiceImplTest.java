@@ -5,6 +5,7 @@ import com.example.smartmessaging.dto.response.TemplateChannelResponse;
 import com.example.smartmessaging.dto.response.TemplateOptionResponse;
 import com.example.smartmessaging.dto.response.TemplateResponse;
 import com.example.smartmessaging.dto.vo.TemplateCategory;
+import com.example.smartmessaging.dto.vo.TemplateChannelVO;
 import com.example.smartmessaging.dto.vo.TemplateVO;
 import com.example.smartmessaging.service.repository.TemplateMapper;
 import org.junit.jupiter.api.Test;
@@ -91,5 +92,51 @@ class TemplateServiceImplTest {
         assertThat(template.getKakaoTemplateCode()).isNull();
         assertThat(template.getKakaoTemplateStatus()).isNull();
         assertThat(template.getPurpose()).isEqualTo("INFO");
+    }
+
+    @Test
+    void updateTemplate_replacesTemplateAndChannels() {
+        TemplateResponse existing = new TemplateResponse();
+        existing.setId(7L);
+        when(templateMapper.selectTemplateDetail(10L, 7L)).thenReturn(existing);
+        when(templateMapper.updateTemplate(org.mockito.ArgumentMatchers.any(TemplateVO.class))).thenReturn(1);
+
+        TemplateSaveRequest request = new TemplateSaveRequest();
+        request.setTitle("Updated");
+        request.setContent("Updated content");
+        request.setCategory(TemplateCategory.EVENT);
+        request.setPurpose("AD");
+        request.setIsAiGenerated(true);
+        request.setChannelIds(List.of(1L, 2L));
+
+        templateService.updateTemplate(10L, 7L, request);
+
+        ArgumentCaptor<TemplateVO> templateCaptor = ArgumentCaptor.forClass(TemplateVO.class);
+        verify(templateMapper).updateTemplate(templateCaptor.capture());
+        assertThat(templateCaptor.getValue().getId()).isEqualTo(7L);
+        assertThat(templateCaptor.getValue().getUserId()).isEqualTo(10L);
+        assertThat(templateCaptor.getValue().getTitle()).isEqualTo("Updated");
+
+        ArgumentCaptor<TemplateChannelVO> channelCaptor = ArgumentCaptor.forClass(TemplateChannelVO.class);
+        verify(templateMapper).softDeleteTemplateChannels(channelCaptor.capture());
+        assertThat(channelCaptor.getValue().getTemplateId()).isEqualTo(7L);
+        verify(templateMapper, org.mockito.Mockito.times(2))
+                .insertTemplateChannel(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void deleteTemplate_softDeletesTemplateAndChannels() {
+        TemplateResponse existing = new TemplateResponse();
+        existing.setId(7L);
+        when(templateMapper.selectTemplateDetail(10L, 7L)).thenReturn(existing);
+        when(templateMapper.softDeleteTemplate(org.mockito.ArgumentMatchers.any(TemplateVO.class))).thenReturn(1);
+
+        templateService.deleteTemplate(10L, 7L);
+
+        ArgumentCaptor<TemplateVO> templateCaptor = ArgumentCaptor.forClass(TemplateVO.class);
+        verify(templateMapper).softDeleteTemplate(templateCaptor.capture());
+        assertThat(templateCaptor.getValue().getId()).isEqualTo(7L);
+        assertThat(templateCaptor.getValue().getUserId()).isEqualTo(10L);
+        verify(templateMapper).softDeleteTemplateChannels(org.mockito.ArgumentMatchers.any());
     }
 }

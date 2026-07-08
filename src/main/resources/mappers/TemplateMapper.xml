@@ -5,7 +5,6 @@
 
     <sql id="templateWhere">
         NVL(t.is_deleted, 0) = 0
-        AND t.user_id = #{userId}
         <if test="keyword != null and keyword != ''">
             AND (
                 t.title LIKE '%' || #{keyword} || '%'
@@ -136,7 +135,6 @@
             GROUP BY template_id
         ) ts ON ts.template_id = t.id
         WHERE t.id = #{templateId}
-          AND t.user_id = #{userId}
           AND NVL(t.is_deleted, 0) = 0
     </select>
 
@@ -178,7 +176,6 @@
             END AS label
         FROM template
         WHERE NVL(is_deleted, 0) = 0
-          AND user_id = #{userId}
           AND category IN ('BENEFIT', 'EVENT', 'NOTICE', 'CRM')
         ORDER BY value ASC
     </select>
@@ -189,7 +186,6 @@
             purpose AS label
         FROM template
         WHERE NVL(is_deleted, 0) = 0
-          AND user_id = #{userId}
           AND purpose IS NOT NULL
         ORDER BY purpose ASC
     </select>
@@ -202,7 +198,6 @@
             NVL(SUM(cnt), 0) AS total_use_count
         FROM template
         WHERE NVL(is_deleted, 0) = 0
-          AND user_id = #{userId}
     </select>
 
     <insert id="insertTemplate" parameterType="TemplateVO" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
@@ -236,4 +231,37 @@
             <include refid="Common.auditInsertValues"/>
         )
     </insert>
+
+    <update id="updateTemplate" parameterType="TemplateVO">
+        UPDATE template
+        SET
+            title = #{title},
+            content = #{content},
+            is_ai_generated = #{isAiGenerated},
+            category = #{category},
+            purpose = #{purpose},
+            <include refid="Common.auditUpdateValues"/>
+        WHERE id = #{id}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!-- 템플릿 삭제는 이력 보존을 위해 물리 삭제가 아니라 soft delete로 처리한다. -->
+    <update id="softDeleteTemplate" parameterType="TemplateVO">
+        UPDATE template
+        SET
+            is_deleted = 1,
+            <include refid="Common.auditUpdateValues"/>
+        WHERE id = #{id}
+          AND NVL(is_deleted, 0) = 0
+    </update>
+
+    <!-- 템플릿 수정/삭제 시 기존 채널 매핑을 조회 대상에서 제외한다. -->
+    <update id="softDeleteTemplateChannels" parameterType="TemplateChannelVO">
+        UPDATE template_channel
+        SET
+            is_deleted = 1,
+            <include refid="Common.auditUpdateValues"/>
+        WHERE template_id = #{templateId}
+          AND NVL(is_deleted, 0) = 0
+    </update>
 </mapper>

@@ -2,6 +2,8 @@ let templateCurrentPage = 1;
 let templatePageSize = 10;
 let templatePreviewMode = "message";
 let templateIsAiGenerated = false;
+let templateEditMode = false;
+let templateEditingId = null;
 let templateReviewSignature = null;
 let templateReviewStatus = null;
 let templateGenerating = false;
@@ -21,6 +23,8 @@ const TEMPLATE_AVAILABLE_VARIABLES = ["#{고객명}"];
 const TEMPLATE_SMS_MAX_BYTES = 90;
 const TEMPLATE_EXTENDED_MAX_BYTES = 1000;
 const TEMPLATE_AD_PREVIEW_UNSUBSCRIBE_URL = "https://kosa.kr/u/Qr7xK2Lm";
+// 서버가 Thymeleaf로 주입한 권한 플래그다. 버튼 노출용이며, 실제 차단은 SecurityConfig가 담당한다.
+const TEMPLATE_IS_ADMIN = window.templateIsAdmin === true;
 
 document.addEventListener("DOMContentLoaded", function() {
     bindTemplateEvents();
@@ -289,7 +293,7 @@ function enforceTemplateLength() {
 
 function fetchTemplates() {
     const tbody = document.getElementById("templateTableBody");
-    tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">데이터를 불러오는 중입니다...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${TEMPLATE_IS_ADMIN ? 7 : 6}" class="template-empty-cell">데이터를 불러오는 중입니다...</td></tr>`;
     document.getElementById("templateMobileList").innerHTML = `<div class="template-empty-cell">데이터를 불러오는 중입니다...</div>`;
 
     const params = new URLSearchParams({
@@ -312,7 +316,7 @@ function fetchTemplates() {
         })
         .catch(err => {
             console.error("Template list load fail:", err);
-            tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${TEMPLATE_IS_ADMIN ? 7 : 6}" class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</td></tr>`;
             document.getElementById("templateMobileList").innerHTML = `<div class="template-empty-cell">템플릿 목록을 불러오는 도중 오류가 발생했습니다.</div>`;
         });
 }
@@ -338,7 +342,7 @@ function renderTemplateTable(list) {
     tbody.innerHTML = "";
 
     if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="template-empty-cell">조건에 맞는 템플릿이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${TEMPLATE_IS_ADMIN ? 7 : 6}" class="template-empty-cell">조건에 맞는 템플릿이 없습니다.</td></tr>`;
         return;
     }
 
@@ -357,9 +361,25 @@ function renderTemplateTable(list) {
             <td>${renderChannelChips(item.channels || [])}</td>
             <td class="template-col-lg"><span class="template-title">${(item.cnt || 0).toLocaleString()}회</span></td>
             <td><span class="text-muted">${item.updatedAt || "-"}</span></td>
+            ${renderTemplateActionCell(item)}
         `;
         tbody.appendChild(tr);
     });
+}
+
+function renderTemplateActionCell(item) {
+    if (!TEMPLATE_IS_ADMIN) {
+        return "";
+    }
+    // 행 클릭 상세 열기와 버튼 클릭이 겹치지 않도록 액션 영역에서 이벤트 전파를 막는다.
+    return `
+        <td class="template-action-col" onclick="event.stopPropagation()">
+            <div class="template-row-actions">
+                <button type="button" class="ds-button ds-button--outline ds-button--sm" onclick="openTemplateEditModal(${Number(item.id)}, event)">수정</button>
+                <button type="button" class="ds-button ds-button--outline ds-button--sm template-delete-button" onclick="deleteTemplate(${Number(item.id)}, event)">삭제</button>
+            </div>
+        </td>
+    `;
 }
 
 function renderTemplateMobileList(list) {
@@ -387,8 +407,21 @@ function renderTemplateMobileList(list) {
                 <span>${(item.cnt || 0).toLocaleString()}회 사용</span>
                 <span>${item.updatedAt || "-"}</span>
             </div>
+            ${renderTemplateMobileActions(item)}
         </button>
     `).join("");
+}
+
+function renderTemplateMobileActions(item) {
+    if (!TEMPLATE_IS_ADMIN) {
+        return "";
+    }
+    return `
+        <div class="template-mobile-card__actions" onclick="event.stopPropagation()">
+            <button type="button" class="ds-button ds-button--outline ds-button--sm" onclick="openTemplateEditModal(${Number(item.id)}, event)">수정</button>
+            <button type="button" class="ds-button ds-button--outline ds-button--sm template-delete-button" onclick="deleteTemplate(${Number(item.id)}, event)">삭제</button>
+        </div>
+    `;
 }
 
 function renderChannelChips(channels) {
@@ -614,6 +647,55 @@ function openAddTemplateModal() {
     renderFormPreview();
 }
 
+function openTemplateEditModal(templateId, event) {
+    event?.stopPropagation();
+    if (!TEMPLATE_IS_ADMIN) {
+        return;
+    }
+
+    resetTemplateForm();
+    // 기존 등록 모달을 재사용하되 저장 시 PUT 요청을 보내도록 편집 상태를 기록한다.
+    templateEditMode = true;
+    templateEditingId = templateId;
+    document.getElementById("templateFormModalTitle").innerText = "Edit Template";
+    document.getElementById("templateSaveButton").innerText = "Update";
+    document.getElementById("templateAddModal").classList.add("is-open");
+
+    fetch(`/api/templates/${templateId}`)
+        .then(async res => {
+            if (!res.ok) throw new Error(await readErrorMessage(res, "Template load failed."));
+            return res.json();
+        })
+        .then(data => {
+            document.getElementById("templateTitle").value = data.title || "";
+            document.getElementById("templateContent").value = data.content || "";
+            document.getElementById("templateCategory").value = data.category || "";
+            document.getElementById("templatePurpose").value = normalizePurpose(data.purpose);
+            document.querySelectorAll("[data-purpose-value]").forEach(button => {
+                button.classList.toggle("is-active", button.dataset.purposeValue === document.getElementById("templatePurpose").value);
+            });
+
+            const selectedChannelIds = new Set((data.channels || []).map(channel => String(channel.channelId)));
+            document.querySelectorAll("input[name='templateChannel']").forEach(input => {
+                input.checked = selectedChannelIds.has(String(input.value));
+            });
+
+            templateIsAiGenerated = Boolean(data.isAiGenerated);
+            syncTemplateFields();
+            syncTemplateChannelSelection();
+            renderTemplateByteCount();
+            renderFormPreview();
+            templateReviewSignature = getTemplateReviewSignature();
+            templateReviewStatus = "PASS";
+            updateTemplateSaveState();
+        })
+        .catch(err => {
+            console.error("Template edit load fail:", err);
+            alert(err.message || "Template load failed.");
+            closeAddTemplateModal();
+        });
+}
+
 function closeAddTemplateModal() {
     document.getElementById("templateAddModal").classList.remove("is-open");
     closeTemplateAiPanel();
@@ -650,11 +732,15 @@ function closeTemplateReviewOnBackdrop(event) {
 
 function resetTemplateForm() {
     document.getElementById("templateForm").reset();
+    templateEditMode = false;
+    templateEditingId = null;
     templateIsAiGenerated = false;
     templateReviewSignature = null;
     templateReviewStatus = null;
     templateGenerating = false;
     templateReviewing = false;
+    document.getElementById("templateFormModalTitle").innerText = "New Template";
+    document.getElementById("templateSaveButton").innerText = "Save";
     document.getElementById("templatePurpose").value = "AD";
     document.querySelectorAll("[data-purpose-value]").forEach(button => {
         button.classList.toggle("is-active", button.dataset.purposeValue === "AD");
@@ -707,7 +793,11 @@ function saveTemplate() {
             .map(input => Number(input.value))
     };
 
-    fetch("/api/templates", withJsonBody("POST", body))
+    // 생성은 기존 POST 정책을 유지하고, 편집 모드에서만 관리자 전용 PUT API를 호출한다.
+    const method = templateEditMode ? "PUT" : "POST";
+    const url = templateEditMode ? `/api/templates/${templateEditingId}` : "/api/templates";
+
+    fetch(url, withJsonBody(method, body))
         .then(res => {
             if (!res.ok) throw new Error("save failed");
             closeAddTemplateModal();
@@ -717,6 +807,27 @@ function saveTemplate() {
         .catch(err => {
             console.error("Template save fail:", err);
             alert("템플릿 저장 중 오류가 발생했습니다.");
+        });
+}
+
+function deleteTemplate(templateId, event) {
+    event?.stopPropagation();
+    if (!TEMPLATE_IS_ADMIN) {
+        return;
+    }
+    if (!confirm("Delete this template?")) {
+        return;
+    }
+
+    fetch(`/api/templates/${templateId}`, withJsonBody("DELETE", {}))
+        .then(async res => {
+            if (!res.ok) throw new Error(await readErrorMessage(res, "delete failed"));
+            fetchTemplateOptions();
+            fetchTemplates();
+        })
+        .catch(err => {
+            console.error("Template delete fail:", err);
+            alert(err.message || "Template delete failed.");
         });
 }
 

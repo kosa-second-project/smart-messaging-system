@@ -58,6 +58,18 @@ class TemplateMapperXmlTest {
                         "SUM(NVL(conversion_count, 0)) / SUM(NVL(conversion_target_count, 0))");
     }
 
+    @Test
+    void template_read_queries_are_not_limited_to_current_user() throws Exception {
+        String mapper = new String(
+                Resources.getResourceAsStream(RESOURCE).readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(mapper)
+                .doesNotContain("AND t.user_id = #{userId}")
+                .doesNotContain("AND user_id = #{userId}");
+    }
+
     private void parseMapper(Configuration configuration, String resource) throws Exception {
         try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
             XMLMapperBuilder mapperParser = new XMLMapperBuilder(

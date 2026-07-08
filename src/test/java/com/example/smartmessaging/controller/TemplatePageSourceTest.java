@@ -196,10 +196,35 @@ class TemplatePageSourceTest {
                 .contains("buildTemplateFormPreviewContent(content)")
                 .contains("(광고)")
                 .contains("수신거부:")
-                .contains("https://kosa.kr/u/Qr7xK2Lm");
+                .contains("TEMPLATE_AD_PREVIEW_UNSUBSCRIBE_URL");
+        assertThat(script).contains("https://kosa.kr/u/Qr7xK2Lm");
         assertThat(saveFunction)
                 .doesNotContain("buildTemplateFormPreviewContent")
                 .doesNotContain("(광고)")
                 .doesNotContain("https://kosa.kr/u/Qr7xK2Lm");
+    }
+
+    @Test
+    void template_actions_are_rendered_only_for_admin() throws Exception {
+        String template = Files.readString(
+                Path.of("src/main/resources/templates/pages/templates.html"),
+                StandardCharsets.UTF_8
+        );
+        String script = Files.readString(
+                Path.of("src/main/resources/static/js/pages/templates.js"),
+                StandardCharsets.UTF_8
+        );
+
+        assertThat(template)
+                .contains("window.templateIsAdmin")
+                .contains("hasAuthority('ROLE_ADMIN')")
+                .contains("template-action-col");
+        assertThat(script)
+                .contains("const TEMPLATE_IS_ADMIN = window.templateIsAdmin === true")
+                .contains("renderTemplateActionCell")
+                .contains("renderTemplateMobileActions")
+                .contains("openTemplateEditModal")
+                .contains("deleteTemplate")
+                .contains("templateEditMode ? \"PUT\" : \"POST\"");
     }
 }
