@@ -110,7 +110,7 @@ public class AiSuggestionService {
             List<AiSuggestionItemResponseDTO> candidates = generated.suggestions();
 
             ValidationOutcome outcome = validateCandidates(request, availableVariables, candidates);
-            log.info(
+            log.debug(
                     "AI suggestion attempt result: attempt={}, generatedCount={}, excludedCount={}, passedCount={}, failedRuleIds={}",
                     attempt,
                     candidates.size(),
@@ -118,9 +118,9 @@ public class AiSuggestionService {
                     outcome.passedCount(),
                     outcome.failureRuleIds()
             );
-            log.info(
-                    "RAG-assisted suggestion completed: refs={}, focus={}, generatedCount={}, passedCount={}, failedRuleIds={}",
-                    ragContext.references(),
+            log.debug(
+                    "RAG-assisted suggestion completed: referenceCount={}, focus={}, generatedCount={}, passedCount={}, failedRuleIds={}",
+                    ragContext.references().size(),
                     RAG_SUGGESTION_FOCUS,
                     candidates.size(),
                     outcome.passedCount(),

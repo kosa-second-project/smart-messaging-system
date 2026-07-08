@@ -45,7 +45,7 @@ public class RagSearchService {
                             .build()
             );
 
-            log.info("RAG search completed: queryLength={}, topK={}, resultCount={}",
+            log.debug("RAG search completed: queryLength={}, topK={}, resultCount={}",
                     query.length(), topK, documents.size());
             return documents;
         } catch (Exception exception) {

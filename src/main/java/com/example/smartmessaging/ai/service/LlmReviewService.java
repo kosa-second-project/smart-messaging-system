@@ -105,9 +105,9 @@ public class LlmReviewService {
         );
         List<ValidationIssueResponseDTO> newIssues = normalizeNewIssues(response.newIssues());
         String suggestedRewrite = textOrNull(response.suggestedRewrite());
-        log.info(
-                "RAG-assisted review completed: refs={}, focus={}, llmNewIssues={}, llmReviewedExistingIssues={}, suggestedRewrite={}",
-                ragContext.references(),
+        log.debug(
+                "RAG-assisted review completed: referenceCount={}, focus={}, llmNewIssues={}, llmReviewedExistingIssues={}, suggestedRewrite={}",
+                ragContext.references().size(),
                 RAG_REVIEW_FOCUS,
                 newIssues.stream().map(ValidationIssueResponseDTO::ruleId).toList(),
                 reviewedIssueSummaries(response.reviewedExistingIssues()),
