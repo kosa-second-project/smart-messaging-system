@@ -34,4 +34,10 @@ public interface TemplateMapper {
     int insertTemplate(TemplateVO template);
 
     int insertTemplateChannel(TemplateChannelVO templateChannel);
+
+    int updateTemplate(TemplateVO template);
+
+    int softDeleteTemplate(TemplateVO template);
+
+    int softDeleteTemplateChannels(TemplateChannelVO templateChannel);
 }

@@ -18,4 +18,8 @@ public interface TemplateService {
     TemplateStatResponse getTemplateStats(Long userId);
 
     Long createTemplate(Long userId, TemplateSaveRequest request);
+
+    void updateTemplate(Long userId, Long templateId, TemplateSaveRequest request);
+
+    void deleteTemplate(Long userId, Long templateId);
 }
