@@ -119,4 +119,23 @@ public class StatsBatchService {
                 insertedCount
         );
     }
+
+    /**
+     * template_stat 하루치 템플릿별 성과 통계를 집계한다.
+     *
+     * send_history.template_id 기준으로 발송량을 묶고,
+     * short_url 클릭/전환 이력을 합산해서 템플릿 상세와 대시보드 성과 Top 5에서 사용할 수 있게 저장한다.
+     */
+    @Transactional
+    public void aggregateTemplateStat(LocalDate statDate) {
+        int deletedCount = statsBatchMapper.softDeleteTemplateStat(statDate, systemUserId);
+        int insertedCount = statsBatchMapper.insertTemplateStat(statDate, systemUserId);
+
+        log.info(
+                "[StatsBatch] template_stat aggregated - statDate: {}, softDeleted: {}, inserted: {}",
+                statDate,
+                deletedCount,
+                insertedCount
+        );
+    }
 }

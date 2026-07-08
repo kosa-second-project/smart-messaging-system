@@ -99,18 +99,21 @@
   font-weight: var(--font-weight-bold);
 }
 
-.dashboard-page .stats-queue-item__meta {
+.dashboard-page .stats-queue-item__meta,
+.stats-overview-page .stats-queue-item__meta {
   margin-top: 0.25rem;
   color: var(--muted-foreground);
   font-size: 0.6875rem;
   font-weight: var(--font-weight-medium);
 }
 
-.dashboard-page .stats-queue-item.is-unavailable {
+.dashboard-page .stats-queue-item.is-unavailable,
+.stats-overview-page .stats-queue-item.is-unavailable {
   opacity: 0.65;
 }
 
-.dashboard-page .stats-queue-item--empty {
+.dashboard-page .stats-queue-item--empty,
+.stats-overview-page .stats-queue-item--empty {
   grid-column: 1 / -1;
 }
 .dashboard-chart-row {
@@ -206,7 +209,7 @@
   min-height: 0;
   flex: 1 1 auto;
   display: grid;
-  align-content: center;
+  align-content: start;
 }
 
 .dashboard-history-item,

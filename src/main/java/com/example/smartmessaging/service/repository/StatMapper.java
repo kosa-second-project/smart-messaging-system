@@ -28,4 +28,6 @@ public interface StatMapper {
     List<CustomerChannelConsentSummaryVO> selectCustomerChannelConsents(StatSearchRequest request);
 
     List<ClickStatVO> selectPerformanceClickStats(StatSearchRequest request);
+
+    List<ClickStatVO> selectPerformanceConversionStats(StatSearchRequest request);
 }
