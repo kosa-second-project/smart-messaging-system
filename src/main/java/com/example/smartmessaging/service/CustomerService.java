@@ -28,4 +28,6 @@ public interface CustomerService {
     PagedCustomerResponse getCustomers(Long userId, CustomerSearchRequest request);
 
     List<Long> getCustomerIds(CustomerSearchRequest request);
+
+    int countCustomers(CustomerSearchRequest request);
 }

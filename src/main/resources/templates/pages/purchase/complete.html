@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구매 완료</title>
+    <link rel="stylesheet" th:href="@{/css/pages/purchase.css}">
+</head>
+<body>
+<main class="purchase-page">
+    <section class="purchase-card purchase-card-complete" aria-labelledby="purchase-complete-title">
+        <span class="purchase-badge">Purchase Complete</span>
+        <h1 id="purchase-complete-title" class="purchase-title">
+            <span class="purchase-highlight" th:text="${customerName} ?: '고객'">고객</span>님의 구매가 완료되었습니다.
+        </h1>
+        <p class="purchase-description">
+            특별 혜택 구매 신청이 정상적으로 처리되었습니다.
+        </p>
+        <p class="purchase-footer">이 페이지를 닫으셔도 구매 전환 기록은 유지됩니다.</p>
+    </section>
+</main>
+</body>
+</html>

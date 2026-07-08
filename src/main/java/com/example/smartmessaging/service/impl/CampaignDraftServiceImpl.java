@@ -37,7 +37,9 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
     private final RecipientChannelResolver recipientChannelResolver;
 
     private static final String KEY_PREFIX = "draft:recipient:";
+    private static final String STATUS_KEY_PREFIX = "draft:recipient:status:";
     private static final Duration TTL = Duration.ofMinutes(30);
+    private static final int ZSET_WRITE_CHUNK_SIZE = 1000;
 
     /**
      * ZSET 내 가장 큰 score 값을 찾아 +1 한 값을 반환합니다.
@@ -56,21 +58,13 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
         String draftId = UUID.randomUUID().toString();
         String key = KEY_PREFIX + userId + ":" + draftId;
 
-        ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
-
-        Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>();
-        for (int i = 0; i < customerIds.size(); i++) {
-            final Long id = customerIds.get(i);
-            final double score = i;
-            tuples.add(new DefaultTypedTuple<>(id, score));
-        }
-
-        if (!tuples.isEmpty()) {
-            zset.add(key, tuples);
+        if (customerIds != null && !customerIds.isEmpty()) {
+            addRecipientsInChunks(key, customerIds, 0.0);
             redisTemplate.expire(key, TTL);
         }
 
-        log.info("[CampaignDraft] 저장 완료 - draftId={}, 총 {}명, TTL=30분", draftId, customerIds.size());
+        int savedCount = customerIds == null ? 0 : customerIds.size();
+        log.info("[CampaignDraft] 저장 완료 - draftId={}, 총 {}명, TTL=30분", draftId, savedCount);
         return draftId;
     }
 
@@ -84,19 +78,13 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
         double startScore = getNextScore(zset, key);
 
-        Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>();
-        for (int i = 0; i < customerIds.size(); i++) {
-            final Long id = customerIds.get(i);
-            final double score = startScore + i;
-            tuples.add(new DefaultTypedTuple<>(id, score));
-        }
-
-        if (!tuples.isEmpty()) {
-            zset.add(key, tuples);
+        if (customerIds != null && !customerIds.isEmpty()) {
+            addRecipientsInChunks(key, customerIds, startScore);
             redisTemplate.expire(key, TTL);
         }
 
-        log.info("[CampaignDraft] 병합 완료 - draftId={}, 추가 {}명", draftId, customerIds.size());
+        int appendedCount = customerIds == null ? 0 : customerIds.size();
+        log.info("[CampaignDraft] 병합 완료 - draftId={}, 추가 {}명", draftId, appendedCount);
         return draftId;
     }
 
@@ -145,6 +133,46 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
     }
 
     @Override
+    public void markProcessing(Long userId, String draftId, long expectedCount) {
+        String key = statusKey(userId, draftId);
+        redisTemplate.opsForHash().put(key, "status", "PROCESSING");
+        redisTemplate.opsForHash().put(key, "expectedCount", expectedCount);
+        redisTemplate.opsForHash().put(key, "totalCount", 0L);
+        redisTemplate.expire(key, TTL);
+    }
+
+    @Override
+    public void markReady(Long userId, String draftId, long totalCount) {
+        String key = statusKey(userId, draftId);
+        redisTemplate.opsForHash().put(key, "status", "READY");
+        redisTemplate.opsForHash().put(key, "totalCount", totalCount);
+        redisTemplate.expire(key, TTL);
+    }
+
+    @Override
+    public void markFailed(Long userId, String draftId) {
+        String key = statusKey(userId, draftId);
+        redisTemplate.opsForHash().put(key, "status", "FAILED");
+        redisTemplate.expire(key, TTL);
+    }
+
+    @Override
+    public Map<String, Object> getStatus(Long userId, String draftId) {
+        if (draftId == null || draftId.isBlank()) {
+            return Map.of("status", "NOT_FOUND", "totalCount", 0L);
+        }
+        Map<Object, Object> status = redisTemplate.opsForHash().entries(statusKey(userId, draftId));
+        if (status == null || status.isEmpty()) {
+            return Map.of("status", "READY", "totalCount", getTotalCount(userId, draftId));
+        }
+        return Map.of(
+                "status", String.valueOf(status.getOrDefault("status", "READY")),
+                "expectedCount", parseLong(status.get("expectedCount")),
+                "totalCount", parseLong(status.get("totalCount"))
+        );
+    }
+
+    @Override
     public void removeRecipient(Long userId, String draftId, Long customerId) {
         redisTemplate.opsForZSet().remove(KEY_PREFIX + userId + ":" + draftId, customerId);
         log.debug("[CampaignDraft] 제거 - draftId={}, customerId={}", draftId, customerId);
@@ -161,6 +189,44 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
     }
 
     @Override
+    public void removeRecipients(Long userId, String draftId, List<Long> customerIds) {
+        if (customerIds == null || customerIds.isEmpty()) {
+            return;
+        }
+        String key = KEY_PREFIX + userId + ":" + draftId;
+        for (int offset = 0; offset < customerIds.size(); offset += ZSET_WRITE_CHUNK_SIZE) {
+            int end = Math.min(offset + ZSET_WRITE_CHUNK_SIZE, customerIds.size());
+            List<Long> chunk = customerIds.subList(offset, end);
+            redisTemplate.opsForZSet().remove(key, chunk.toArray());
+        }
+        log.debug("[CampaignDraft] 배치 제거 - draftId={}, count={}", draftId, customerIds.size());
+    }
+
+    @Override
+    public void addRecipients(Long userId, String draftId, List<Long> customerIds) {
+        if (customerIds == null || customerIds.isEmpty()) {
+            return;
+        }
+        String key = KEY_PREFIX + userId + ":" + draftId;
+        double startScore = getNextScore(redisTemplate.opsForZSet(), key);
+        addRecipientsInChunks(key, customerIds, startScore);
+        redisTemplate.expire(key, TTL);
+        log.debug("[CampaignDraft] 배치 추가 - draftId={}, count={}", draftId, customerIds.size());
+    }
+
+    private void addRecipientsInChunks(String key, List<Long> customerIds, double startScore) {
+        ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
+        for (int offset = 0; offset < customerIds.size(); offset += ZSET_WRITE_CHUNK_SIZE) {
+            int end = Math.min(offset + ZSET_WRITE_CHUNK_SIZE, customerIds.size());
+            Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>(end - offset);
+            for (int i = offset; i < end; i++) {
+                tuples.add(new DefaultTypedTuple<>(customerIds.get(i), startScore + i));
+            }
+            zset.add(key, tuples);
+        }
+    }
+
+    @Override
     public boolean isExpired(Long userId, String draftId) {
         Long ttl = redisTemplate.getExpire(KEY_PREFIX + userId + ":" + draftId);
         return ttl == null || ttl == -2L;
@@ -169,7 +235,26 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
     @Override
     public void deleteDraft(Long userId, String draftId) {
         redisTemplate.delete(KEY_PREFIX + userId + ":" + draftId);
+        redisTemplate.delete(statusKey(userId, draftId));
         log.info("[CampaignDraft] 삭제 완료 - draftId={}", draftId);
+    }
+
+    private String statusKey(Long userId, String draftId) {
+        return STATUS_KEY_PREFIX + userId + ":" + draftId;
+    }
+
+    private long parseLong(Object value) {
+        if (value == null) {
+            return 0L;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     @Override

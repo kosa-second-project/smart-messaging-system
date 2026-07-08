@@ -23,6 +23,7 @@ const SendPage = {
         conditionMode: 'OR',
         draftId: null,
         draftTotalCount: 0,
+        draftProcessing: false,
         searchQuery: '',
         cursorHistory: [null],
         currentCursorIndex: 0,
@@ -102,7 +103,8 @@ const SendPage = {
                 self.state.pendingDraftRequests = Math.max(0, self.state.pendingDraftRequests - 1);
                 if (self.state.pendingDraftRequests === 0) {
                     const $btn = $("[data-action='next-step']");
-                    $btn.prop("disabled", false).text($btn.data("original-text") || "다음 단계");
+                    $btn.prop("disabled", self.state.draftProcessing)
+                        .text(self.state.draftProcessing ? "수신자 저장 중..." : ($btn.data("original-text") || "다음 단계"));
                 }
             }
         });
@@ -121,6 +123,10 @@ const SendPage = {
             // draftId가 없거나 선택된 수신자가 0명이면 차단
             if (!this.state.draftId || this.state.draftTotalCount === 0) {
                 alert("⚠️ 발송 대상 수신자가 0명입니다.\n테이블에서 수신 대상자를 선택해 주세요.");
+                return;
+            }
+            if (this.state.draftProcessing) {
+                alert("수신자 목록을 저장 중입니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
 

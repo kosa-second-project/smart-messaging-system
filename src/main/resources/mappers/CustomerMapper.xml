@@ -347,10 +347,11 @@
         AND NVL(is_ad_blocked, 0) = 0
         AND (customer_type IS NULL OR customer_type != 'DORMANT')
         <if test="consentTagIds != null and consentTagIds.size() > 0">
-            AND id IN (
-                SELECT customer_id
+            AND EXISTS (
+                SELECT 1
                 FROM   customer_tag_mapping
-                WHERE  tag_id IN
+                WHERE  customer_id = customer.id
+                AND    tag_id IN
                 <foreach item="tid" collection="consentTagIds" open="(" separator="," close=")">
                     #{tid}
                 </foreach>
