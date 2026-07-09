@@ -215,15 +215,23 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
     }
 
     private void addRecipientsInChunks(String key, List<Long> customerIds, double startScore) {
-        ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
-        for (int offset = 0; offset < customerIds.size(); offset += ZSET_WRITE_CHUNK_SIZE) {
-            int end = Math.min(offset + ZSET_WRITE_CHUNK_SIZE, customerIds.size());
-            Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>(end - offset);
-            for (int i = offset; i < end; i++) {
-                tuples.add(new DefaultTypedTuple<>(customerIds.get(i), startScore + i));
+        redisTemplate.executePipelined(new org.springframework.data.redis.core.SessionCallback<Object>() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <K, V> Object execute(org.springframework.data.redis.core.RedisOperations<K, V> operations)
+                    throws org.springframework.dao.DataAccessException {
+                org.springframework.data.redis.core.ZSetOperations<String, Object> zsetOps = (org.springframework.data.redis.core.ZSetOperations<String, Object>) operations.opsForZSet();
+                for (int offset = 0; offset < customerIds.size(); offset += ZSET_WRITE_CHUNK_SIZE) {
+                    int end = Math.min(offset + ZSET_WRITE_CHUNK_SIZE, customerIds.size());
+                    Set<ZSetOperations.TypedTuple<Object>> tuples = new LinkedHashSet<>(end - offset);
+                    for (int i = offset; i < end; i++) {
+                        tuples.add(new DefaultTypedTuple<>(customerIds.get(i), startScore + i));
+                    }
+                    zsetOps.add(key, tuples);
+                }
+                return null;
             }
-            zset.add(key, tuples);
-        }
+        }, redisTemplate.getStringSerializer());
     }
 
     @Override
@@ -267,9 +275,10 @@ public class CampaignDraftServiceImpl implements CampaignDraftService {
         List<Object> results = redisTemplate
                 .executePipelined(new org.springframework.data.redis.core.SessionCallback<Object>() {
                     @Override
-                    public Object execute(org.springframework.data.redis.core.RedisOperations operations)
+                    @SuppressWarnings("unchecked")
+                    public <K, V> Object execute(org.springframework.data.redis.core.RedisOperations<K, V> operations)
                             throws org.springframework.dao.DataAccessException {
-                        org.springframework.data.redis.core.ZSetOperations<String, Object> zsetOps = operations
+                        org.springframework.data.redis.core.ZSetOperations<String, Object> zsetOps = (org.springframework.data.redis.core.ZSetOperations<String, Object>) operations
                                 .opsForZSet();
                         for (Long id : customerIds) {
                             zsetOps.score(key, id);

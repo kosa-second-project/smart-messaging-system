@@ -69,20 +69,39 @@ public class CampaignCommandConsumer {
                 sendPreparationMapper.updateHistoryStatus(command.getSendHistoryId(), "SENDING");
             }
 
-            List<Long> customerIds = draftService.getDraftCustomerIds(command.getUserId(), command.getDraftId());
-            if (customerIds == null || customerIds.isEmpty()) {
+            long totalCount = draftService.getTotalCount(command.getUserId(), command.getDraftId());
+            if (totalCount == 0) {
                 throw new IllegalStateException("Draft recipient list is empty or expired.");
             }
 
             List<ChannelVO> activeChannels = channelService.getActiveChannels();
-            List<SendRecipientCandidateVO> recipients = findRecipientCandidates(customerIds);
             List<String> priorities = restorePriorities(command.getRoutingChannelIds(), activeChannels);
-            List<RecipientSendPlan> plans = recipientChannelResolver.resolve(recipients, activeChannels, priorities);
 
-            int targetCount = plans == null ? 0 : plans.size();
-            sendPreparationMapper.updateHistoryTotalTargetCount(command.getSendHistoryId(), targetCount);
+            // 임시 저장 대상자 수로 우선 총 대상자 수 설정
+            sendPreparationMapper.updateHistoryTotalTargetCount(command.getSendHistoryId(), (int) totalCount);
 
-            if (targetCount == 0) {
+            int pageSize = 1000;
+            int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+            int published = 0;
+            int actualTargetCount = 0;
+
+            for (int page = 1; page <= totalPages; page++) {
+                List<Long> chunkIds = draftService.getPagedIds(command.getUserId(), command.getDraftId(), page, pageSize);
+                if (chunkIds.isEmpty()) {
+                    continue;
+                }
+                List<SendRecipientCandidateVO> recipients = findRecipientCandidates(chunkIds);
+                List<RecipientSendPlan> plans = recipientChannelResolver.resolve(recipients, activeChannels, priorities);
+                if (plans != null && !plans.isEmpty()) {
+                    actualTargetCount += plans.size();
+                    published += persistTargetsAndPublish(command, plans, isScheduled);
+                }
+            }
+
+            // 실제 필터링 등을 거쳐 결정된 최종 발송 대상자 수로 최종 업데이트
+            sendPreparationMapper.updateHistoryTotalTargetCount(command.getSendHistoryId(), actualTargetCount);
+
+            if (actualTargetCount == 0) {
                 historyMapper.finalizeSendHistory(command.getSendHistoryId(), "SENT");
                 draftService.deleteDraft(command.getUserId(), command.getDraftId());
                 rabbitChannel.basicAck(deliveryTag, false);
@@ -90,12 +109,10 @@ public class CampaignCommandConsumer {
                 return;
             }
 
-            int published = persistTargetsAndPublish(command, plans, isScheduled);
-
             draftService.deleteDraft(command.getUserId(), command.getDraftId());
 
             log.info("[CampaignCommandConsumer] done sendHistoryId={}, targets={}, published={}",
-                    command.getSendHistoryId(), targetCount, published);
+                    command.getSendHistoryId(), actualTargetCount, published);
             rabbitChannel.basicAck(deliveryTag, false);
         } catch (Exception e) {
             log.error("[CampaignCommandConsumer] failed sendHistoryId={}, error={}", command.getSendHistoryId(), e.getMessage(), e);

@@ -53,7 +53,6 @@ class CustomerMessageSenderImplTest {
                 .build();
 
         when(channelService.getActiveChannels()).thenReturn(List.of(channel(1L, "SMS")));
-        when(historyMapper.countUnfinishedTargets(10L)).thenReturn(0);
 
         sender.send(task);
 
@@ -68,10 +67,7 @@ class CustomerMessageSenderImplTest {
 
         verify(messageRouterService, never()).send(any());
         verify(historyMapper).updateSendTargetStatus(20L, "SENDING");
-        verify(historyMapper).updateSendTargetStatus(20L, "SUCCEEDED");
-        verify(historyMapper).incrementSuccessCount(10L);
-        verify(historyMapper, never()).incrementActualCostByChannel(any(), any());
-        verify(historyMapper).updateHistoryStatus(10L, "SENT");
+        verify(historyMapper).updateSendTargetSuccess(20L, 1L);
     }
 
     @Test
@@ -90,15 +86,10 @@ class CustomerMessageSenderImplTest {
 
         when(channelService.getActiveChannels()).thenReturn(List.of(channel(1L, "SMS")));
         when(messageRouterService.send(any())).thenReturn(SendResult.success("SMS"));
-        when(historyMapper.findNextAttemptOrder(20L)).thenReturn(1);
-        when(historyMapper.countUnfinishedTargets(10L)).thenReturn(0);
 
         sender.send(task);
 
-        verify(historyMapper).updateSendTargetStatus(20L, "SUCCEEDED");
-        verify(historyMapper).incrementSuccessCount(10L);
-        verify(historyMapper).incrementActualCostByChannel(10L, 1L);
-        verify(historyMapper).updateHistoryStatus(10L, "SENT");
+        verify(historyMapper).updateSendTargetSuccess(20L, 1L);
     }
 
     private ChannelVO channel(Long id, String type) {

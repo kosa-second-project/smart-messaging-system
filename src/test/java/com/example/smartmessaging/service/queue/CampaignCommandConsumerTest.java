@@ -53,6 +53,12 @@ class CampaignCommandConsumerTest {
     @Mock
     private Channel rabbitChannel;
 
+    @Mock
+    private org.apache.ibatis.session.SqlSessionFactory sqlSessionFactory;
+
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private CampaignCommandConsumer consumer;
 
@@ -72,10 +78,29 @@ class CampaignCommandConsumerTest {
 
         when(sendPreparationMapper.selectSendHistoryById(10L))
                 .thenReturn(SendHistoryVO.builder().id(10L).status("SENDING").build());
-        when(draftService.getDraftCustomerIds(20L, "draft-1")).thenReturn(List.of(100L));
+        when(draftService.getTotalCount(20L, "draft-1")).thenReturn(1L);
+        when(draftService.getPagedIds(eq(20L), eq("draft-1"), eq(1), any(Integer.class))).thenReturn(List.of(100L));
         when(channelService.getActiveChannels()).thenReturn(List.of(channel(1L, "SMS")));
         when(sendPreparationMapper.findRecipientCandidatesByCustomerIds(List.of(100L))).thenReturn(List.of(recipient));
         when(recipientChannelResolver.resolve(any(), any(), any())).thenReturn(List.of(plan(recipient)));
+
+        // SqlSessionFactory & SqlSession Mocking for BATCH executor
+        org.apache.ibatis.session.SqlSession sqlSession = org.mockito.Mockito.mock(org.apache.ibatis.session.SqlSession.class);
+        org.apache.ibatis.session.Configuration configuration = org.mockito.Mockito.mock(org.apache.ibatis.session.Configuration.class);
+        org.apache.ibatis.mapping.Environment environment = org.mockito.Mockito.mock(org.apache.ibatis.mapping.Environment.class);
+        when(sqlSessionFactory.openSession(any(org.apache.ibatis.session.ExecutorType.class))).thenReturn(sqlSession);
+        when(sqlSessionFactory.getConfiguration()).thenReturn(configuration);
+        when(configuration.getEnvironment()).thenReturn(environment);
+        when(configuration.getMapper(eq(SendPreparationMapper.class), any())).thenReturn(sendPreparationMapper);
+
+        // findSendTargetsByUserUuids Mocking to prevent IllegalStateException
+        when(sendPreparationMapper.findSendTargetsByUserUuids(any()))
+                .thenAnswer(invocation -> {
+                    List<String> uuids = invocation.getArgument(0);
+                    return uuids.stream()
+                            .map(uuid -> SendTargetVO.builder().id(1000L).userUuid(uuid).build())
+                            .toList();
+                });
 
         consumer.consumeCampaignCommand(command, rabbitChannel, 1L);
 

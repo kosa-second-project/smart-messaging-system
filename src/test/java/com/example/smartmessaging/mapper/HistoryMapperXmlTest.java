@@ -94,8 +94,8 @@ class HistoryMapperXmlTest {
                         "COUNT(CASE WHEN sa.is_succeeded = 0 THEN 1 END)",
                         "GROUP BY sa.attempt_order, sa.channel_id",
                         "ac.attempt_order = ao.attempt_order",
-                        "ac.channel_id = shr.channel_id",
-                        "ORDER BY ao.attempt_order ASC, shr.priority_order ASC")
+                        "ac.channel_id = dc.channel_id",
+                        "ORDER BY ao.attempt_order ASC, dc.sort_order ASC, c.channel_type ASC")
                 .doesNotContain("fail_reason");
     }
 

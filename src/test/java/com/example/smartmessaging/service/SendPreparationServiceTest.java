@@ -90,7 +90,7 @@ class SendPreparationServiceTest {
         request.setLinkUrl("https://example.com/coupon");
         request.setLinkPurpose("PURCHASE");
 
-        when(draftService.getDraftCustomerIds(10L, "draft-1")).thenReturn(List.of(100L, 200L));
+        when(draftService.getTotalCount(10L, "draft-1")).thenReturn(2L);
         when(channelService.getActiveChannels()).thenReturn(List.of(
                 channel(1L, "KAKAO", "53"),
                 channel(2L, "EMAIL", "0.15"),
@@ -170,7 +170,7 @@ class SendPreparationServiceTest {
         request.setPurpose("INFO");
         request.setPriorities(List.of("KAKAO", "EMAIL"));
 
-        when(draftService.getDraftCustomerIds(10L, "draft-1")).thenReturn(List.of(100L, 200L));
+        when(draftService.getTotalCount(10L, "draft-1")).thenReturn(2L);
         when(channelService.getActiveChannels()).thenReturn(List.of(
                 channel(1L, "KAKAO", "53"),
                 channel(2L, "EMAIL", "0.15")
