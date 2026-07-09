@@ -1,11 +1,13 @@
 package com.example.smartmessaging.ai.rag.service;
 
+import com.example.smartmessaging.aop.AiServiceLoggingAspect;
+
 import com.example.smartmessaging.ai.dto.request.AiReviewRequestDTO;
 import com.example.smartmessaging.ai.dto.request.AiSuggestionRequestDTO;
 import com.example.smartmessaging.ai.rag.config.RagProperties;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,19 +15,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RagPromptContextService {
 
     // 프롬프트가 너무 길어지면 Gemini 응답 품질이 흔들릴 수 있어 문서 본문은 짧게 잘라 넣는다.
-    private static final int MAX_CONTENT_LENGTH = 500;
     private static final int MAX_LOG_PREVIEW_LENGTH = 60;
 
     private final RagSearchService ragSearchService;
     private final RagProperties ragProperties;
+    private final Executor aiTaskExecutor;
 
+    public RagPromptContextService(
+            RagSearchService ragSearchService,
+            RagProperties ragProperties,
+            @Qualifier("aiTaskExecutor") Executor aiTaskExecutor
+    ) {
+        this.ragSearchService = ragSearchService;
+        this.ragProperties = ragProperties;
+        this.aiTaskExecutor = aiTaskExecutor;
+    }
     public String buildSuggestionContext(AiSuggestionRequestDTO request) {
         return buildSuggestionPromptContext(request).promptText();
     }
@@ -110,12 +125,39 @@ public class RagPromptContextService {
     }
 
     private RagPromptContext buildContextSafely(String query, String useCase) {
+        CompletableFuture<List<Document>> searchFuture = null;
         try {
-            int topK = ragProperties.getSearch().getTopK();
-            List<Document> documents = ragSearchService.similaritySearch(query, topK);
+            // AI 프롬프트용 RAG는 Swagger 검색과 별도로 더 적은 문서만 사용해 입력 토큰과 검색 비용을 낮춘다.
+            int topK = ragProperties.getSearch().getPromptTopK();
+            long timeoutMs = Math.max(1, ragProperties.getSearch().getTimeoutMs());
+            // Qdrant/embedding 지연이 길어지면 전체 AI 응답을 붙잡지 않고 빈 context로 fallback한다.
+            searchFuture = CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> ragSearchService.similaritySearch(query, topK)), aiTaskExecutor);
+            List<Document> documents = searchFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
             return new RagPromptContext(toPromptContext(documents), toReferenceLogs(documents));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            cancelSearch(searchFuture);
+            log.warn("RAG context unavailable for AI {}. Continuing without RAG context: queryLength={}, exceptionType={}, message={}",
+                    useCase,
+                    query.length(),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage());
+            return RagPromptContext.empty();
+        } catch (TimeoutException | ExecutionException exception) {
+            cancelSearch(searchFuture);
+            Throwable cause = exception instanceof ExecutionException && exception.getCause() != null
+                    ? exception.getCause()
+                    : exception;
+            // AI 추천/검사는 RAG가 없어도 동작해야 하므로 검색 실패를 빈 context로 처리한다.
+            log.warn("RAG context unavailable for AI {}. Continuing without RAG context: queryLength={}, exceptionType={}, message={}",
+                    useCase,
+                    query.length(),
+                    cause.getClass().getSimpleName(),
+                    cause.getMessage());
+            return RagPromptContext.empty();
         } catch (RuntimeException exception) {
-            // AI 추천/검사는 RAG가 없어도 동작해야 하므로 검색 실패를 빈 context로 낮춰 처리한다.
+            cancelSearch(searchFuture);
+            // AI 추천/검사는 RAG가 없어도 동작해야 하므로 검색 실패를 빈 context로 처리한다.
             log.warn("RAG context unavailable for AI {}. Continuing without RAG context: queryLength={}, exceptionType={}, message={}",
                     useCase,
                     query.length(),
@@ -125,6 +167,11 @@ public class RagPromptContextService {
         }
     }
 
+    private void cancelSearch(CompletableFuture<List<Document>> searchFuture) {
+        if (searchFuture != null) {
+            searchFuture.cancel(true);
+        }
+    }
     private RagReferenceLog toReferenceLog(Document document) {
         Map<String, Object> metadata = document.getMetadata();
         return new RagReferenceLog(
@@ -183,10 +230,11 @@ public class RagPromptContextService {
             return "";
         }
         String normalized = value.replaceAll("\\s+", " ").trim();
-        if (normalized.length() <= MAX_CONTENT_LENGTH) {
+        int maxContentLength = Math.max(1, ragProperties.getPrompt().getMaxContentLength());
+        if (normalized.length() <= maxContentLength) {
             return normalized;
         }
-        return normalized.substring(0, MAX_CONTENT_LENGTH) + "...";
+        return normalized.substring(0, maxContentLength) + "...";
     }
 
     private String previewForLog(String value) {
@@ -220,3 +268,4 @@ public class RagPromptContextService {
     ) {
     }
 }
+

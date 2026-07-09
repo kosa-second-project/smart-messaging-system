@@ -104,6 +104,17 @@ public class LlmReviewService {
         RagPromptContext ragContext = ragPromptContextService == null
                 ? RagPromptContext.empty()
                 : ragPromptContextService.buildReviewPromptContext(request);
+        return review(request, existingIssues, ragContext);
+    }
+
+    public ReviewResult review(
+            AiReviewRequestDTO request,
+            List<ValidationIssueResponseDTO> existingIssues,
+            RagPromptContext ragContext
+    ) {
+        if (ragContext == null) {
+            ragContext = RagPromptContext.empty();
+        }
         String userPrompt = serialize(LlmReviewRequestDTO.from(request, existingIssues, ragContext.promptText()));
         LlmReviewResponseDTO response = geminiReviewClient.review(SYSTEM_PROMPT, userPrompt);
         if (response == null) {
@@ -116,9 +127,9 @@ public class LlmReviewService {
         );
         List<ValidationIssueResponseDTO> newIssues = normalizeNewIssues(response.newIssues());
         String suggestedRewrite = textOrNull(response.suggestedRewrite());
-        log.info(
-                "RAG-assisted review completed: refs={}, focus={}, llmNewIssues={}, llmReviewedExistingIssues={}, suggestedRewrite={}",
-                ragContext.references(),
+        log.debug(
+                "RAG-assisted review completed: referenceCount={}, focus={}, llmNewIssues={}, llmReviewedExistingIssues={}, suggestedRewrite={}",
+                ragContext.references().size(),
                 RAG_REVIEW_FOCUS,
                 newIssues.stream().map(ValidationIssueResponseDTO::ruleId).toList(),
                 reviewedIssueSummaries(response.reviewedExistingIssues()),

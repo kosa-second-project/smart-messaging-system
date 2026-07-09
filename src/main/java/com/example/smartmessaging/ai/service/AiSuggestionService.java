@@ -16,6 +16,7 @@ import com.example.smartmessaging.exception.BusinessException;
 import com.example.smartmessaging.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,7 +29,6 @@ import java.util.stream.Collectors;
 @Service
 public class AiSuggestionService {
 
-    private static final int MAX_ATTEMPTS = 3;
     private static final int MAX_RESULTS = 3;
     private static final String CUSTOMER_NAME_VARIABLE = "#{고객명}";
     // AI 추천 문구는 고객별 치환이 보장된 고객명 변수만 사용한다.
@@ -78,6 +78,9 @@ public class AiSuggestionService {
     // 추천 프롬프트에 넣을 Hmall 브랜드톤 참고자료를 만들어 주는 전용 서비스입니다.
     private final RagPromptContextService ragPromptContextService;
 
+    @Value("${ai.performance.suggestion.max-attempts:2}")
+    private int maxAttempts = 2;
+
     @Autowired
     public AiSuggestionService(
             GeminiSuggestionClient geminiSuggestionClient,
@@ -106,13 +109,13 @@ public class AiSuggestionService {
                 : ragPromptContextService.buildSuggestionPromptContext(request);
 
         // 통과 후보가 하나라도 있으면 즉시 반환하고, 0개인 경우에만 최대 두 번 재시도한다.
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 1; attempt <= effectiveMaxAttempts(); attempt++) {
             String prompt = buildPrompt(request, availableVariables, previousFailureRuleIds, ragContext.promptText());
             AiSuggestionResponseDTO generated = geminiSuggestionClient.generate(prompt);
             List<AiSuggestionItemResponseDTO> candidates = generated.suggestions();
 
             ValidationOutcome outcome = validateCandidates(request, availableVariables, candidates);
-            log.info(
+            log.debug(
                     "AI suggestion attempt result: attempt={}, generatedCount={}, excludedCount={}, passedCount={}, failedRuleIds={}",
                     attempt,
                     candidates.size(),
@@ -120,9 +123,9 @@ public class AiSuggestionService {
                     outcome.passedCount(),
                     outcome.failureRuleIds()
             );
-            log.info(
-                    "RAG-assisted suggestion completed: refs={}, focus={}, generatedCount={}, passedCount={}, failedRuleIds={}",
-                    ragContext.references(),
+            log.debug(
+                    "RAG-assisted suggestion completed: referenceCount={}, focus={}, generatedCount={}, passedCount={}, failedRuleIds={}",
+                    ragContext.references().size(),
                     RAG_SUGGESTION_FOCUS,
                     candidates.size(),
                     outcome.passedCount(),
@@ -322,6 +325,10 @@ public class AiSuggestionService {
 
     private BusinessException invalidRequest(String message) {
         return new BusinessException(message, ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    private int effectiveMaxAttempts() {
+        return Math.max(1, maxAttempts);
     }
 
     private record ValidationOutcome(
