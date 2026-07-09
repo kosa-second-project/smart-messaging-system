@@ -28,12 +28,46 @@
             </div>
         </div>
 
-        <form th:action="@{'/p/' + ${code} + '/purchase'}" method="post">
-            <button type="submit" class="purchase-button">구매하러 가기</button>
+        <form id="purchaseForm" th:action="@{'/p/' + ${code} + '/purchase'}" method="post">
+            <button type="button" class="purchase-button" onclick="openPurchaseModal()">구매하러 가기</button>
         </form>
         
         <p class="purchase-footer">본 링크는 수신자 본인만 이용 가능한 일회성 주소입니다.</p>
     </section>
 </main>
+
+<!-- 커스텀 구매 컨펌 모달 -->
+<div id="purchaseConfirmModal" class="custom-modal">
+    <div class="custom-modal__backdrop" onclick="closePurchaseModal()"></div>
+    <div class="custom-modal__panel">
+        <span class="custom-modal__icon">🎁</span>
+        <h3 class="custom-modal__title">구매를 진행하시겠습니까?</h3>
+        <p class="custom-modal__message">
+            확인 버튼을 누르시면 특별 혜택 구매 신청이 완료됩니다.
+        </p>
+        <div class="custom-modal__actions">
+            <button type="button" class="custom-modal__btn custom-modal__btn--cancel" onclick="closePurchaseModal()">취소</button>
+            <button type="button" class="custom-modal__btn custom-modal__btn--confirm" onclick="submitPurchaseForm()">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openPurchaseModal() {
+        document.getElementById('purchaseConfirmModal').classList.add('is-open');
+        document.body.classList.add('modal-open');
+    }
+
+    function closePurchaseModal() {
+        document.getElementById('purchaseConfirmModal').classList.remove('is-open');
+        document.body.classList.remove('modal-open');
+    }
+
+    function submitPurchaseForm() {
+        document.getElementById('purchaseConfirmModal').classList.remove('is-open');
+        document.body.classList.remove('modal-open');
+        document.getElementById('purchaseForm').submit();
+    }
+</script>
 </body>
 </html>
