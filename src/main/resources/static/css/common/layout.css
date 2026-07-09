@@ -168,8 +168,9 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 82%, #000000);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .app-header__left,
@@ -182,7 +183,7 @@
 
 .app-header__title {
   overflow: hidden;
-  color: var(--foreground);
+  color: var(--primary-foreground);
   font-size: 1rem;
   font-weight: var(--font-weight-bold);
   line-height: 1.3;
@@ -194,7 +195,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--foreground);
+  color: var(--primary-foreground);
   font-size: 0.75rem;
   font-weight: var(--font-weight-medium);
 }
@@ -205,8 +206,8 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-pill);
-  background: rgba(24, 67, 250, 0.1);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--primary-foreground);
   font-size: 0.75rem;
   font-weight: var(--font-weight-bold);
 }
@@ -233,11 +234,11 @@
 }
 
 .app-header__profile-link:hover .app-header__profile-image {
-  box-shadow: 0 0 0 3px rgba(24, 67, 250, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.24);
 }
 
 .app-header__profile-link:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--primary-foreground);
 }
 
 .app-header__profile-image {
@@ -252,7 +253,7 @@
 .app-header__profile-name {
   max-width: 8rem;
   overflow: hidden;
-  color: var(--foreground);
+  color: var(--primary-foreground);
   font-size: 0.8125rem;
   font-weight: var(--font-weight-bold);
   line-height: 1.2;
