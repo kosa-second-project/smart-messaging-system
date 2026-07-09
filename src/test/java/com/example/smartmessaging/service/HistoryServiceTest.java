@@ -182,6 +182,6 @@ class HistoryServiceTest {
     }
 
     private HistoryDetailResponseDTO detail(Long id) {
-        return new HistoryDetailResponseDTO(id, null, null, null, null, null, null, null, null, null, null, null);
+        return new HistoryDetailResponseDTO(id, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

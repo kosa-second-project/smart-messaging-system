@@ -51,7 +51,9 @@ class HistoryDetailResponseDTOTest {
                 null,
                 null,
                 null,
-                successRate
+                successRate,
+                null,
+                null
         );
     }
 }

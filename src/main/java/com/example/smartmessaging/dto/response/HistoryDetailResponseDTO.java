@@ -21,6 +21,8 @@ public record HistoryDetailResponseDTO(
         BigDecimal actualCost,
         BigDecimal estimatedSaving,
         BigDecimal successRate,
+        BigDecimal clickRate,
+        BigDecimal conversionRate,
         List<String> channels,
         List<String> tags,
         List<HistoryAttemptFlowResponseDTO> attemptFlows,
@@ -39,7 +41,9 @@ public record HistoryDetailResponseDTO(
             Integer failCount,
             BigDecimal actualCost,
             BigDecimal estimatedSaving,
-            BigDecimal successRate
+            BigDecimal successRate,
+            BigDecimal clickRate,
+            BigDecimal conversionRate
     ) {
         this(
                 sendHistoryId,
@@ -54,6 +58,8 @@ public record HistoryDetailResponseDTO(
                 actualCost,
                 estimatedSaving,
                 successRate,
+                clickRate,
+                conversionRate,
                 List.of(),
                 List.of(),
                 List.of(),
@@ -76,6 +82,8 @@ public record HistoryDetailResponseDTO(
                 actualCost,
                 estimatedSaving,
                 successRate,
+                clickRate,
+                conversionRate,
                 copyOrEmpty(channels),
                 tags,
                 attemptFlows,
@@ -98,6 +106,8 @@ public record HistoryDetailResponseDTO(
                 actualCost,
                 estimatedSaving,
                 successRate,
+                clickRate,
+                conversionRate,
                 channels,
                 copyOrEmpty(tags),
                 attemptFlows,
@@ -120,6 +130,8 @@ public record HistoryDetailResponseDTO(
                 actualCost,
                 estimatedSaving,
                 successRate,
+                clickRate,
+                conversionRate,
                 channels,
                 tags,
                 attemptFlows == null ? List.of() : List.copyOf(attemptFlows),
@@ -142,6 +154,8 @@ public record HistoryDetailResponseDTO(
                 actualCost,
                 estimatedSaving,
                 successRate,
+                clickRate,
+                conversionRate,
                 channels,
                 tags,
                 attemptFlows,
@@ -154,6 +168,18 @@ public record HistoryDetailResponseDTO(
         return successRate == null
                 ? BigDecimal.ZERO.setScale(1)
                 : successRate.setScale(1, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getDisplayClickRate() {
+        return clickRate == null
+                ? BigDecimal.ZERO.setScale(1)
+                : clickRate.setScale(1, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getDisplayConversionRate() {
+        return conversionRate == null
+                ? BigDecimal.ZERO.setScale(1)
+                : conversionRate.setScale(1, RoundingMode.HALF_UP);
     }
 
     public String getPurposeLabel() {

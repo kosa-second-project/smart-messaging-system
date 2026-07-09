@@ -179,6 +179,8 @@ $(function() {
         savingElement.textContent = formatWon(detail.estimatedSaving);
         savingElement.classList.toggle("is-positive", Number(detail.estimatedSaving ?? 0) >= 1);
         setText("historyDetailSuccessRate", `${formatRate(detail.displaySuccessRate)}%`);
+        setText("historyDetailClickRate", `${formatRate(detail.displayClickRate)}%`);
+        setText("historyDetailConversionRate", `${formatRate(detail.displayConversionRate)}%`);
         setText("historyDetailMessage", detail.content || "-");
         renderBadges(detail);
         renderTags(detail.tags || []);
@@ -198,9 +200,9 @@ $(function() {
         if (channels.length === 0) {
             appendBadge(container, "-");
         } else {
-            channels.forEach(channel => appendBadge(container, channel, "ds-badge--primary"));
+            channels.forEach(channel => appendBadge(container, channel, channelClassOf(channel)));
         }
-        appendBadge(container, detail.purposeLabel || "-");
+        appendBadge(container, detail.purposeLabel || "-", purposeClassOf(detail.purpose));
         appendBadge(container, detail.statusLabel || "-", statusClassOf(detail.status));
     }
 
@@ -421,5 +423,27 @@ $(function() {
         };
         return statusClasses[String(status || "").trim().toUpperCase()]
             || "history-status history-status--default";
+    }
+
+    function channelClassOf(channel) {
+        const value = String(channel || "").trim().toUpperCase();
+        if (value.includes("KAKAO") || value.includes("카카오")) {
+            return "ds-badge--channel-kakao";
+        }
+        if (value.includes("EMAIL") || value.includes("이메일")) {
+            return "ds-badge--channel-email";
+        }
+        return "ds-badge--channel-sms";
+    }
+
+    function purposeClassOf(purpose) {
+        const value = String(purpose || "").trim().toUpperCase();
+        if (value === "AD") {
+            return "ds-badge--purpose-ad";
+        }
+        if (value === "INFO") {
+            return "ds-badge--purpose-info";
+        }
+        return "";
     }
 });
