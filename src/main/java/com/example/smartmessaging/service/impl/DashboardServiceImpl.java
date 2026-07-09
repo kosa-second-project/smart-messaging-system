@@ -72,6 +72,7 @@ public class DashboardServiceImpl implements DashboardService {
         long totalSend = n(summary.getTotalSendCount());
         long totalSuccess = n(summary.getTotalSuccessCount());
         long failCount = n(summary.getTotalFailCount());
+        long unprocessedCount = Math.max(totalSend - totalSuccess - failCount, 0);
         BigDecimal billingCost = n(summary.getBillingCost());
         BigDecimal maxCost = n(summary.getMaxCost());
         BigDecimal savingCost = maxCost.subtract(billingCost).max(BigDecimal.ZERO);
@@ -80,8 +81,12 @@ public class DashboardServiceImpl implements DashboardService {
         double todaySuccessRate = totalSend == 0 ? 100.0 : rate(totalSuccess, totalSend);
 
         return List.of(
-                card("오늘 발송 건수", formatNumber(totalSend) + "건", "오늘 기준"),
-                card("성공률 / 실패 건수", formatRate(todaySuccessRate) + "% / " + formatNumber(failCount) + "건", "오늘 기준"),
+                card("발송 건수", formatNumber(totalSend) + "건", "오늘 기준"),
+                card(
+                        "성공률 / 실패 건수",
+                        formatRate(todaySuccessRate) + "% / " + formatNumber(failCount) + "건",
+                        "전체 " + formatNumber(totalSend) + "건 / 성공 " + formatNumber(totalSuccess) + "건 / 실패 " + formatNumber(failCount) + "건 / 미집계 " + formatNumber(unprocessedCount) + "건"
+                ),
                 card("활성 고객 수", formatNumber(activeCustomers), "오늘 기준"),
                 card("청구비용", formatWon(billingCost), "오늘 기준"),
                 card("절감 현황 (오늘 기준)", formatWon(savingCost), "최대 비용 대비")
