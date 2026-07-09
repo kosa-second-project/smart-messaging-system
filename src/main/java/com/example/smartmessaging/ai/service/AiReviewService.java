@@ -10,9 +10,9 @@ import com.example.smartmessaging.ai.dto.type.IssueSource;
 import com.example.smartmessaging.ai.dto.type.ReviewStatus;
 import com.example.smartmessaging.ai.rag.service.RagPromptContextService;
 import com.example.smartmessaging.ai.rag.service.RagPromptContextService.RagPromptContext;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AiReviewService {
 
@@ -33,6 +33,7 @@ public class AiReviewService {
     private final ProfanityValidationService profanityValidationService;
     private final OpenAiModerationValidationService openAiModerationValidationService;
     private final LlmReviewService llmReviewService;
+    private final Executor aiTaskExecutor;
 
     @Autowired(required = false)
     private RagPromptContextService ragPromptContextService;
@@ -40,6 +41,19 @@ public class AiReviewService {
     @Value("${ai.performance.review.parallel-enabled:true}")
     private boolean reviewParallelEnabled = true;
 
+    public AiReviewService(
+            RuleValidationService ruleValidationService,
+            ProfanityValidationService profanityValidationService,
+            OpenAiModerationValidationService openAiModerationValidationService,
+            LlmReviewService llmReviewService,
+            @Qualifier("aiTaskExecutor") Executor aiTaskExecutor
+    ) {
+        this.ruleValidationService = ruleValidationService;
+        this.profanityValidationService = profanityValidationService;
+        this.openAiModerationValidationService = openAiModerationValidationService;
+        this.llmReviewService = llmReviewService;
+        this.aiTaskExecutor = aiTaskExecutor;
+    }
     public AiReviewResponseDTO review(AiReviewRequestDTO request) {
         // 서버 룰은 확정 규칙이라 가장 먼저 실행하고, 이후 LLM/RAG가 이 결과를 제거하지 못하게 유지한다.
         AiReviewResponseDTO ruleResponse = ruleValidationService.review(request);
@@ -50,11 +64,11 @@ public class AiReviewService {
         RagPromptContext ragContext = null;
         if (reviewParallelEnabled) {
             // 서로 의존하지 않는 외부 API와 RAG 검색을 동시에 시작해 직렬 대기 시간을 줄인다.
-            CompletableFuture<List<ValidationIssueResponseDTO>> profanityFuture = CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> profanityValidationService.validate(request.content())));
-            CompletableFuture<List<ValidationIssueResponseDTO>> moderationFuture = CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> openAiModerationValidationService.validate(request.content())));
+            CompletableFuture<List<ValidationIssueResponseDTO>> profanityFuture = CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> profanityValidationService.validate(request.content())), aiTaskExecutor);
+            CompletableFuture<List<ValidationIssueResponseDTO>> moderationFuture = CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> openAiModerationValidationService.validate(request.content())), aiTaskExecutor);
             CompletableFuture<RagPromptContext> ragFuture = ragPromptContextService == null
                     ? null
-                    : CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> ragPromptContextService.buildReviewPromptContext(request)));
+                    : CompletableFuture.supplyAsync(AiServiceLoggingAspect.withCurrentTimingContext(() -> ragPromptContextService.buildReviewPromptContext(request)), aiTaskExecutor);
 
             issues.addAll(withMetadata(
                     joinOrDefault(profanityFuture, List.of(), "profanity"),
@@ -168,3 +182,4 @@ public class AiReviewService {
         };
     }
 }
+

@@ -89,6 +89,10 @@ ai:
       parallel-enabled: true
     suggestion:
       max-attempts: 2
+    executor:
+      core-pool-size: 4
+      max-pool-size: 8
+      queue-capacity: 20
 
 app:
   base-url: http://localhost:8080
@@ -123,4 +127,5 @@ rag:
 security:
   crypto:
     secret-key: ${TOKEN_CRYPTO_SECRET:smart-messaging-local-token-secret}
+
 
