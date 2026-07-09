@@ -112,7 +112,7 @@ class AiSuggestionServiceTest {
                 .withMessage("조건을 만족하는 추천 문구를 생성하지 못했습니다.")
                 .satisfies(exception -> assertThat(exception.getErrorCode())
                         .isEqualTo(ErrorCode.AI_SUGGESTION_NO_VALID_CANDIDATE));
-        verify(geminiSuggestionClient, times(3)).generate(anyString());
+        verify(geminiSuggestionClient, times(2)).generate(anyString());
     }
 
     @Test
