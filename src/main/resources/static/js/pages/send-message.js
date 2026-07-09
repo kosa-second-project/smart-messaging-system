@@ -343,6 +343,7 @@ const MessageComposer = {
                     const content = item.content || "";
                     const categoryLabel = item.categoryDisplayName || "일반";
                     const purposeStr = item.purpose === "AD" ? "광고성" : "정보성";
+                    const purposeClass = item.purpose === "AD" ? "tag-badge--purpose-ad" : "tag-badge--purpose-info";
 
                     let channelHtml = "";
                     if (item.channels && item.channels.length > 0) {
@@ -364,7 +365,7 @@ const MessageComposer = {
                             </div>
                             <div class="card-tags">
                                 <span class="tag-badge">${escapeHtml(categoryLabel)}</span>
-                                <span class="tag-badge">${purposeStr}</span>
+                                <span class="tag-badge ${purposeClass}">${purposeStr}</span>
                             </div>
                         </div>
                     `;
@@ -798,12 +799,12 @@ const MessageComposer = {
         const $badge = $("#msgTypeBadge");
         if (limitInfo.type === "LMS") {
             $badge.text(limitInfo.isOverLimit ? "초과" : "LMS")
-                .removeClass("ds-badge--primary")
+                .removeClass("ds-badge--primary ds-badge--channel-sms")
                 .addClass("ds-badge--secondary msg-type-badge--lms");
         } else {
             $badge.text("SMS")
                 .removeClass("ds-badge--secondary msg-type-badge--lms")
-                .addClass("ds-badge--primary");
+                .addClass("ds-badge--channel-sms");
         }
     },
 

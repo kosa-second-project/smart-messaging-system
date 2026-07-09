@@ -247,9 +247,31 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  padding: 0.125rem 0.5rem 0.125rem 0.25rem;
+  border: 1px solid var(--channel-badge-border, var(--primary));
+  border-radius: var(--radius-pill);
+  background: var(--channel-badge-bg, var(--primary));
   font-size: 0.875rem;
   font-weight: var(--font-weight-bold);
-  color: var(--foreground);
+  color: var(--channel-badge-fg, var(--primary-foreground));
+}
+
+.channel-badge-item--sms {
+  --channel-badge-border: #7dd3fc;
+  --channel-badge-bg: #e0f2fe;
+  --channel-badge-fg: #0369a1;
+}
+
+.channel-badge-item--kakao {
+  --channel-badge-border: #facc15;
+  --channel-badge-bg: #fee500;
+  --channel-badge-fg: #3a1d1d;
+}
+
+.channel-badge-item--email {
+  --channel-badge-border: #fdba74;
+  --channel-badge-bg: #ffedd5;
+  --channel-badge-fg: #c2410c;
 }
 
 .channel-number-circle {
@@ -258,8 +280,8 @@
   width: 1.125rem;
   height: 1.125rem;
   border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: color-mix(in srgb, var(--channel-badge-fg, var(--primary)) 90%, #000000);
+  color: #ffffff;
   font-size: 0.6875rem;
   font-weight: var(--font-weight-bold);
 }

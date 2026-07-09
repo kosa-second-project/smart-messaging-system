@@ -486,9 +486,9 @@ function renderTags(tags) {
 function renderTypeBadge(type) {
     const value = type || "-";
     let className = "ds-badge";
-    if (value === "신규") className += " ds-badge--success";
-    else if (value === "휴면") className += " ds-badge--violet";
-    else if (value === "일반") className += " ds-badge--primary";
+    if (value === "신규") className += " ds-badge--customer-new";
+    else if (value === "휴면") className += " ds-badge--customer-dormant";
+    else if (value === "일반") className += " ds-badge--customer-regular";
     return `<span class="${className}">${escapeHtml(value)}</span>`;
 }
 

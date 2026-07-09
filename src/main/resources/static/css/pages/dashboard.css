@@ -271,8 +271,8 @@
 }
 
 .dashboard-status-badge--green {
-  background: #ecfdf5;
-  color: #047857;
+  background: #16a34a;
+  color: #ffffff;
 }
 
 .dashboard-status-badge--amber {
@@ -281,8 +281,8 @@
 }
 
 .dashboard-status-badge--red {
-  background: #fef2f2;
-  color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
 }
 
 .dashboard-source-badge {

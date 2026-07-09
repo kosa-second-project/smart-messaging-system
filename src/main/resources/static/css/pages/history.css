@@ -353,15 +353,15 @@
 }
 
 .history-status--completed {
-  border-color: #cce8dc;
-  background: #f0faf5;
-  color: #39755c;
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #ffffff;
 }
 
 .history-status--failed {
-  border-color: #f2cccc;
-  background: #fdf2f2;
-  color: #a44b4b;
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
 }
 
 .history-status--default {

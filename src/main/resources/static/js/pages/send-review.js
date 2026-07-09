@@ -141,10 +141,11 @@ const MessageReviewer = {
 
         channelsToRender.forEach((channel, index) => {
             const normalized = this.normalizeChannelType(channel.originalType || channel.channelType);
+            const badgeClass = this.getChannelBadgeClass(normalized);
             const count = distribution[normalized];
             const countText = Number.isFinite(count) ? ` ${count.toLocaleString()}명` : "";
             $channelList.append(`
-                <div class="channel-badge-item" style="margin-right: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                <div class="channel-badge-item ${badgeClass}" style="margin-right: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
                     <span class="channel-number-circle">${index + 1}</span> ${this.getChannelLabel(normalized)}${countText}
                 </div>
             `);
@@ -404,6 +405,13 @@ const MessageReviewer = {
         if (normalized === "SMS") return "SMS";
         if (normalized === "UNASSIGNED") return "발송불가";
         return normalized;
+    },
+
+    getChannelBadgeClass: function (channelType) {
+        const normalized = this.normalizeChannelType(channelType);
+        if (normalized === "KAKAO") return "channel-badge-item--kakao";
+        if (normalized === "EMAIL") return "channel-badge-item--email";
+        return "channel-badge-item--sms";
     },
 
     calculateBaselineCost: function (validCount) {
