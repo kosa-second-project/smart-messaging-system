@@ -71,6 +71,8 @@ class HistoryControllerTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 null
         ).withChannels(List.of("SMS")).withTags(List.of("배송 완료자"));
         when(historyService.getHistoryDetail(11L)).thenReturn(detail);

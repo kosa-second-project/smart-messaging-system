@@ -32,6 +32,8 @@
             <arg column="actual_cost" javaType="java.math.BigDecimal"/>
             <arg column="estimated_saving" javaType="java.math.BigDecimal"/>
             <arg column="success_rate" javaType="java.math.BigDecimal"/>
+            <arg column="click_rate" javaType="java.math.BigDecimal"/>
+            <arg column="conversion_rate" javaType="java.math.BigDecimal"/>
         </constructor>
     </resultMap>
 
@@ -247,7 +249,33 @@
                 WHERE st.send_history_id = sh.id
                   AND NVL(st.is_deleted, 0) = 0
             ) ELSE NVL(sh.estimated_saving, 0) END AS estimated_saving,
-            <include refid="successRateExpression"/> AS success_rate
+            <include refid="successRateExpression"/> AS success_rate,
+            (
+                SELECT CASE
+                    WHEN COUNT(su.id) = 0 THEN 0
+                    ELSE (SUM(CASE WHEN NVL(su.is_clicked, 0) = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(su.id)
+                END
+                FROM short_url su
+                JOIN send_target st
+                  ON st.id = su.send_target_id
+                 AND NVL(st.is_deleted, 0) = 0
+                WHERE st.send_history_id = sh.id
+                  AND su.purpose IN ('CLICK', 'PURCHASE')
+                  AND NVL(su.is_deleted, 0) = 0
+            ) AS click_rate,
+            (
+                SELECT CASE
+                    WHEN COUNT(su.id) = 0 THEN 0
+                    ELSE (SUM(CASE WHEN NVL(su.is_converted, 0) = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(su.id)
+                END
+                FROM short_url su
+                JOIN send_target st
+                  ON st.id = su.send_target_id
+                 AND NVL(st.is_deleted, 0) = 0
+                WHERE st.send_history_id = sh.id
+                  AND su.purpose = 'PURCHASE'
+                  AND NVL(su.is_deleted, 0) = 0
+            ) AS conversion_rate
         FROM send_history sh
         WHERE sh.id = #{sendHistoryId}
           AND NVL(sh.is_deleted, 0) = 0

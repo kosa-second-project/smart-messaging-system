@@ -131,11 +131,16 @@
                     <td class="history-table__title" th:text="${history.title ?: '-'}">-</td>
                     <td>
                         <div class="history-badges" th:if="${!history.channels.isEmpty()}">
-                            <span class="ds-badge ds-badge--primary" th:each="channel : ${history.channels}" th:text="${channel}">채널</span>
+                            <span class="ds-badge"
+                                  th:each="channel : ${history.channels}"
+                                  th:classappend="${#strings.contains(#strings.toUpperCase(channel), 'KAKAO') ? ' ds-badge--channel-kakao' : (#strings.contains(#strings.toUpperCase(channel), 'EMAIL') ? ' ds-badge--channel-email' : ' ds-badge--channel-sms')}"
+                                  th:text="${channel}">채널</span>
                         </div>
                         <span th:if="${history.channels.isEmpty()}">-</span>
                     </td>
-                    <td><span class="ds-badge" th:text="${history.purposeLabel}">-</span></td>
+                    <td><span class="ds-badge"
+                              th:classappend="${#strings.equalsIgnoreCase(history.purpose, 'AD') ? ' ds-badge--purpose-ad' : (#strings.equalsIgnoreCase(history.purpose, 'INFO') ? ' ds-badge--purpose-info' : '')}"
+                              th:text="${history.purposeLabel}">-</span></td>
                     <td>
                         <div class="history-badges" th:if="${!history.tags.isEmpty()}">
                             <span class="ds-badge history-tag-badge" th:each="tag : ${history.displayTags}" th:text="${tag}">태그</span>
@@ -252,6 +257,12 @@
                         </article>
                         <article class="history-summary-card">
                             <span>최종도달률</span><strong id="historyDetailSuccessRate">0.0%</strong>
+                        </article>
+                        <article class="history-summary-card">
+                            <span>클릭률</span><strong id="historyDetailClickRate">0.0%</strong>
+                        </article>
+                        <article class="history-summary-card">
+                            <span>전환률</span><strong id="historyDetailConversionRate">0.0%</strong>
                         </article>
                     </section>
 

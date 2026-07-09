@@ -112,8 +112,8 @@
 }
 
 .preview-ad-badge {
-    background-color: #e8f0fe;
-    color: #1a73e8;
+    background-color: #1d4ed8;
+    color: #ffffff;
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 0.75rem;
@@ -337,8 +337,8 @@
 }
 
 .preview-ad-badge--info {
-    background-color: #fff8e6;
-    color: #8a5a00;
+    background-color: #0284c7;
+    color: #ffffff;
 }
 
 .message-header-actions {
@@ -760,8 +760,13 @@
 }
 
 .card-channel.sms {
-    background-color: #E9E9EB;
-    color: #333;
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.card-channel.email {
+    background-color: #ffedd5;
+    color: #c2410c;
 }
 
 .template-card .card-body {
@@ -818,6 +823,14 @@
 .tag-btn:nth-child(4n),
 .template-card .tag-badge:nth-child(4n) {
     --tag-bg: #0369A1;
+}
+
+.template-card .tag-badge--purpose-ad {
+    --tag-bg: #1d4ed8;
+}
+
+.template-card .tag-badge--purpose-info {
+    --tag-bg: #0284c7;
 }
 
 .template-search-footer {

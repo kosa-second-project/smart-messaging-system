@@ -19,6 +19,54 @@
   color: var(--primary-foreground);
 }
 
+.ds-badge--channel-sms {
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.ds-badge--channel-kakao {
+  border-color: #facc15;
+  background: #fee500;
+  color: #3a1d1d;
+}
+
+.ds-badge--channel-email {
+  border-color: #fdba74;
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.ds-badge--purpose-ad {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.ds-badge--purpose-info {
+  border-color: #0284c7;
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.ds-badge--customer-regular {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.ds-badge--customer-new {
+  border-color: #059669;
+  background: #059669;
+  color: #ffffff;
+}
+
+.ds-badge--customer-dormant {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
 .ds-badge--success {
   background: rgba(16, 185, 129, 0.12);
   color: #047857;

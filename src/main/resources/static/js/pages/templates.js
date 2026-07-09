@@ -429,21 +429,59 @@ function renderChannelChips(channels) {
         return renderBadge("미지정", "default");
     }
 
-    return `<div class="template-channel-list">${channels.map(channel => renderBadge(channel.channelType, "blue")).join("")}</div>`;
+    const displayTypes = getDisplayChannelTypes(channels);
+    return `<div class="template-channel-list">${displayTypes.map(renderChannelBadge).join("")}</div>`;
+}
+
+function getDisplayChannelTypes(channels) {
+    const displayTypes = [];
+    let hasTextChannel = false;
+
+    channels.forEach(channel => {
+        const normalized = normalizeChannelType(channel.channelType);
+        if (normalized === "SMS" || normalized === "LMS") {
+            if (!hasTextChannel) {
+                displayTypes.push("TEXT");
+                hasTextChannel = true;
+            }
+            return;
+        }
+        if (!displayTypes.includes(normalized)) {
+            displayTypes.push(normalized);
+        }
+    });
+
+    return displayTypes;
 }
 
 function renderPurposeBadge(purpose) {
     const normalized = normalizePurpose(purpose);
     if (normalized === "AD") {
-        return renderBadge("광고", "amber");
+        return renderBadge("광고성", "purpose-ad");
     }
-    return renderBadge("정보성", "green");
+    return renderBadge("정보성", "purpose-info");
+}
+
+function renderChannelBadge(channelType) {
+    const normalized = normalizeChannelType(channelType);
+    if (normalized === "KAKAO") {
+        return renderBadge(getChannelLabel(normalized), "channel-kakao");
+    }
+    if (normalized === "EMAIL") {
+        return renderBadge(getChannelLabel(normalized), "channel-email");
+    }
+    return renderBadge(getChannelLabel(normalized), "channel-sms");
 }
 
 function renderBadge(text, variant) {
     const className = variant === "blue" ? "ds-badge ds-badge--primary"
         : variant === "green" ? "ds-badge ds-badge--success"
         : variant === "amber" ? "ds-badge ds-badge--warning"
+        : variant === "channel-sms" ? "ds-badge ds-badge--channel-sms"
+        : variant === "channel-kakao" ? "ds-badge ds-badge--channel-kakao"
+        : variant === "channel-email" ? "ds-badge ds-badge--channel-email"
+        : variant === "purpose-ad" ? "ds-badge ds-badge--purpose-ad"
+        : variant === "purpose-info" ? "ds-badge ds-badge--purpose-info"
         : "ds-badge";
     return `<span class="${className}">${escapeHtml(text)}</span>`;
 }
@@ -1265,6 +1303,24 @@ function normalizePurpose(purpose) {
 
 function getPurposeLabel(purpose) {
     return normalizePurpose(purpose) === "AD" ? "광고성" : "정보성";
+}
+
+function normalizeChannelType(channelType) {
+    const value = String(channelType || "").trim().toUpperCase();
+    if (value === "TEXT" || value.includes("문자")) return "TEXT";
+    if (value.includes("KAKAO") || value.includes("카카오")) return "KAKAO";
+    if (value.includes("EMAIL") || value.includes("이메일")) return "EMAIL";
+    if (value.includes("LMS")) return "LMS";
+    return "SMS";
+}
+
+function getChannelLabel(channelType) {
+    const normalized = normalizeChannelType(channelType);
+    if (normalized === "TEXT") return "문자";
+    if (normalized === "KAKAO") return "카카오";
+    if (normalized === "EMAIL") return "이메일";
+    if (normalized === "LMS") return "LMS";
+    return "SMS";
 }
 
 function flattenText(text) {
