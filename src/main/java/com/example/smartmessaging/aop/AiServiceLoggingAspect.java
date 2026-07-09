@@ -7,6 +7,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 @Aspect
 @Component
@@ -14,13 +15,36 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AiServiceLoggingAspect {
 
     private static final AtomicLong REQUEST_SEQUENCE = new AtomicLong();
+    private static final AtomicLong ACTIVE_REQUEST_ID = new AtomicLong();
     private static final ThreadLocal<Long> CURRENT_REQUEST_ID = new ThreadLocal<>();
     private static final ThreadLocal<String> CURRENT_REQUEST_TYPE = new ThreadLocal<>();
-    private static final ThreadLocal<Long> EXTERNAL_CALL_NANOS = ThreadLocal.withInitial(() -> 0L);
+    private static final ThreadLocal<Long> EXTERNAL_AI_CALL_NANOS = ThreadLocal.withInitial(() -> 0L);
     private static final ThreadLocal<Integer> CALL_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<RuleCheckSummary> SUGGESTION_RULE_CHECK_SUMMARY =
             ThreadLocal.withInitial(RuleCheckSummary::new);
 
+    public static <T> Supplier<T> withCurrentTimingContext(Supplier<T> delegate) {
+        TimingContext context = new TimingContext(
+                CURRENT_REQUEST_ID.get(),
+                CURRENT_REQUEST_TYPE.get(),
+                CALL_DEPTH.get()
+        );
+        return () -> {
+            if (context.requestId() == null) {
+                return delegate.get();
+            }
+            CURRENT_REQUEST_ID.set(context.requestId());
+            CURRENT_REQUEST_TYPE.set(context.requestType());
+            CALL_DEPTH.set(context.callDepth());
+            try {
+                return delegate.get();
+            } finally {
+                CURRENT_REQUEST_ID.remove();
+                CURRENT_REQUEST_TYPE.remove();
+                CALL_DEPTH.remove();
+            }
+        };
+    }
     @Around("""
             within(com.example.smartmessaging.ai.service..*)
             || within(com.example.smartmessaging.ai.rag.service..*)
@@ -37,6 +61,7 @@ public class AiServiceLoggingAspect {
         if (rootRequest && CURRENT_REQUEST_ID.get() == null) {
             long requestId = REQUEST_SEQUENCE.incrementAndGet();
             CURRENT_REQUEST_ID.set(requestId);
+            ACTIVE_REQUEST_ID.set(requestId);
             CURRENT_REQUEST_TYPE.set(requestType(className));
             CALL_DEPTH.set(0);
             startedRequest = true;
@@ -63,9 +88,10 @@ public class AiServiceLoggingAspect {
                         requestType(className),
                         requestId);
                 log.info("");
+                ACTIVE_REQUEST_ID.compareAndSet(requestId, 0L);
                 CURRENT_REQUEST_ID.remove();
                 CURRENT_REQUEST_TYPE.remove();
-                EXTERNAL_CALL_NANOS.remove();
+                EXTERNAL_AI_CALL_NANOS.remove();
                 CALL_DEPTH.remove();
                 SUGGESTION_RULE_CHECK_SUMMARY.remove();
             }
@@ -127,7 +153,11 @@ public class AiServiceLoggingAspect {
 
     private Long currentRequestId() {
         Long requestId = CURRENT_REQUEST_ID.get();
-        return requestId == null ? 0L : requestId;
+        if (requestId != null) {
+            return requestId;
+        }
+        long activeRequestId = ACTIVE_REQUEST_ID.get();
+        return activeRequestId == 0L ? 0L : activeRequestId;
     }
 
     private String elapsed(long start) {
@@ -136,15 +166,15 @@ public class AiServiceLoggingAspect {
 
     private void logSummary(String displayName, long start) {
         long totalNanos = System.nanoTime() - start;
-        long serverNanos = Math.max(0, totalNanos - EXTERNAL_CALL_NANOS.get());
+        long withoutExternalAiNanos = Math.max(0, totalNanos - EXTERNAL_AI_CALL_NANOS.get());
 
         log.info("==================== AI {} 시간 측정 요약 #{} ====================",
                 CURRENT_REQUEST_TYPE.get(),
                 currentRequestId());
-        log.info("[AI Timing #{}] [서버] AI {} 서버 처리 합계 completed in {}",
+        log.info("[AI Timing #{}] [외부 AI 제외] AI {} 처리 시간 completed in {}",
                 currentRequestId(),
                 CURRENT_REQUEST_TYPE.get(),
-                formatNanos(serverNanos));
+                formatNanos(withoutExternalAiNanos));
         log.info("[AI Timing #{}] [전체] {} completed in {}",
                 currentRequestId(),
                 stepLabel(displayName),
@@ -160,8 +190,8 @@ public class AiServiceLoggingAspect {
         if (isSuggestionCandidateRuleCheck(displayName)) {
             SUGGESTION_RULE_CHECK_SUMMARY.get().add(System.nanoTime() - start);
         }
-        if (isExternalCall(displayName)) {
-            EXTERNAL_CALL_NANOS.set(EXTERNAL_CALL_NANOS.get() + (System.nanoTime() - start));
+        if (isExternalAiCall(displayName)) {
+            EXTERNAL_AI_CALL_NANOS.set(EXTERNAL_AI_CALL_NANOS.get() + (System.nanoTime() - start));
         }
     }
 
@@ -185,11 +215,9 @@ public class AiServiceLoggingAspect {
         return "%.1fms".formatted(nanos / 1_000_000.0);
     }
 
-    private boolean isExternalCall(String displayName) {
+    private boolean isExternalAiCall(String displayName) {
         return "GeminiSuggestionClient.generate()".equals(displayName)
-                || "GeminiReviewClient.review()".equals(displayName)
-                || "ProfanityFilterClient.filter()".equals(displayName)
-                || "OpenAiModerationClient.moderate()".equals(displayName);
+                || "GeminiReviewClient.review()".equals(displayName);
     }
 
     private String stepLabel(String displayName) {
@@ -210,6 +238,13 @@ public class AiServiceLoggingAspect {
             case "RagSearchService.search()" -> "[서버] RAG 검색 API";
             default -> displayName;
         };
+    }
+
+    private record TimingContext(
+            Long requestId,
+            String requestType,
+            Integer callDepth
+    ) {
     }
 
     private static class RuleCheckSummary {
