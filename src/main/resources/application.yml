@@ -83,6 +83,13 @@ openai:
     model: omni-moderation-latest
     enabled: true
 
+ai:
+  performance:
+    review:
+      parallel-enabled: true
+    suggestion:
+      max-attempts: 2
+
 app:
   base-url: http://localhost:8080
   short-url-base-url: https://kosa.kr
@@ -108,6 +115,10 @@ rag:
     auto-ingest: false
   search:
     top-k: 5
+    prompt-top-k: 3
+    timeout-ms: 1500
+  prompt:
+    max-content-length: 300
 
 security:
   crypto:
