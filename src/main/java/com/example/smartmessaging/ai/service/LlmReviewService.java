@@ -93,6 +93,17 @@ public class LlmReviewService {
         RagPromptContext ragContext = ragPromptContextService == null
                 ? RagPromptContext.empty()
                 : ragPromptContextService.buildReviewPromptContext(request);
+        return review(request, existingIssues, ragContext);
+    }
+
+    public ReviewResult review(
+            AiReviewRequestDTO request,
+            List<ValidationIssueResponseDTO> existingIssues,
+            RagPromptContext ragContext
+    ) {
+        if (ragContext == null) {
+            ragContext = RagPromptContext.empty();
+        }
         String userPrompt = serialize(LlmReviewRequestDTO.from(request, existingIssues, ragContext.promptText()));
         LlmReviewResponseDTO response = geminiReviewClient.review(SYSTEM_PROMPT, userPrompt);
         if (response == null) {
