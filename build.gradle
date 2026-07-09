@@ -63,6 +63,7 @@ dependencies {
     
     // Redis (RedisConfig 및 CampaignDraftService 컴파일용 필수 의존성 추가)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
 
     // RabbitMQ (메시지 대기열 큐 연동 필수 의존성 추가)
     implementation 'org.springframework.boot:spring-boot-starter-amqp'

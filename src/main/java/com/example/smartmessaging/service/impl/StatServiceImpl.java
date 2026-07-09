@@ -226,9 +226,7 @@ public class StatServiceImpl implements StatService {
     }
 
     private StatChartResponse buildFallbackSuccessChart(DegreeStatsSummary summary, Map<Long, String> channelNames) {
-        List<Integer> fallbackDegrees = summary.degrees().stream()
-                .filter(degree -> degree != null && degree > 1)
-                .toList();
+        List<Integer> fallbackDegrees = List.of(1, 2, 3);
 
         return StatChartResponse.builder()
                 .chartId("fallbackSuccess")

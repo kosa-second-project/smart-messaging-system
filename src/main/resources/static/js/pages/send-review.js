@@ -9,7 +9,46 @@ const MessageReviewer = {
         scheduleMode: "IMMEDIATE",
         selectedDate: "",
         selectedTime: "",
-        routingChannels: []
+        routingChannels: [],
+        sendSuccess: false,
+        pendingPayload: null
+    },
+
+    openConfirmModal: function (message) {
+        $("#sendConfirmMessage").text(message);
+        $("#sendConfirmModal").addClass("is-open");
+    },
+
+    closeConfirmModal: function () {
+        $("#sendConfirmModal").removeClass("is-open");
+        this.state.pendingPayload = null;
+    },
+
+    closeConfirmOnBackdrop: function (event) {
+        if (event.target.id === "sendConfirmModal" || event.target.classList.contains("ds-modal__backdrop")) {
+            this.closeConfirmModal();
+        }
+    },
+
+    showSendResult: function (title, message, isSuccess) {
+        this.state.sendSuccess = isSuccess;
+        $("#sendResultTitle").text(title);
+        $("#sendResultMessage").text(message);
+        $("#sendResultIcon").text(isSuccess ? "✅" : "❌");
+        $("#sendResultModal").addClass("is-open");
+    },
+
+    closeResultModal: function () {
+        $("#sendResultModal").removeClass("is-open");
+        if (this.state.sendSuccess) {
+            this.clearSessionAndDraft();
+        }
+    },
+
+    closeResultOnBackdrop: function (event) {
+        if (event.target.id === "sendResultModal" || event.target.classList.contains("ds-modal__backdrop")) {
+            this.closeResultModal();
+        }
     },
 
     init: function () {
@@ -218,13 +257,13 @@ const MessageReviewer = {
         this.state.title = (this.state.title || sessionStorage.getItem("messageTitle") || "").trim();
         this.state.content = (this.state.content || sessionStorage.getItem("messageContent") || "").trim();
         if (!this.state.title) {
-            alert("\uBA54\uC2DC\uC9C0 \uC81C\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA54\uC2DC\uC9C0 \uC791\uC131 \uB2E8\uACC4\uC5D0\uC11C \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
-            window.location.href = "/send/message";
+            alert("\uBA54\uC2DC\uC9C0 \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+            window.location.href = "/dashboard";
             return;
         }
         if (!this.state.content) {
-            alert("\uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA54\uC2DC\uC9C0 \uC791\uC131 \uB2E8\uACC4\uC5D0\uC11C \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
-            window.location.href = "/send/message";
+            alert("\uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+            window.location.href = "/dashboard";
             return;
         }
 
@@ -245,19 +284,12 @@ const MessageReviewer = {
             scheduledAtStr = `${dateVal}T${timeVal}:00`;
         }
 
-        if (!confirm(`\uCD1D ${this.state.totalCount.toLocaleString()}\uBA85\uC5D0\uAC8C \uBA54\uC2DC\uC9C0 \uBC1C\uC1A1\uC744 \uC694\uCCAD\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`)) {
-            return;
-        }
-
-        const $nextBtn = $("#btnNextStep");
-        $nextBtn.prop("disabled", true).text("\uCC98\uB9AC \uC911...");
-
         const savedLinkUrl = (sessionStorage.getItem("linkUrl") || "").trim();
         const originalUrl = savedLinkUrl || null;
         const savedButtonName = (sessionStorage.getItem("linkButtonName") || "").trim();
         const savedLinkPurpose = sessionStorage.getItem("linkPurpose") || "CLICK";
 
-        const payload = {
+        this.state.pendingPayload = {
             draftId: this.state.draftId,
             templateId: null,
             title: this.state.title,
@@ -270,6 +302,19 @@ const MessageReviewer = {
             scheduledAt: scheduledAtStr
         };
 
+        const confirmMsg = `총 ${this.state.totalCount.toLocaleString()}명에게 메시지 발송을 요청하시겠습니까?`;
+        this.openConfirmModal(confirmMsg);
+    },
+
+    executeFinalSend: function () {
+        const payload = this.state.pendingPayload;
+        if (!payload) return;
+
+        $("#sendConfirmModal").removeClass("is-open");
+
+        const $nextBtn = $("#btnNextStep");
+        $nextBtn.prop("disabled", true).text("\uCC98\uB9AC \uC911...");
+
         const self = this;
         $.ajax({
             url: "/api/send-requests",
@@ -277,12 +322,19 @@ const MessageReviewer = {
             contentType: "application/json",
             data: JSON.stringify(payload),
             success: function () {
-                alert("\uBC1C\uC1A1 \uC694\uCCAD\uC774 \uC811\uC218\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uBC1C\uC1A1 \uD604\uD669\uC740 \uB300\uC2DC\uBCF4\uB4DC \uBC0F \uD1B5\uACC4 \uBA54\uB274\uC5D0\uC11C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
-                self.clearSessionAndDraft();
+                self.showSendResult(
+                    "발송 요청 완료",
+                    "발송 요청이 성공적으로 접수되었습니다.\n발송 현황은 대시보드 및 통신 이력 메뉴에서 확인하실 수 있습니다.",
+                    true
+                );
             },
             error: function (err) {
                 const msg = err.responseJSON ? err.responseJSON.message : "발송 중 오류가 발생했습니다.";
-                alert("\uBC1C\uC1A1 \uC2E4\uD328: " + msg);
+                self.showSendResult(
+                    "발송 실패",
+                    "발송 요청 생성에 실패했습니다.\n사유: " + msg,
+                    false
+                );
                 $nextBtn.prop("disabled", false).html("발송 요청");
             }
         });
@@ -308,7 +360,7 @@ const MessageReviewer = {
             "routingChannels"
         ].forEach(key => sessionStorage.removeItem(key));
 
-        window.location.href = "/send";
+        window.location.href = "/dashboard";
     },
 
     getPriorityNames: function () {

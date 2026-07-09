@@ -92,6 +92,41 @@
             </div>
             
         </div>
+
+        <!-- 발송 확인 팝업 모달 (Confirm) -->
+        <div id="sendConfirmModal" class="ds-modal" onclick="MessageReviewer.closeConfirmOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel" style="max-width: 400px;">
+                <div class="ds-modal__header">
+                    <h3 class="ds-modal__title">발송 요청 확인</h3>
+                    <button type="button" class="ds-icon-button" onclick="MessageReviewer.closeConfirmModal()" aria-label="닫기">×</button>
+                </div>
+                <div class="ds-modal__body" style="padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✉️</div>
+                    <p id="sendConfirmMessage" style="font-size: 1rem; line-height: 1.5; color: var(--foreground); margin-bottom: 1.5rem; white-space: pre-wrap;"></p>
+                    <div style="display: flex; gap: 0.75rem; width: 100%;">
+                        <button type="button" class="ds-button ds-button--outline" style="flex: 1;" onclick="MessageReviewer.closeConfirmModal()">취소</button>
+                        <button type="button" id="btnSendConfirmSubmit" class="ds-button ds-button--primary" style="flex: 1;" onclick="MessageReviewer.executeFinalSend()">확인</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 발송 결과 팝업 모달 -->
+        <div id="sendResultModal" class="ds-modal" onclick="MessageReviewer.closeResultOnBackdrop(event)">
+            <div class="ds-modal__backdrop"></div>
+            <div class="ds-modal__panel" style="max-width: 400px;">
+                <div class="ds-modal__header">
+                    <h3 id="sendResultTitle" class="ds-modal__title">발송 결과</h3>
+                    <button type="button" class="ds-icon-button" onclick="MessageReviewer.closeResultModal()" aria-label="닫기">×</button>
+                </div>
+                <div class="ds-modal__body" style="padding: 1.5rem; text-align: center;">
+                    <div id="sendResultIcon" style="font-size: 3rem; margin-bottom: 1rem;"></div>
+                    <p id="sendResultMessage" style="font-size: 0.95rem; line-height: 1.5; color: var(--foreground); margin-bottom: 1.5rem; white-space: pre-wrap;"></p>
+                    <button type="button" class="ds-button ds-button--primary" style="width: 100%;" onclick="MessageReviewer.closeResultModal()">확인</button>
+                </div>
+            </div>
+        </div>
         
         <!-- 3단계 전용 JS 로드 -->
         <script th:src="@{/js/pages/send-review.js(v=${#dates.createNow().getTime()})}"></script>

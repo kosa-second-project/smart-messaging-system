@@ -74,10 +74,10 @@ class StatServiceImplTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(fallbackChart.getLabels()).containsExactly("2차");
+        assertThat(fallbackChart.getLabels()).containsExactly("1차", "2차", "3차");
         assertThat(fallbackChart.getDatasets()).hasSize(1);
         assertThat(fallbackChart.getDatasets().get(0).getLabel()).isEqualTo("SMS");
-        assertThat(fallbackChart.getDatasets().get(0).getData()).containsExactly(80.0);
+        assertThat(fallbackChart.getDatasets().get(0).getData()).containsExactly(100.0, 80.0, 0.0);
     }
 
     private MessageStatByDegreeVO degreeStat(int degree, Long channelId, int sendCount, int successCount) {

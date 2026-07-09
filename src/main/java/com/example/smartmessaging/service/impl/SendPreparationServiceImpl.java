@@ -44,8 +44,8 @@ public class SendPreparationServiceImpl implements SendPreparationService {
     public SendPrepareResponseDTO prepare(Long userId, SendPrepareRequestDTO request, String kakaoAccessToken) {
         validate(request);
 
-        List<Long> customerIds = draftService.getDraftCustomerIds(userId, request.getDraftId());
-        if (customerIds.isEmpty()) {
+        long totalCount = draftService.getTotalCount(userId, request.getDraftId());
+        if (totalCount == 0) {
             throw new BusinessException(ErrorCode.DRAFT_NOT_FOUND);
         }
 
@@ -81,7 +81,7 @@ public class SendPreparationServiceImpl implements SendPreparationService {
                 .content(request.getContent().trim())
                 .purpose(normalizedPurpose)
                 .status(isScheduled ? "SCHEDULED" : "SENDING")
-                .totalTargetCount(customerIds.size())
+                .totalTargetCount((int) totalCount)
                 .successCount(0)
                 .failCount(0)
                 .estimatedCost(BigDecimal.ZERO)
@@ -124,7 +124,7 @@ public class SendPreparationServiceImpl implements SendPreparationService {
 
         return SendPrepareResponseDTO.builder()
                 .sendHistoryId(history.getId())
-                .totalRequestedCount(customerIds.size())
+                .totalRequestedCount((int) totalCount)
                 .preparedTargetCount(0)
                 .excludedTargetCount(0)
                 .publishedMessageCount(1)

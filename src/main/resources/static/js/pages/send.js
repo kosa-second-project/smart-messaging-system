@@ -155,7 +155,6 @@ const SendPage = {
                 return;
             }
             if (typeof MessageComposer !== "undefined" && !MessageComposer.hasValidAiReview()) {
-                alert("\uB2E4\uC74C \uB2E8\uACC4\uB85C \uC774\uB3D9\uD558\uAE30 \uC804\uC5D0 AI \uAC80\uC0AC\uB97C \uC9C4\uD589\uD574 \uC8FC\uC138\uC694.");
                 MessageComposer.openAiReviewModal();
                 $("#sendAiReviewResult").html('<p class="send-ai-summary is-error">\uD604\uC7AC \uBA54\uC2DC\uC9C0 \uB0B4\uC6A9\uC73C\uB85C AI \uAC80\uC0AC\uB97C \uBA3C\uC800 \uC9C4\uD589\uD574 \uC8FC\uC138\uC694.</p>');
                 return;
