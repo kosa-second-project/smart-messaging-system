@@ -24,4 +24,6 @@ public interface DashboardMapper {
     List<SendHistoryVO> selectRecentSends();
 
     List<TemplatePerformance> selectTemplatePerformanceTop(StatSearchRequest request);
+
+    long countActiveSendBacklog();
 }

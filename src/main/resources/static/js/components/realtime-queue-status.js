@@ -1,5 +1,5 @@
 const RealtimeQueueStatus = (function() {
-    const DEFAULT_REFRESH_MS = 5000;
+    const DEFAULT_REFRESH_MS = 1000;
 
     function start(options) {
         const settings = {
@@ -7,10 +7,21 @@ const RealtimeQueueStatus = (function() {
             refreshMs: DEFAULT_REFRESH_MS,
             ...options
         };
+        let isLoading = false;
 
-        load(settings);
+        function tick() {
+            if (isLoading) {
+                return;
+            }
+            isLoading = true;
+            load(settings).always(function() {
+                isLoading = false;
+            });
+        }
+
+        tick();
         const timer = window.setInterval(function() {
-            load(settings);
+            tick();
         }, settings.refreshMs);
 
         $(window).on("beforeunload", function() {
@@ -21,7 +32,9 @@ const RealtimeQueueStatus = (function() {
     }
 
     function load(settings) {
-        ApiClient.get(settings.endpoint)
+        return ApiClient.get(settings.endpoint, {
+            _: Date.now()
+        })
             .done(function(response) {
                 renderQueueState(response || {});
                 renderQueueStatus(response?.queues || []);
@@ -51,9 +64,10 @@ const RealtimeQueueStatus = (function() {
     }
 
     function renderQueueStatus(queueStatus) {
-        const total = getQueueTotal(queueStatus);
+        const displayItems = buildQueueDisplayItems(queueStatus);
+        const total = getQueueTotal(displayItems);
 
-        if (!queueStatus || queueStatus.length === 0) {
+        if (displayItems.length === 0) {
             $("#dashboardQueueItems").html(`
                 <div class="stats-queue-item stats-queue-item--empty">
                     <div class="stats-queue-item__top">
@@ -66,19 +80,14 @@ const RealtimeQueueStatus = (function() {
             return;
         }
 
-        $("#dashboardQueueItems").html(queueStatus.map(function(item) {
+        $("#dashboardQueueItems").html(displayItems.map(function(item) {
             const count = getQueueCount(item);
             const rate = total === 0 ? 0 : (count / total) * 100;
-            const readyCount = Number(item.readyCount || 0);
-            const unackedCount = Number(item.unackedCount || 0);
-            const consumerCount = Number(item.consumerCount || 0);
             const available = item.available !== false;
-            const metaText = available
-                ? `대기 ${readyCount.toLocaleString()}건 · 처리중 ${unackedCount.toLocaleString()}건 · 컨슈머 ${consumerCount.toLocaleString()}개`
-                : "Management API 조회 실패";
+            const metaText = getQueueMetaText(item);
 
             return `
-                <div class="stats-queue-item ${available ? "" : "is-unavailable"}">
+                <div class="stats-queue-item ${available ? "" : "is-unavailable"} ${item.isDatabaseBacklog ? "is-database-backlog" : ""}" style="--queue-color:${escapeHtml(item.color || "#94A3B8")}">
                     <div class="stats-queue-item__top">
                         <div class="stats-queue-item__label-wrap">
                             <span class="stats-queue-item__dot" style="background:${escapeHtml(item.color || "#94A3B8")}"></span>
@@ -92,12 +101,69 @@ const RealtimeQueueStatus = (function() {
             `;
         }).join(""));
 
-        $("#dashboardQueueBar").html(queueStatus.map(function(item) {
+        $("#dashboardQueueBar").html(displayItems.filter(function(item) {
+            return getQueueCount(item) > 0;
+        }).map(function(item) {
             const count = getQueueCount(item);
             const rate = total === 0 ? 0 : (count / total) * 100;
-            const width = total === 0 ? 0 : Math.max(count === 0 ? 2 : 4, rate);
+            const width = total === 0 ? 0 : Math.max(4, rate);
             return `<span class="stats-queue-bar__segment" title="${escapeHtml(item.label)} ${rate.toFixed(1)}%" style="width:${width}%;background:${escapeHtml(item.color || "#94A3B8")}"></span>`;
         }).join(""));
+    }
+
+    function buildQueueDisplayItems(queueStatus) {
+        const sourceItems = queueStatus || [];
+        if (sourceItems.length === 0) {
+            return [];
+        }
+
+        const rabbitItems = sourceItems.map(function(item) {
+            return {
+                ...item,
+                databaseBacklogCount: 0
+            };
+        });
+        const databaseBacklogCount = sourceItems.reduce(function(sum, item) {
+            return sum + Number(item.databaseBacklogCount || 0);
+        }, 0);
+        const databaseItem = {
+            queueName: "database.send.backlog",
+            label: "DB 처리 대기",
+            readyCount: databaseBacklogCount,
+            unackedCount: 0,
+            totalCount: databaseBacklogCount,
+            databaseBacklogCount,
+            consumerCount: 0,
+            color: "#F59E0B",
+            badge: "amber",
+            available: true,
+            isDatabaseBacklog: true
+        };
+        const sourceIndex = sourceItems.findIndex(function(item) {
+            return Number(item.databaseBacklogCount || 0) > 0;
+        });
+        const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : Math.min(2, rabbitItems.length);
+
+        return [
+            ...rabbitItems.slice(0, insertIndex),
+            databaseItem,
+            ...rabbitItems.slice(insertIndex)
+        ];
+    }
+
+    function getQueueMetaText(item) {
+        if (item.isDatabaseBacklog) {
+            return "RabbitMQ 적재 전 대상자 처리";
+        }
+        if (item.available === false) {
+            return "Management API 조회 실패";
+        }
+
+        const readyCount = Number(item.readyCount || 0);
+        const unackedCount = Number(item.unackedCount || 0);
+        const consumerCount = Number(item.consumerCount || 0);
+
+        return `대기 ${readyCount.toLocaleString()}건 · 처리중 ${unackedCount.toLocaleString()}건 · 컨슈머 ${consumerCount.toLocaleString()}개`;
     }
 
     function getQueueCount(item) {

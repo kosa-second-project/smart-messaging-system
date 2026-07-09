@@ -107,9 +107,21 @@
   font-weight: var(--font-weight-medium);
 }
 
+.dashboard-page .stats-queue-item,
+.stats-overview-page .stats-queue-item {
+  border: 1px solid color-mix(in srgb, var(--queue-color, #94a3b8) 28%, transparent);
+  background: color-mix(in srgb, var(--queue-color, #94a3b8) 9%, var(--card));
+}
+
 .dashboard-page .stats-queue-item.is-unavailable,
 .stats-overview-page .stats-queue-item.is-unavailable {
   opacity: 0.65;
+}
+
+.dashboard-page .stats-queue-item.is-database-backlog,
+.stats-overview-page .stats-queue-item.is-database-backlog {
+  border-color: color-mix(in srgb, var(--queue-color, #f59e0b) 34%, transparent);
+  background: color-mix(in srgb, var(--queue-color, #f59e0b) 12%, var(--card));
 }
 
 .dashboard-page .stats-queue-item--empty,

@@ -205,4 +205,20 @@
             SUM(COALESCE(ts.click_count, 0)) DESC
         FETCH FIRST 5 ROWS ONLY
     </select>
+    <select id="countActiveSendBacklog" resultType="long">
+        SELECT NVL(SUM(GREATEST(
+            NVL(sh.total_target_count, 0)
+            - NVL((
+                SELECT COUNT(*)
+                FROM send_target st
+                WHERE st.send_history_id = sh.id
+                  AND st.status IN ('SUCCEEDED', 'FAILED', 'SKIPPED')
+                  AND NVL(st.is_deleted, 0) = 0
+            ), 0),
+            0
+        )), 0)
+        FROM send_history sh
+        WHERE sh.status = 'SENDING'
+          AND NVL(sh.is_deleted, 0) = 0
+    </select>
 </mapper>

@@ -31,6 +31,7 @@ public class DashboardQueueStatusResponse {
         private long readyCount;
         private long unackedCount;
         private long totalCount;
+        private long databaseBacklogCount;
         private int consumerCount;
         private String color;
         private String badge;

@@ -22,6 +22,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +33,9 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class SendPreparationServiceImpl implements SendPreparationService {
+
+    private static final LocalTime AD_SEND_START_TIME = LocalTime.of(8, 0);
+    private static final LocalTime AD_SEND_END_TIME = LocalTime.of(23, 50);
 
     private final CampaignDraftService draftService;
     private final ChannelService channelService;
@@ -63,13 +67,21 @@ public class SendPreparationServiceImpl implements SendPreparationService {
 
         String normalizedPurpose = normalizePurpose(request.getPurpose());
         if ("AD".equalsIgnoreCase(normalizedPurpose) || "ADVERTISEMENT".equalsIgnoreCase(normalizedPurpose)) {
-            int hour = scheduledTime.getHour();
-            if (hour >= 21 || hour < 8) {
+            LocalTime sendTime = scheduledTime.toLocalTime();
+            if (sendTime.isBefore(AD_SEND_START_TIME) || sendTime.isAfter(AD_SEND_END_TIME)) {
                 isScheduled = true;
-                if (hour >= 21) {
-                    scheduledTime = scheduledTime.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
+                if (sendTime.isAfter(AD_SEND_END_TIME)) {
+                    scheduledTime = scheduledTime.plusDays(1)
+                            .withHour(AD_SEND_START_TIME.getHour())
+                            .withMinute(AD_SEND_START_TIME.getMinute())
+                            .withSecond(0)
+                            .withNano(0);
                 } else {
-                    scheduledTime = scheduledTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
+                    scheduledTime = scheduledTime
+                            .withHour(AD_SEND_START_TIME.getHour())
+                            .withMinute(AD_SEND_START_TIME.getMinute())
+                            .withSecond(0)
+                            .withNano(0);
                 }
             }
         }
