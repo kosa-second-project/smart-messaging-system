@@ -77,10 +77,11 @@ public class DashboardServiceImpl implements DashboardService {
         BigDecimal savingCost = maxCost.subtract(billingCost).max(BigDecimal.ZERO);
         CustomerStatVO customer = latestCustomer == null ? new CustomerStatVO() : latestCustomer;
         long activeCustomers = n(customer.getNormalCustomerCount()) + n(customer.getNewCustomerCount());
+        double todaySuccessRate = totalSend == 0 ? 100.0 : rate(totalSuccess, totalSend);
 
         return List.of(
                 card("오늘 발송 건수", formatNumber(totalSend) + "건", "오늘 기준"),
-                card("성공률 / 실패 건수", formatRate(rate(totalSuccess, totalSend)) + "% / " + formatNumber(failCount) + "건", "오늘 기준"),
+                card("성공률 / 실패 건수", formatRate(todaySuccessRate) + "% / " + formatNumber(failCount) + "건", "오늘 기준"),
                 card("활성 고객 수", formatNumber(activeCustomers), "오늘 기준"),
                 card("청구비용", formatWon(billingCost), "오늘 기준"),
                 card("절감 현황 (오늘 기준)", formatWon(savingCost), "최대 비용 대비")
