@@ -3,7 +3,6 @@ package com.example.smartmessaging.service.queue;
 import com.example.smartmessaging.config.RabbitMQConfig;
 import com.example.smartmessaging.dto.response.DashboardQueueStatusResponse;
 import com.example.smartmessaging.dto.response.DashboardQueueStatusResponse.QueueItem;
-import com.example.smartmessaging.service.repository.DashboardMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
@@ -23,35 +22,30 @@ import java.util.Map;
 @Service
 public class RabbitQueueStatusService {
     private final RestTemplate restTemplate;
-    private final DashboardMapper dashboardMapper;
     private final String managementBaseUrl;
     private final String vhost;
 
     public RabbitQueueStatusService(
             RestTemplateBuilder restTemplateBuilder,
-            DashboardMapper dashboardMapper,
             @Value("${rabbitmq.management.base-url:http://localhost:15672}") String managementBaseUrl,
             @Value("${rabbitmq.management.vhost:/}") String vhost,
             @Value("${rabbitmq.management.username:guest}") String username,
             @Value("${rabbitmq.management.password:guest}") String password
     ) {
         this.restTemplate = restTemplateBuilder.basicAuthentication(username, password).build();
-        this.dashboardMapper = dashboardMapper;
         this.managementBaseUrl = trimTrailingSlash(managementBaseUrl);
         this.vhost = vhost;
     }
 
     public DashboardQueueStatusResponse getDashboardQueueStatus() {
-        long activeSendBacklog = countActiveSendBacklog();
         List<QueueItem> queues = List.of(
                 queueItem(RabbitMQConfig.CAMP_COMMAND_QUEUE, "\uCEA0\uD398\uC778 \uD050", "#8B5CF6", "violet"),
-                queueItem(RabbitMQConfig.MAIN_QUEUE, "\uBA54\uC2DC\uC9C0 \uBC1C\uC1A1 \uD050", "#3B82F6", "blue", activeSendBacklog),
+                queueItem(RabbitMQConfig.MAIN_QUEUE, "\uBA54\uC2DC\uC9C0 \uBC1C\uC1A1 \uD050", "#3B82F6", "blue"),
                 queueItem(RabbitMQConfig.DLQ_QUEUE, "\uC2E4\uD328 \uD050", "#EF4444", "red")
         );
 
         long totalReadyCount = queues.stream().mapToLong(QueueItem::getReadyCount).sum();
         long totalQueueCount = queues.stream().mapToLong(QueueItem::getTotalCount).sum();
-        long totalDatabaseBacklogCount = queues.stream().mapToLong(QueueItem::getDatabaseBacklogCount).sum();
         int totalConsumerCount = queues.stream().mapToInt(QueueItem::getConsumerCount).sum();
         long deadCount = queues.stream()
                 .filter(queue -> RabbitMQConfig.DLQ_QUEUE.equals(queue.getQueueName()))
@@ -59,7 +53,7 @@ public class RabbitQueueStatusService {
                 .sum();
         boolean hasUnavailableQueue = queues.stream().anyMatch(queue -> !queue.isAvailable());
 
-        String status = resolveStatus(totalQueueCount + totalDatabaseBacklogCount, deadCount, hasUnavailableQueue);
+        String status = resolveStatus(totalQueueCount, deadCount, hasUnavailableQueue);
         return DashboardQueueStatusResponse.builder()
                 .status(status)
                 .statusLabel(statusLabel(status))
@@ -72,10 +66,6 @@ public class RabbitQueueStatusService {
     }
 
     private QueueItem queueItem(String queueName, String label, String color, String badge) {
-        return queueItem(queueName, label, color, badge, 0);
-    }
-
-    private QueueItem queueItem(String queueName, String label, String color, String badge, long databaseBacklogCount) {
         Map<String, Object> queue = fetchQueue(queueName);
         boolean available = queue != null;
         long readyCount = longValue(queue, "messages_ready");
@@ -89,20 +79,11 @@ public class RabbitQueueStatusService {
                 .readyCount(readyCount)
                 .unackedCount(unackedCount)
                 .totalCount(totalCount)
-                .databaseBacklogCount(databaseBacklogCount)
                 .consumerCount(consumerCount)
                 .color(color)
                 .badge(badge)
                 .available(available)
                 .build();
-    }
-
-    private long countActiveSendBacklog() {
-        try {
-            return Math.max(dashboardMapper.countActiveSendBacklog(), 0);
-        } catch (RuntimeException exception) {
-            return 0;
-        }
     }
 
     @SuppressWarnings("unchecked")

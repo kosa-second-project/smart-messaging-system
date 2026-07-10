@@ -78,40 +78,24 @@
 }
 
 .tag-item-btn {
-  position: relative;
   font-size: 0.75rem;
   padding: 0.25rem 0.625rem;
   border-radius: var(--radius-pill);
-  background: var(--tag-bg, var(--primary));
-  color: var(--primary-foreground);
-  border: 1px solid var(--tag-bg, var(--primary));
-  font-weight: var(--font-weight-bold);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid transparent;
   transition: all 150ms ease;
 }
 
 .tag-item-btn:hover {
-  background: color-mix(in srgb, var(--tag-bg, var(--primary)) 86%, #000000);
-  border-color: color-mix(in srgb, var(--tag-bg, var(--primary)) 86%, #000000);
+  background: var(--border);
 }
 
 .tag-item-btn.selected {
-  background: color-mix(in srgb, var(--tag-bg, var(--primary)) 82%, #000000);
-  color: var(--primary-foreground);
-  border-color: color-mix(in srgb, var(--tag-bg, var(--primary)) 82%, #000000);
-  font-weight: 800;
-  padding-left: 1.5rem;
-  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px color-mix(in srgb, var(--tag-bg, var(--primary)) 64%, var(--border));
-}
-
-.tag-item-btn.selected::before {
-  content: "✓";
-  position: absolute;
-  left: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75rem;
-  font-weight: 900;
-  line-height: 1;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .filter-scroll-container {
@@ -294,8 +278,8 @@
 .ds-table th {
   position: sticky;
   top: 0;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--secondary);
+  color: var(--muted-foreground);
   z-index: 10;
 }
 

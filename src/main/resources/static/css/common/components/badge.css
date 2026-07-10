@@ -4,67 +4,18 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.125rem 0.5rem;
-  border: 1px solid var(--tag-bg, var(--primary));
   border-radius: var(--radius-pill);
-  background: var(--tag-bg, var(--primary));
-  color: var(--primary-foreground);
+  background: var(--muted);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   line-height: 1.2;
   white-space: nowrap;
 }
 
 .ds-badge--primary {
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.ds-badge--channel-sms {
-  border-color: #7dd3fc;
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.ds-badge--channel-kakao {
-  border-color: #facc15;
-  background: #fee500;
-  color: #3a1d1d;
-}
-
-.ds-badge--channel-email {
-  border-color: #fdba74;
-  background: #ffedd5;
-  color: #c2410c;
-}
-
-.ds-badge--purpose-ad {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #ffffff;
-}
-
-.ds-badge--purpose-info {
-  border-color: #0284c7;
-  background: #0284c7;
-  color: #ffffff;
-}
-
-.ds-badge--customer-regular {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #ffffff;
-}
-
-.ds-badge--customer-new {
-  border-color: #059669;
-  background: #059669;
-  color: #ffffff;
-}
-
-.ds-badge--customer-dormant {
-  border-color: #7c3aed;
-  background: #7c3aed;
-  color: #ffffff;
+  background: rgba(24, 67, 250, 0.1);
+  color: var(--primary);
 }
 
 .ds-badge--success {
@@ -87,32 +38,3 @@
   color: #6D28D9;
 }
 
-.customer-tag-list .ds-badge:nth-child(5n+1),
-.history-badges .history-tag-badge:nth-child(5n+1),
-.history-detail__tags .history-tag-badge:nth-child(5n+1) {
-  --tag-bg: #1843FA;
-}
-
-.customer-tag-list .ds-badge:nth-child(5n+2),
-.history-badges .history-tag-badge:nth-child(5n+2),
-.history-detail__tags .history-tag-badge:nth-child(5n+2) {
-  --tag-bg: #2563EB;
-}
-
-.customer-tag-list .ds-badge:nth-child(5n+3),
-.history-badges .history-tag-badge:nth-child(5n+3),
-.history-detail__tags .history-tag-badge:nth-child(5n+3) {
-  --tag-bg: #1D4ED8;
-}
-
-.customer-tag-list .ds-badge:nth-child(5n+4),
-.history-badges .history-tag-badge:nth-child(5n+4),
-.history-detail__tags .history-tag-badge:nth-child(5n+4) {
-  --tag-bg: #0369A1;
-}
-
-.customer-tag-list .ds-badge:nth-child(5n),
-.history-badges .history-tag-badge:nth-child(5n),
-.history-detail__tags .history-tag-badge:nth-child(5n) {
-  --tag-bg: #075985;
-}

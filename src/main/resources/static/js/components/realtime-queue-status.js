@@ -64,7 +64,7 @@ const RealtimeQueueStatus = (function() {
     }
 
     function renderQueueStatus(queueStatus) {
-        const displayItems = buildQueueDisplayItems(queueStatus);
+        const displayItems = queueStatus || [];
         const total = getQueueTotal(displayItems);
 
         if (displayItems.length === 0) {
@@ -87,7 +87,7 @@ const RealtimeQueueStatus = (function() {
             const metaText = getQueueMetaText(item);
 
             return `
-                <div class="stats-queue-item ${available ? "" : "is-unavailable"} ${item.isDatabaseBacklog ? "is-database-backlog" : ""}" style="--queue-color:${escapeHtml(item.color || "#94A3B8")}">
+                <div class="stats-queue-item ${available ? "" : "is-unavailable"}" style="--queue-color:${escapeHtml(item.color || "#94A3B8")}">
                     <div class="stats-queue-item__top">
                         <div class="stats-queue-item__label-wrap">
                             <span class="stats-queue-item__dot" style="background:${escapeHtml(item.color || "#94A3B8")}"></span>
@@ -111,50 +111,7 @@ const RealtimeQueueStatus = (function() {
         }).join(""));
     }
 
-    function buildQueueDisplayItems(queueStatus) {
-        const sourceItems = queueStatus || [];
-        if (sourceItems.length === 0) {
-            return [];
-        }
-
-        const rabbitItems = sourceItems.map(function(item) {
-            return {
-                ...item,
-                databaseBacklogCount: 0
-            };
-        });
-        const databaseBacklogCount = sourceItems.reduce(function(sum, item) {
-            return sum + Number(item.databaseBacklogCount || 0);
-        }, 0);
-        const databaseItem = {
-            queueName: "database.send.backlog",
-            label: "DB 처리 대기",
-            readyCount: databaseBacklogCount,
-            unackedCount: 0,
-            totalCount: databaseBacklogCount,
-            databaseBacklogCount,
-            consumerCount: 0,
-            color: "#F59E0B",
-            badge: "amber",
-            available: true,
-            isDatabaseBacklog: true
-        };
-        const sourceIndex = sourceItems.findIndex(function(item) {
-            return Number(item.databaseBacklogCount || 0) > 0;
-        });
-        const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : Math.min(2, rabbitItems.length);
-
-        return [
-            ...rabbitItems.slice(0, insertIndex),
-            databaseItem,
-            ...rabbitItems.slice(insertIndex)
-        ];
-    }
-
     function getQueueMetaText(item) {
-        if (item.isDatabaseBacklog) {
-            return "RabbitMQ 적재 전 대상자 처리";
-        }
         if (item.available === false) {
             return "Management API 조회 실패";
         }
