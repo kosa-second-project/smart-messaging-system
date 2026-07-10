@@ -196,6 +196,68 @@ class SendPreparationServiceTest {
         assertThat(commandCaptor.getValue().getKakaoAccessToken()).isNull();
         assertThat(response.getSendHistoryId()).isEqualTo(901L);
     }
+
+    @Test
+    void advertisingSendAllowsScheduledTimeAt2350() {
+        SendPrepareRequestDTO request = basicAdRequest();
+        LocalDateTime scheduledAt = LocalDateTime.now().plusDays(1)
+                .withHour(23)
+                .withMinute(50)
+                .withSecond(0)
+                .withNano(0);
+        request.setScheduledAt(scheduledAt);
+
+        when(draftService.getTotalCount(10L, "draft-1")).thenReturn(1L);
+        when(channelService.getActiveChannels()).thenReturn(List.of(channel(3L, "SMS", "18")));
+        doAnswer(invocation -> {
+            SendHistoryVO history = invocation.getArgument(0);
+            history.setId(902L);
+            return 1;
+        }).when(sendPreparationMapper).insertSendHistory(any(SendHistoryVO.class));
+
+        sendPreparationService.prepare(10L, request, null);
+
+        ArgumentCaptor<SendHistoryVO> historyCaptor = ArgumentCaptor.forClass(SendHistoryVO.class);
+        verify(sendPreparationMapper).insertSendHistory(historyCaptor.capture());
+        assertThat(historyCaptor.getValue().getScheduledAt()).isEqualTo(scheduledAt);
+    }
+
+    @Test
+    void advertisingSendAfter2350IsScheduledAtNextMorning() {
+        SendPrepareRequestDTO request = basicAdRequest();
+        LocalDateTime scheduledAt = LocalDateTime.now().plusDays(1)
+                .withHour(23)
+                .withMinute(51)
+                .withSecond(0)
+                .withNano(0);
+        request.setScheduledAt(scheduledAt);
+
+        when(draftService.getTotalCount(10L, "draft-1")).thenReturn(1L);
+        when(channelService.getActiveChannels()).thenReturn(List.of(channel(3L, "SMS", "18")));
+        doAnswer(invocation -> {
+            SendHistoryVO history = invocation.getArgument(0);
+            history.setId(903L);
+            return 1;
+        }).when(sendPreparationMapper).insertSendHistory(any(SendHistoryVO.class));
+
+        sendPreparationService.prepare(10L, request, null);
+
+        ArgumentCaptor<SendHistoryVO> historyCaptor = ArgumentCaptor.forClass(SendHistoryVO.class);
+        verify(sendPreparationMapper).insertSendHistory(historyCaptor.capture());
+        assertThat(historyCaptor.getValue().getScheduledAt())
+                .isEqualTo(scheduledAt.plusDays(1).withHour(8).withMinute(0));
+    }
+
+    private SendPrepareRequestDTO basicAdRequest() {
+        SendPrepareRequestDTO request = new SendPrepareRequestDTO();
+        request.setDraftId("draft-1");
+        request.setTitle("Ad notice");
+        request.setContent("Ad body");
+        request.setPurpose("AD");
+        request.setPriorities(List.of("SMS"));
+        return request;
+    }
+
     private ChannelVO channel(Long id, String type, String cost) {
         return ChannelVO.builder()
                 .id(id)

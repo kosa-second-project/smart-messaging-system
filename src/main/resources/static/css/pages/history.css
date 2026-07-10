@@ -129,12 +129,12 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border: 1px solid var(--tag-bg, var(--primary));
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--tag-bg, var(--primary));
-  color: var(--primary-foreground);
+  background: var(--card);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
 }
 
@@ -316,9 +316,8 @@
 }
 
 .history-tag-badge {
-  background: var(--tag-bg, var(--primary));
-  color: var(--primary-foreground);
-  font-weight: 800;
+  background: #f3f4f6;
+  color: #5f6672;
 }
 
 .history-table .ds-badge {
@@ -331,9 +330,8 @@
 
 .history-tag-count {
   flex: 0 0 auto;
-  background: color-mix(in srgb, var(--primary) 86%, #000000);
-  color: var(--primary-foreground);
-  font-weight: 800;
+  background: #e9ebef;
+  color: #555d69;
 }
 
 .history-status {
@@ -353,15 +351,15 @@
 }
 
 .history-status--completed {
-  border-color: #16a34a;
-  background: #16a34a;
-  color: #ffffff;
+  border-color: #cce8dc;
+  background: #f0faf5;
+  color: #39755c;
 }
 
 .history-status--failed {
-  border-color: #dc2626;
-  background: #dc2626;
-  color: #ffffff;
+  border-color: #f2cccc;
+  background: #fdf2f2;
+  color: #a44b4b;
 }
 
 .history-status--default {
@@ -562,10 +560,10 @@ body.history-modal-open {
   min-height: 1.375rem;
   flex: 0 0 auto;
   padding: 0.125rem 0.5rem;
-  background: var(--tag-bg, var(--primary));
-  color: var(--primary-foreground);
+  background: #e9ebef;
+  color: #5f6672;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .history-detail__summary {

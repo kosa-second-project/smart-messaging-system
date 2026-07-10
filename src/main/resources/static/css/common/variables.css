@@ -7,7 +7,7 @@
   --font-weight-medium: 600;
   --font-weight-bold: 700;
 
-  --background: linear-gradient(135deg, #e6f2f7 0%, #b8d7e5 45%, #86bad2 100%);
+  --background: linear-gradient(135deg, #f7fafc 0%, #e6edf5 45%, #d8e7f7 100%);
   --foreground: #0A0A0F;
   --card: #FFFFFF;
   --card-foreground: #0A0A0F;
@@ -18,7 +18,7 @@
   --secondary: #F0F0F5;
   --secondary-foreground: #0A0A0F;
   --muted: #F0F0F5;
-  --muted-foreground: #3F3F46;
+  --muted-foreground: #6B6B80;
   --accent: #EEF1FF;
   --accent-foreground: #1843FA;
   --destructive: #E02020;
@@ -27,10 +27,10 @@
   --success-foreground: #FFFFFF;
   --warning: #F59E0B;
   --warning-foreground: #0A0A0F;
-  --border: #A1A1AA;
-  --border-strong: #71717A;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
   --input: transparent;
-  --input-background: var(--accent);
+  --input-background: #F0F0F5;
   --switch-background: #C8C8D5;
   --ring: #1843FA;
 
@@ -46,7 +46,7 @@
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #EEF1FF;
   --sidebar-accent-foreground: #1843FA;
-  --sidebar-border: #A1A1AA;
+  --sidebar-border: rgba(0, 0, 0, 0.07);
   --sidebar-ring: #1843FA;
 
   --space-1: 0.25rem;
